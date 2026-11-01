@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>육군 정자세 팔굽혀펴기 AI 모바일 코치</title>
-    <!-- MediaPipe Pose CDN (iOS/Android 공용) -->
+    <title>육군 정자세 팔굽혀펴기 AI 정밀 코칭 체계</title>
+    <!-- MediaPipe Pose CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
     <style>
@@ -12,12 +12,12 @@
         body {
             background-color: #0b110c;
             color: #e2eae3;
-            font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
-            overflow-x: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", Dotum, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            padding-bottom: 30px;
         }
         header {
             width: 100%;
@@ -34,34 +34,35 @@
             border: 1px solid #39e75f;
             color: #39e75f;
             font-size: 10px;
-            padding: 2px 6px;
+            padding: 2px 7px;
             border-radius: 3px;
         }
 
         .camera-container {
             position: relative;
             width: 100%;
-            max-width: 480px;
+            max-width: 500px;
             aspect-ratio: 4 / 3;
             background: #000;
             display: flex;
             justify-content: center;
             align-items: center;
             overflow: hidden;
+            border-bottom: 2px solid #233827;
         }
         canvas {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
-        /* iOS 비디오 인라인 재생 필수 */
         video { display: none; }
 
+        /* HUD 오버레이 */
         .hud-overlay {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
+            top: 8px;
+            left: 8px;
+            right: 8px;
             display: flex;
             justify-content: space-between;
             pointer-events: none;
@@ -69,107 +70,223 @@
         .hud-card {
             background: rgba(11, 17, 12, 0.85);
             border: 1px solid #233827;
-            padding: 6px 12px;
-            border-radius: 6px;
+            padding: 5px 8px;
+            border-radius: 5px;
             text-align: center;
+            min-width: 70px;
         }
-        .hud-val { font-size: 24px; font-weight: bold; color: #ffffff; font-family: monospace; }
-        .hud-lbl { font-size: 10px; color: #8b9b8e; }
+        .hud-val { font-size: 20px; font-weight: bold; color: #ffffff; font-family: monospace; }
+        .hud-lbl { font-size: 9px; color: #8b9b8e; }
 
         .feedback-banner {
             position: absolute;
-            bottom: 12px;
-            left: 10px;
-            right: 10px;
-            padding: 8px 12px;
+            bottom: 8px;
+            left: 8px;
+            right: 8px;
+            padding: 7px 10px;
             background: rgba(17, 26, 19, 0.9);
             border: 1px solid #39e75f;
-            border-radius: 6px;
+            border-radius: 5px;
             text-align: center;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: bold;
             color: #39e75f;
             transition: all 0.2s;
         }
         .feedback-banner.warn { border-color: #e74c3c; color: #ff5252; background: rgba(40, 10, 10, 0.9); }
 
-        .control-panel {
+        .main-panel {
             width: 100%;
-            max-width: 480px;
-            padding: 12px;
+            max-width: 500px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
             gap: 8px;
         }
-        .btn-group { display: flex; gap: 8px; }
-        button {
-            flex: 1;
-            padding: 12px;
-            font-size: 13px;
-            font-weight: bold;
-            border-radius: 6px;
-            border: 1px solid #39e75f;
-            background: #218c39;
-            color: #fff;
-            cursor: pointer;
-        }
-        button:active { filter: brightness(0.8); }
-        button.btn-sub { background: #131c15; border-color: #233827; color: #a3b8a6; }
-        button.btn-reset { background: #7a1f1f; border-color: #e74c3c; }
 
-        .guide-card {
+        .card {
             background: #131c15;
             border: 1px solid #233827;
             border-radius: 6px;
             padding: 10px;
-            font-size: 11px;
-            color: #a3b8a6;
-            line-height: 1.5;
         }
-        .guide-card b { color: #39e75f; }
+        .card-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #39e75f;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 타이머 설정 버튼군 */
+        .timer-presets {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 6px;
+        }
+        .btn-preset {
+            flex: 1;
+            padding: 6px;
+            font-size: 11px;
+            font-weight: bold;
+            background: #1c2a1f;
+            border: 1px solid #2d4233;
+            color: #a3b8a6;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-preset.active {
+            background: #218c39;
+            color: #ffffff;
+            border-color: #39e75f;
+        }
+
+        .timer-custom-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .timer-custom-row input {
+            width: 70px;
+            background: #0d120e;
+            border: 1px solid #2d4233;
+            color: #fff;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 11px;
+            text-align: center;
+        }
+
+        /* 컨트롤 버튼군 */
+        .btn-group { display: flex; gap: 6px; margin-top: 4px; }
+        button.action-btn {
+            flex: 1;
+            padding: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .btn-start { background: #218c39; border-color: #39e75f; color: #fff; }
+        .btn-pause { background: #d35400; border-color: #e67e22; color: #fff; }
+        .btn-sub { background: #1f3323; border-color: #2d4233; color: #a3b8a6; }
+        .btn-reset { background: #7a1f1f; border-color: #e74c3c; color: #fff; }
+
+        /* 부정자세 타임라인 로그 테이블 */
+        .log-table-wrap {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #1f3323;
+            border-radius: 4px;
+            background: #0d140e;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10.5px;
+            text-align: left;
+        }
+        th, td {
+            padding: 5px 6px;
+            border-bottom: 1px solid #1a261c;
+        }
+        th {
+            background: #111a13;
+            color: #8b9b8e;
+            position: sticky;
+            top: 0;
+        }
+        .td-time { color: #e5a93c; font-family: monospace; font-weight: bold; width: 65px; }
+        .td-reason { color: #ff6b6b; font-weight: bold; }
+        .td-detail { color: #8b9b8e; font-size: 9.5px; }
     </style>
 </head>
 <body>
 
 <header>
-    <div class="header-title">🛡️ 입영 전 팔굽혀펴기 정자세 AI 코치</div>
-    <div class="badge">모바일 브라우저 전용</div>
+    <div class="header-title">🛡️ 육군 팔굽혀펴기 AI 정밀 측정체계</div>
+    <div class="badge">관절인식·타이머·부정기록</div>
 </header>
 
 <div class="camera-container">
     <canvas id="outputCanvas"></canvas>
     <video id="inputVideo" playsinline webkit-playsinline muted autoplay></video>
 
+    <!-- 상단 HUD -->
     <div class="hud-overlay">
         <div class="hud-card">
             <div class="hud-val" id="repCount">0</div>
             <div class="hud-lbl">정자세 카운트</div>
         </div>
         <div class="hud-card">
+            <div class="hud-val" id="dispTimer" style="color:#e5a93c;">02:00</div>
+            <div class="hud-lbl">측정 잔여시간</div>
+        </div>
+        <div class="hud-card">
             <div class="hud-val" id="elbowAngle">0°</div>
-            <div class="hud-lbl">팔꿈치 각도</div>
+            <div class="hud-lbl">팔꿈치(≤90°)</div>
         </div>
         <div class="hud-card">
             <div class="hud-val" id="coreAngle">0°</div>
-            <div class="hud-lbl">코어 각도</div>
+            <div class="hud-lbl">코어(≥145°)</div>
         </div>
     </div>
 
-    <div class="feedback-banner" id="feedbackText">측면 1.5m 바닥에 폰을 세우고 시작하세요</div>
+    <!-- 하단 실시간 가이드 배너 -->
+    <div class="feedback-banner" id="feedbackText">카메라를 켜고 엎드려뻗쳐 자세를 잡으십시오</div>
 </div>
 
-<div class="control-panel">
-    <div class="btn-group">
-        <button id="btnStart" onclick="startApp()">📹 카메라 켜기</button>
-        <button class="btn-sub" onclick="switchCamera()">🔄 전/후면 전환</button>
-        <button class="btn-reset" onclick="resetCount()">0회 리셋</button>
+<div class="main-panel">
+    <!-- 타이머 설정 카드 -->
+    <div class="card">
+        <div class="card-title">
+            <span>⏱️ 측정 시간 설정</span>
+            <span id="txtTimerState" style="font-size:10px; color:#8b9b8e;">대기 중</span>
+        </div>
+        <div class="timer-presets">
+            <button type="button" class="btn-preset active" onclick="setTimerPreset(120, this)">2분 (육군검정)</button>
+            <button type="button" class="btn-preset" onclick="setTimerPreset(60, this)">1분 (단련)</button>
+            <button type="button" class="btn-preset" onclick="setTimerPreset(30, this)">30초</button>
+        </div>
+        <div class="timer-custom-row">
+            <span style="font-size:11px; color:#8b9b8e;">직접 입력:</span>
+            <input type="number" id="inCustomSec" placeholder="초" min="10" max="600" onchange="applyCustomTimer()">
+            <span style="font-size:11px; color:#8b9b8e;">초 설정</span>
+        </div>
     </div>
 
-    <div class="guide-card">
-        <b>[스마트폰 거치 요령]</b><br>
-        1. 폰을 바닥 물병이나 신발에 기대어 <b>측면 1.5~2m 거리</b>에 세웁니다.<br>
-        2. 머리부터 발끝까지 화면 안에 온전히 들어가도록 엎드립니다.<br>
-        3. <b>정자세 기준</b>: 팔꿈치 90° 이하 하강 + 팔 완전히 펴기 + 허리 처짐 방지.
+    <!-- 제어 버튼군 -->
+    <div class="btn-group">
+        <button type="button" class="action-btn btn-start" id="btnMainAction" onclick="toggleTimerAndCamera()">📹 측정 시작 (카메라 ON)</button>
+        <button type="button" class="action-btn btn-sub" onclick="switchCamera()">🔄 전/후면</button>
+        <button type="button" class="action-btn btn-reset" onclick="resetAll()">0회 초기화</button>
+    </div>
+
+    <!-- 부정자세 타임라인 로그 카드 -->
+    <div class="card">
+        <div class="card-title">
+            <span>⚠️ 부정자세(No-Count) 타임스탬프 이력</span>
+            <span id="failCount" style="color:#ff6b6b; font-size:11px;">0건</span>
+        </div>
+        <div class="log-table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">경과 시간</th>
+                        <th style="width: 45%;">불합격 사유</th>
+                        <th style="width: 30%;">관측 각도</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody">
+                    <tr id="emptyRow">
+                        <td colspan="3" style="text-align:center; color:#8b9b8e; padding:12px;">부정자세 기록이 없습니다.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -178,28 +295,41 @@
     var canvasElement = document.getElementById('outputCanvas');
     var canvasCtx = canvasElement.getContext('2d');
 
+    // 계측 및 상태 변수
     var repCount = 0;
     var state = "UP"; // UP -> DOWN -> UP
     var facingMode = "user"; // "user" (전면) or "environment" (후면)
     var pose = null;
     var camera = null;
-    var lastFeedbackTime = 0;
+    var cameraStarted = false;
 
-    // 모바일 Web Speech API (음성 코칭)
+    // 타이머 변수
+    var totalSeconds = 120;
+    var remainingSeconds = 120;
+    var timerInterval = null;
+    var isTimerRunning = false;
+
+    // 부정자세 판단용 변수
+    var minElbowInCurrentRep = 180; // 이번 반복 중 팔이 내려간 최저 각도
+    var failCount = 0;
+    var lastFeedbackTime = 0;
+    var lastSagWarnTime = 0;
+
+    // 음성(TTS) 엔진
     function speak(text) {
         if (!('speechSynthesis' in window)) return;
         var now = Date.now();
-        if (now - lastFeedbackTime < 1800) return; // 1.8초 음성 중복 방지
+        if (now - lastFeedbackTime < 1600) return;
         lastFeedbackTime = now;
 
         window.speechSynthesis.cancel();
         var msg = new SpeechSynthesisUtterance(text);
         msg.lang = 'ko-KR';
-        msg.rate = 1.1; // 신속한 코칭 템포
+        msg.rate = 1.15;
         window.speechSynthesis.speak(msg);
     }
 
-    // 3점 사이 각도 산출
+    // 사잇각 계산 (내적)
     function getAngle(A, B, C) {
         var rad = Math.atan2(C.y - B.y, C.x - B.x) - Math.atan2(A.y - B.y, A.x - B.x);
         var deg = Math.abs(rad * 180.0 / Math.PI);
@@ -207,24 +337,137 @@
         return Math.round(deg);
     }
 
+    // 배너 텍스트
     function setFeedback(text, isWarn) {
         var el = document.getElementById('feedbackText');
         el.innerText = text;
-        if (isWarn) {
-            el.className = "feedback-banner warn";
-        } else {
-            el.className = "feedback-banner";
+        el.className = isWarn ? "feedback-banner warn" : "feedback-banner";
+    }
+
+    // 부정자세 타임로그 추가 함수
+    function logInvalidRep(reason, detail) {
+        failCount++;
+        document.getElementById('failCount').innerText = failCount + "건";
+
+        var emptyRow = document.getElementById('emptyRow');
+        if (emptyRow) emptyRow.remove();
+
+        var elapsedSec = totalSeconds - remainingSeconds;
+        var m = Math.floor(elapsedSec / 60);
+        var s = elapsedSec % 60;
+        var timeStr = (m < 10 ? "0" + m : m) + "분 " + (s < 10 ? "0" + s : s) + "초";
+
+        var tbody = document.getElementById('logTableBody');
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td class="td-time">' + timeStr + '</td>' +
+                       '<td class="td-reason">' + reason + '</td>' +
+                       '<td class="td-detail">' + detail + '</td>';
+        tbody.insertBefore(tr, tbody.firstChild); // 최신 기록을 상단에 삽입
+    }
+
+    // 타이머 제어
+    function setTimerPreset(sec, btn) {
+        if (isTimerRunning) return;
+        totalSeconds = sec;
+        remainingSeconds = sec;
+        updateTimerDisplay();
+        var btns = document.querySelectorAll('.btn-preset');
+        for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+        if (btn) btn.classList.add('active');
+        document.getElementById('inCustomSec').value = "";
+    }
+
+    function applyCustomTimer() {
+        if (isTimerRunning) return;
+        var val = parseInt(document.getElementById('inCustomSec').value, 10);
+        if (!isNaN(val) && val >= 10 && val <= 600) {
+            totalSeconds = val;
+            remainingSeconds = val;
+            updateTimerDisplay();
+            var btns = document.querySelectorAll('.btn-preset');
+            for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
         }
     }
 
-    function resetCount() {
+    function updateTimerDisplay() {
+        var m = Math.floor(remainingSeconds / 60);
+        var s = remainingSeconds % 60;
+        document.getElementById('dispTimer').innerText = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+    }
+
+    function startTimer() {
+        if (isTimerRunning) return;
+        isTimerRunning = true;
+        document.getElementById('txtTimerState').innerText = "측정 진행 중";
+        document.getElementById('txtTimerState').style.color = "#39e75f";
+        speak("측정을 시작합니다");
+
+        timerInterval = setInterval(function() {
+            remainingSeconds--;
+            updateTimerDisplay();
+
+            // 음성 잔여시간 알림
+            if (remainingSeconds === 30) speak("30초 남았습니다");
+            if (remainingSeconds === 10) speak("10초 전");
+
+            if (remainingSeconds <= 0) {
+                stopTimer();
+                speak("측정 종료! 최종 " + repCount + "회입니다");
+                setFeedback("🏁 측정 종료 (최종: " + repCount + "회)", false);
+                document.getElementById('txtTimerState').innerText = "측정 완료";
+                document.getElementById('txtTimerState').style.color = "#e5a93c";
+            }
+        }, 1000);
+    }
+
+    function stopTimer() {
+        isTimerRunning = false;
+        clearInterval(timerInterval);
+        document.getElementById('btnMainAction').innerText = "▶️ 측정 재개";
+        document.getElementById('btnMainAction').className = "action-btn btn-start";
+    }
+
+    function toggleTimerAndCamera() {
+        if (!cameraStarted) {
+            initPoseModel();
+            startCameraStream();
+            cameraStarted = true;
+            document.getElementById('btnMainAction').innerText = "⏸️ 일시 정지";
+            document.getElementById('btnMainAction').className = "action-btn btn-pause";
+            startTimer();
+        } else {
+            if (isTimerRunning) {
+                stopTimer();
+                document.getElementById('txtTimerState').innerText = "일시 정지";
+                document.getElementById('txtTimerState').style.color = "#e67e22";
+            } else {
+                startTimer();
+                document.getElementById('btnMainAction').innerText = "⏸️ 일시 정지";
+                document.getElementById('btnMainAction').className = "action-btn btn-pause";
+            }
+        }
+    }
+
+    function resetAll() {
+        stopTimer();
+        remainingSeconds = totalSeconds;
+        updateTimerDisplay();
         repCount = 0;
+        failCount = 0;
         state = "UP";
-        document.getElementById('repCount').innerText = repCount;
+        minElbowInCurrentRep = 180;
+        document.getElementById('repCount').innerText = "0";
+        document.getElementById('failCount').innerText = "0건";
+        document.getElementById('logTableBody').innerHTML = '<tr id="emptyRow"><td colspan="3" style="text-align:center; color:#8b9b8e; padding:12px;">부정자세 기록이 없습니다.</td></tr>';
+        document.getElementById('txtTimerState').innerText = "대기 중";
+        document.getElementById('txtTimerState').style.color = "#8b9b8e";
+        document.getElementById('btnMainAction').innerText = cameraStarted ? "▶️ 측정 시작" : "📹 측정 시작 (카메라 ON)";
+        document.getElementById('btnMainAction').className = "action-btn btn-start";
         setFeedback("측정 준비 완료", false);
     }
 
-    function initPose() {
+    // MediaPipe Pose 정밀 모델 초기화 (ModelComplexity 1 탑재)
+    function initPoseModel() {
         pose = new Pose({
             locateFile: function(file) {
                 return "https://cdn.jsdelivr.net/npm/@mediapipe/pose/" + file;
@@ -232,32 +475,22 @@
         });
 
         pose.setOptions({
-            modelComplexity: 0, // 0: 모바일 최적화 경량 모델
+            modelComplexity: 1, // 정밀 모델: 무릎, 발끝, 관절 스켈레톤 인식률 대폭 향상
             smoothLandmarks: true,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
+            minDetectionConfidence: 0.55,
+            minTrackingConfidence: 0.55
         });
 
-        pose.onResults(onResults);
+        pose.onResults(onPoseResults);
     }
 
-    function startApp() {
-        document.getElementById('btnStart').style.display = 'none';
-        setFeedback("신체 인식 준비 중...", false);
-        // iOS 오디오 권한 잠금 해제
-        speak("자세를 잡으세요");
-        initPose();
-        startStream();
-    }
-
-    function startStream() {
-        if (camera) {
-            camera.stop();
-        }
-
+    function startCameraStream() {
+        if (camera) camera.stop();
         camera = new Camera(videoElement, {
             onFrame: async function() {
-                await pose.send({ image: videoElement });
+                if (cameraStarted) {
+                    await pose.send({ image: videoElement });
+                }
             },
             width: 640,
             height: 480,
@@ -268,17 +501,18 @@
 
     function switchCamera() {
         facingMode = (facingMode === "user") ? "environment" : "user";
-        startStream();
+        startCameraStream();
     }
 
-    function onResults(results) {
+    // 포즈 인식 메인 처리 루프
+    function onPoseResults(results) {
         canvasElement.width = videoElement.videoWidth || 640;
         canvasElement.height = videoElement.videoHeight || 480;
 
         canvasCtx.save();
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
-        // 전면 카메라 사용 시 좌우 거울 반전
+        // 전면 카메라 거울 반전
         if (facingMode === "user") {
             canvasCtx.translate(canvasElement.width, 0);
             canvasCtx.scale(-1, 1);
@@ -286,72 +520,113 @@
         canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
         if (!results.poseLandmarks) {
-            setFeedback("전신이 나오도록 거리를 조정하세요", true);
+            setFeedback("⚠️ 전신이 화면에 나오도록 거리를 조정하십시오", true);
             canvasCtx.restore();
             return;
         }
 
         var lm = results.poseLandmarks;
-
-        // 카메라에 더 잘 보이는 측면 선택 (가시도 비교)
-        var leftVis = (lm[11].visibility + lm[23].visibility) / 2;
-        var rightVis = (lm[12].visibility + lm[24].visibility) / 2;
-        var isLeft = leftVis >= rightVis;
-
-        var shoulder = isLeft ? lm[11] : lm[12];
-        var elbow = isLeft ? lm[13] : lm[14];
-        var wrist = isLeft ? lm[15] : lm[16];
-        var hip = isLeft ? lm[23] : lm[24];
-        var ankle = isLeft ? lm[27] : lm[28];
-
         var w = canvasElement.width;
         var h = canvasElement.height;
 
-        var pShoulder = { x: shoulder.x * w, y: shoulder.y * h };
-        var pElbow = { x: elbow.x * w, y: elbow.y * h };
-        var pWrist = { x: wrist.x * w, y: wrist.y * h };
-        var pHip = { x: hip.x * w, y: hip.y * h };
-        var pAnkle = { x: ankle.x * w, y: ankle.y * h };
+        // 카메라 방향 자동 판별
+        var leftVis = (lm[11].visibility + lm[23].visibility + lm[27].visibility) / 3;
+        var rightVis = (lm[12].visibility + lm[24].visibility + lm[28].visibility) / 3;
+        var isLeft = leftVis >= rightVis;
 
-        // 1. 관절 각도 계산
-        var elbowAng = getAngle(pShoulder, pElbow, pWrist);
-        var coreAng = getAngle(pShoulder, pHip, pAnkle);
+        // 7대 주요 관절 매핑 (머리·어깨·팔꿈치·손목·골반·무릎·발끝)
+        var head = lm[0];                                          // 머리 (코 중심)
+        var shoulder = isLeft ? lm[11] : lm[12];                  // 어깨
+        var elbow = isLeft ? lm[13] : lm[14];                     // 팔꿈치
+        var wrist = isLeft ? lm[15] : lm[16];                     // 손목
+        var hip = isLeft ? lm[23] : lm[24];                       // 골반
+        var knee = isLeft ? lm[25] : lm[26];                      // 무릎
+        var ankle = isLeft ? lm[27] : lm[28];                     // 발목
+        var toe = isLeft ? lm[31] : lm[32];                       // 발끝
+
+        var pH = { x: head.x * w, y: head.y * h };
+        var pS = { x: shoulder.x * w, y: shoulder.y * h };
+        var pE = { x: elbow.x * w, y: elbow.y * h };
+        var pW = { x: wrist.x * w, y: wrist.y * h };
+        var pP = { x: hip.x * w, y: hip.y * h };
+        var pK = { x: knee.x * w, y: knee.y * h };
+        var pA = { x: ankle.x * w, y: ankle.y * h };
+        var pT = { x: toe.x * w, y: toe.y * h };
+
+        // 관절 각도 산출
+        var elbowAng = getAngle(pS, pE, pW);
+        var coreAng = getAngle(pS, pP, pA);
 
         document.getElementById('elbowAngle').innerText = elbowAng + "°";
         document.getElementById('coreAngle').innerText = coreAng + "°";
 
-        // 2. 코어 정렬 검증 (145도 미만 허리 처짐)
-        var isCoreBad = coreAng < 145;
+        // 코어 자세 불량 여부 (허리 처짐 < 145° 또는 과도한 치켜듦 > 195°)
+        var isCoreBad = (coreAng < 145 || coreAng > 195);
 
-        // 3. 골격선 렌더링
+        // 1. 골격 스켈레톤 라인 렌더링
         var boneColor = isCoreBad ? "#ff3333" : (state === "DOWN" ? "#e5a93c" : "#39e75f");
-        drawLine(pShoulder, pElbow, boneColor);
-        drawLine(pElbow, pWrist, boneColor);
-        drawLine(pShoulder, pHip, boneColor);
-        drawLine(pHip, pAnkle, boneColor);
+        drawBone(pH, pS, boneColor, 4);
+        drawBone(pS, pE, boneColor, 5);
+        drawBone(pE, pW, boneColor, 5);
+        drawBone(pS, pP, boneColor, 5);
+        drawBone(pP, pK, boneColor, 4);
+        drawBone(pK, pA, boneColor, 4);
+        drawBone(pA, pT, boneColor, 4);
 
-        // 4. 팔굽혀펴기 계측 및 음성 코칭 FSM
-        if (isCoreBad) {
-            setFeedback("⚠️ 허리가 처졌습니다! 코어 힘 유지", true);
-            speak("허리 펴세요");
-        } else {
+        // 2. 7개 관절 원형 노드 및 라벨 렌더링
+        drawJoint(pH, "#ffffff", "머리");
+        drawJoint(pS, "#39e75f", "어깨");
+        drawJoint(pE, "#e5a93c", "팔꿈치 " + elbowAng + "°");
+        drawJoint(pW, "#5dade2", "손목");
+        drawJoint(pP, "#f4d03f", "골반 " + coreAng + "°");
+        drawJoint(pK, "#39e75f", "무릎");
+        drawJoint(pA, "#5dade2", "발끝");
+
+        // 최저 팔꿈치 하강 각도 갱신
+        if (elbowAng < minElbowInCurrentRep) {
+            minElbowInCurrentRep = elbowAng;
+        }
+
+        // 3. 계측 및 부정자세 판정 (타이머가 돌 때만 작동)
+        if (isTimerRunning) {
+            var now = Date.now();
+
+            // 허리 처짐 실시간 경고 및 로그
+            if (isCoreBad) {
+                setFeedback("⚠️ 허리 처짐! 코어 일직선 유지", true);
+                if (now - lastSagWarnTime > 2500) {
+                    speak("허리 펴세요");
+                    logInvalidRep("허리 처짐 (코어 불량)", "코어: " + coreAng + "°");
+                    lastSagWarnTime = now;
+                }
+            }
+
+            // 팔굽혀펴기 동작 상태 머신
             if (state === "UP") {
-                if (elbowAng <= 90) {
+                if (elbowAng <= 90 && !isCoreBad) {
                     state = "DOWN";
-                    setFeedback("✅ 충분 하강! 팔을 밀어 올리세요", false);
-                } else if (elbowAng > 90 && elbowAng < 130) {
-                    setFeedback("더 깊게 내려가세요 (90도 이하)", false);
+                    setFeedback("✅ 충분 하강! 팔을 밀어 올리십시오", false);
+                } else if (elbowAng > 95 && elbowAng < 130) {
+                    setFeedback("더 깊게 내려가십시오 (90도 이하)", false);
                 }
             } else if (state === "DOWN") {
+                // 완전히 펴서 올라왔을 때
                 if (elbowAng >= 160) {
-                    repCount++;
+                    if (!isCoreBad) {
+                        repCount++;
+                        document.getElementById('repCount').innerText = repCount;
+                        setFeedback("정자세 인정 (" + repCount + "회)", false);
+                        speak(repCount + "");
+                    }
                     state = "UP";
-                    document.getElementById('repCount').innerText = repCount;
-                    setFeedback("정자세 인정 (" + repCount + "회)", false);
-                    speak(repCount + "");
-                } else if (elbowAng > 95 && elbowAng < 150) {
-                    // 완전히 안 펴고 다시 내려가려는 경우
-                    setFeedback("팔을 끝까지 펴야 횟수가 인정됩니다", true);
+                    minElbowInCurrentRep = 180;
+                } else if (elbowAng > 100 && elbowAng < 150) {
+                    // 팔을 덜 펴고 다시 내려가려 할 때 (반동/깔짝거림 감지)
+                    if (minElbowInCurrentRep > 90) {
+                        logInvalidRep("가슴 미도달 (깊이 부족)", "최저: " + minElbowInCurrentRep + "°");
+                        speak("더 내려가세요");
+                        minElbowInCurrentRep = 180;
+                    }
                 }
             }
         }
@@ -359,13 +634,30 @@
         canvasCtx.restore();
     }
 
-    function drawLine(p1, p2, color) {
+    function drawBone(p1, p2, color, width) {
         canvasCtx.strokeStyle = color;
-        canvasCtx.lineWidth = 4;
+        canvasCtx.lineWidth = width;
+        canvasCtx.lineCap = "round";
         canvasCtx.beginPath();
         canvasCtx.moveTo(p1.x, p1.y);
         canvasCtx.lineTo(p2.x, p2.y);
         canvasCtx.stroke();
+    }
+
+    function drawJoint(p, color, label) {
+        canvasCtx.fillStyle = color;
+        canvasCtx.strokeStyle = "#ffffff";
+        canvasCtx.lineWidth = 2;
+        canvasCtx.beginPath();
+        canvasCtx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+        canvasCtx.fill();
+        canvasCtx.stroke();
+
+        if (label) {
+            canvasCtx.font = "bold 9.5px sans-serif";
+            canvasCtx.fillStyle = "#ffffff";
+            canvasCtx.fillText(label, p.x + 8, p.y - 4);
+        }
     }
 </script>
 </body>
