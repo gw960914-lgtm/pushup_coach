@@ -2,7 +2,1256 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <meta name=<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>육군 정자세 팔굽혀펴기 AI 정밀 측정체계</title>
+    <!-- MediaPipe Pose CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body {
+            background-color: #0b110c;
+            color: #e2eae3;
+            font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", Dotum, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding-bottom: 50px;
+        }
+        header {
+            width: 100%;
+            background: #111a13;
+            border-bottom: 2px solid #233827;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-title { font-size: 14px; font-weight: bold; color: #39e75f; }
+        .badge {
+            background: #17381d;
+            border: 1px solid #39e75f;
+            color: #39e75f;
+            font-size: 10px;
+            padding: 2px 7px;
+            border-radius: 3px;
+        }
+
+        /* 16:9 비율 고정 및 전체화면 레터박스 처리 (신체 잘림 0%) */
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            border-bottom: 2px solid #233827;
+            margin: 0 auto;
+        }
+        .camera-container.is-fullscreen {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            max-width: none; aspect-ratio: auto; z-index: 99999;
+            border: none; background: #000;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* 16:9 화면 내 완벽 수용 */
+        }
+        video { display: none; }
+
+        /* 5초 카운트다운 레이어 */
+        .countdown-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            pointer-events: none;
+        }
+        .countdown-num {
+            font-size: 96px; font-weight: 900; color: #39e75f;
+            text-shadow: 0 0 25px rgba(57, 231, 95, 0.8);
+            font-family: monospace; animation: pulse 1s infinite;
+        }
+        .countdown-sub { font-size: 14px; color: #e2eae3; font-weight: bold; margin-top: 10px; }
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.8; }
+        }
+
+        .btn-fullscreen-toggle {
+            position: absolute;
+            top: 8px; right: 8px; z-index: 25;
+            background: rgba(17, 26, 19, 0.85);
+            border: 1px solid #39e75f; color: #39e75f;
+            padding: 5px 9px; font-size: 11px; font-weight: bold;
+            border-radius: 4px; cursor: pointer;
+        }
+
+        .fullscreen-controls {
+            display: none;
+            position: absolute;
+            bottom: 20px; left: 10px; right: 10px;
+            z-index: 30; gap: 6px;
+        }
+        .camera-container.is-fullscreen .fullscreen-controls { display: flex; }
+        .camera-container.is-fullscreen .btn-fullscreen-toggle { display: none; }
+
+        .main-panel {
+            width: 100%; max-width: 640px; padding: 10px;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+
+        .card {
+            background: #131c15; border: 1px solid #233827;
+            border-radius: 6px; padding: 10px;
+        }
+        .card-title {
+            font-size: 12px; font-weight: bold; color: #39e75f;
+            margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .user-info-row { display: flex; gap: 6px; margin-bottom: 6px; }
+        .user-info-row input {
+            flex: 1; background: #0d120e; border: 1px solid #2d4233;
+            color: #fff; padding: 8px; border-radius: 4px; font-size: 11px;
+            text-align: center; outline: none;
+        }
+        .user-info-row input:focus { border-color: #39e75f; }
+
+        .timer-input-group { display: flex; gap: 8px; align-items: stretch; }
+        .btn-preset {
+            flex: 1; padding: 10px 8px; font-size: 12px; font-weight: bold;
+            background: #1c2a1f; border: 1px solid #2d4233; color: #a3b8a6;
+            border-radius: 5px; cursor: pointer;
+        }
+        .btn-preset.active { background: #218c39; color: #ffffff; border-color: #39e75f; }
+        .custom-timer-box {
+            flex: 1.4; display: flex; align-items: center;
+            background: #0d120e; border: 1px solid #2d4233;
+            border-radius: 5px; padding: 0 10px;
+        }
+        .custom-timer-box.active { border-color: #39e75f; }
+        .custom-timer-box input {
+            width: 100%; background: transparent; border: none;
+            color: #ffffff; font-size: 13px; font-weight: bold;
+            text-align: center; outline: none; padding: 8px 0;
+        }
+        .custom-timer-box .sec-label {
+            color: #8b9b8e; font-size: 12px; font-weight: bold; margin-left: 5px; white-space: nowrap;
+        }
+
+        .btn-group { display: flex; gap: 6px; margin-top: 4px; }
+        button.action-btn {
+            flex: 1; padding: 10px; font-size: 12px; font-weight: bold;
+            border-radius: 5px; cursor: pointer; border: 1px solid transparent;
+        }
+        .btn-start { background: #218c39; border-color: #39e75f; color: #fff; }
+        .btn-pause { background: #d35400; border-color: #e67e22; color: #fff; }
+        .btn-sub { background: #1f3323; border-color: #2d4233; color: #a3b8a6; }
+        .btn-excel { background: #1f508a; border-color: #5dade2; color: #fff; }
+        .btn-reset { background: #7a1f1f; border-color: #e74c3c; color: #fff; }
+
+        .log-table-wrap {
+            max-height: 140px; overflow-y: auto;
+            border: 1px solid #1f3323; border-radius: 4px; background: #0d140e;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 10.5px; text-align: left; }
+        th, td { padding: 5px 6px; border-bottom: 1px solid #1a261c; }
+        th { background: #111a13; color: #8b9b8e; position: sticky; top: 0; }
+        .td-time { color: #e5a93c; font-family: monospace; font-weight: bold; width: 65px; }
+        .td-reason { color: #ff6b6b; font-weight: bold; }
+        .td-detail { color: #8b9b8e; font-size: 9.5px; }
+
+        /* 날짜별 측정 이력 리스트 카드 */
+        .history-list {
+            display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto;
+        }
+        .history-item {
+            background: #0d140e; border: 1px solid #1f3323;
+            border-radius: 5px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px;
+        }
+        .history-header {
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .history-date { color: #e5a93c; font-weight: bold; font-size: 11px; font-family: monospace; }
+        .history-stats { font-size: 11px; color: #fff; }
+        .history-stats b { color: #39e75f; }
+        .history-btns { display: flex; gap: 5px; margin-top: 3px; }
+        .btn-mini {
+            padding: 4px 8px; font-size: 10px; font-weight: bold;
+            border-radius: 3px; border: 1px solid #2d4233; background: #19251c; color: #a3b8a6; cursor: pointer;
+        }
+        .btn-mini:hover { border-color: #39e75f; color: #39e75f; }
+
+        /* 모달 팝업 스타일 (저장 경고 및 비디오 플레이어) */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.85); display: none;
+            justify-content: center; align-items: center; z-index: 100000; padding: 15px;
+        }
+        .modal-card {
+            background: #131c15; border: 2px solid #39e75f;
+            border-radius: 8px; width: 100%; max-width: 500px; padding: 14px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.9); display: flex; flex-direction: column; gap: 10px;
+        }
+        .modal-title { font-size: 14px; font-weight: bold; color: #39e75f; border-bottom: 1px solid #233827; padding-bottom: 6px; }
+        .modal-body { font-size: 11.5px; color: #e2eae3; line-height: 1.5; }
+        .modal-video-wrap { width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 4px; overflow: hidden; }
+        .modal-video-wrap video { width: 100%; height: 100%; display: block; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">🛡️ 육군 팔굽혀펴기 AI 정밀 측정체계</div>
+    <div class="badge">16:9 녹화·내장DB·다시보기</div>
+</header>
+
+<!-- 16:9 비율 고정 뷰어 -->
+<div class="camera-container" id="cameraBox">
+    <canvas id="outputCanvas" width="854" height="480"></canvas>
+    <video id="inputVideo" playsinline webkit-playsinline muted autoplay></video>
+
+    <!-- 5초 카운트다운 레이어 -->
+    <div class="countdown-overlay" id="countdownOverlay">
+        <div class="countdown-num" id="countdownText">5</div>
+        <div class="countdown-sub">자세를 취하십시오 (준비 카운트)</div>
+    </div>
+
+    <!-- 일반 모드 전체화면 버튼 -->
+    <button type="button" class="btn-fullscreen-toggle" id="btnFullscreen" onclick="toggleFullscreen()">⛶ 16:9 전체화면</button>
+
+    <!-- 전체화면 플로팅 컨트롤 바 -->
+    <div class="fullscreen-controls" id="fsControls">
+        <button type="button" class="action-btn btn-start" id="btnFsAction" onclick="handleStartOrToggle()">📹 측정 시작</button>
+        <button type="button" class="action-btn btn-sub" onclick="switchCamera()">🔄 전/후면</button>
+        <button type="button" class="action-btn btn-reset" onclick="resetAll()">0회 초기화</button>
+        <button type="button" class="action-btn btn-sub" onclick="toggleFullscreen()">✖ 창모드</button>
+    </div>
+</div>
+
+<div class="main-panel">
+    <!-- 후보생 정보 입력 -->
+    <div class="card">
+        <div class="card-title">
+            <span>👤 후보생 정보 (영상 및 엑셀 로그 각인용)</span>
+        </div>
+        <div class="user-info-row">
+            <input type="text" id="inCadetId" placeholder="교번 (예: 118)" value="118">
+            <input type="text" id="inCadetName" placeholder="성명 (예: 홍길동)" value="홍길동">
+        </div>
+    </div>
+
+    <!-- 타이머 설정 -->
+    <div class="card">
+        <div class="card-title">
+            <span>⏱️ 측정 시간 설정</span>
+            <span id="txtTimerState" style="font-size:10px; color:#8b9b8e;">대기 중</span>
+        </div>
+        <div class="timer-input-group">
+            <button type="button" class="btn-preset active" id="btnPreset2m" onclick="setTimerPreset(120)">2분 (육군검정)</button>
+            <div class="custom-timer-box" id="boxCustomTimer">
+                <input type="number" id="inCustomSec" placeholder="시간(초) 직접입력" min="10" max="600" oninput="applyCustomTimer()">
+                <span class="sec-label">초</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 컨트롤 버튼군 -->
+    <div class="btn-group">
+        <button type="button" class="action-btn btn-start" id="btnMainAction" onclick="handleStartOrToggle()">📹 측정 시작 (녹화 ON)</button>
+        <button type="button" class="action-btn btn-sub" onclick="switchCamera()">🔄 전/후면</button>
+        <button type="button" class="action-btn btn-reset" onclick="resetAll()">0회 초기화</button>
+    </div>
+
+    <!-- 부정자세 실시간 로그 카드 -->
+    <div class="card">
+        <div class="card-title">
+            <span>⚠️ 실시간 부정자세 감지 이력</span>
+            <span id="failCount" style="color:#ff6b6b; font-size:11px;">0건</span>
+        </div>
+        <div class="log-table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">경과 시간</th>
+                        <th style="width: 45%;">불합격 사유 (판정 단계)</th>
+                        <th style="width: 30%;">관측 수치</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody">
+                    <tr id="emptyRow">
+                        <td colspan="3" style="text-align:center; color:#8b9b8e; padding:12px;">부정자세 기록이 없습니다.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- [신설] 날짜별 측정 이력 및 영상 다시보기 (IndexedDB 연동) -->
+    <div class="card">
+        <div class="card-title">
+            <span>📅 날짜별 측정 이력 및 영상 다시보기</span>
+            <button type="button" class="btn-mini" onclick="clearAllHistoryDB()">전체 기록 삭제</button>
+        </div>
+        <div class="history-list" id="historyContainer">
+            <div style="text-align:center; color:#8b9b8e; font-size:11px; padding:15px;">저장된 측정 이력이 없습니다.</div>
+        </div>
+    </div>
+</div>
+
+<!-- 모달 1: 측정 완료 후 저장 안내 팝업 -->
+<div class="modal-overlay" id="saveAlertModal">
+    <div class="modal-card">
+        <div class="modal-title">🎉 측정 종료 및 데이터 보관 안내</div>
+        <div class="modal-body">
+            측정 영상과 부정자세 로그가 <b>스마트폰 내부 저장소(IndexedDB)</b>에 안전하게 자동 보관되었습니다.<br><br>
+            <span style="color:#e5a93c;">⚠️ 브라우저 캐시 삭제 시 소실될 수 있으므로, 갤러리나 파일 앱에 보관하려면 지금 다운로드하십시오.</span>
+        </div>
+        <div class="btn-group">
+            <button type="button" class="action-btn btn-start" onclick="downloadLastRecordedVideo()">📥 480p 영상 파일 다운로드</button>
+            <button type="button" class="action-btn btn-excel" onclick="exportCurrentSessionCSV()">📊 엑셀 로그 다운로드</button>
+        </div>
+        <button type="button" class="action-btn btn-sub" onclick="closeSaveModal()">확인 및 닫기</button>
+    </div>
+</div>
+
+<!-- 모달 2: 과거 날짜 영상 다시보기 플레이어 모달 -->
+<div class="modal-overlay" id="videoPlayerModal">
+    <div class="modal-card" style="max-width: 580px;">
+        <div class="modal-title" id="playerModalTitle">📹 측정 영상 다시보기</div>
+        <div class="modal-video-wrap">
+            <video id="historyVideoPlayer" controls playsinline></video>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:11px; color:#8b9b8e;">재생 속도 조절:</span>
+            <div style="display:flex; gap:4px;">
+                <button type="button" class="btn-mini" onclick="setPlaySpeed(0.5)">0.5x (슬로우)</button>
+                <button type="button" class="btn-mini" onclick="setPlaySpeed(1.0)">1.0x (표준)</button>
+                <button type="button" class="btn-mini" onclick="setPlaySpeed(1.5)">1.5x (빠르게)</button>
+            </div>
+        </div>
+        <div class="log-table-wrap" style="max-height: 110px;">
+            <table id="playerModalFaultTable">
+                <thead><tr><th>발생 시점</th><th>사유</th><th>각도</th></tr></thead>
+                <tbody id="playerModalFaultBody"></tbody>
+            </table>
+        </div>
+        <button type="button" class="action-btn btn-sub" onclick="closeVideoPlayerModal()">닫기</button>
+    </div>
+</div>
+
+<script>
+    var videoElement = document.getElementById('inputVideo');
+    var canvasElement = document.getElementById('outputCanvas');
+    var canvasCtx = canvasElement.getContext('2d');
+    var cameraBox = document.getElementById('cameraBox');
+
+    var repCount = 0;
+    var state = "UP"; // UP -> DOWN -> UP
+    var facingMode = "user";
+    var pose = null;
+    var camera = null;
+    var cameraStarted = false;
+
+    // 타이머
+    var totalSeconds = 120;
+    var remainingSeconds = 120;
+    var timerInterval = null;
+    var isTimerRunning = false;
+    var isCountingDown = false;
+
+    // MediaRecorder 480p 16:9 비디오 녹화 객체
+    var mediaRecorder = null;
+    var recordedChunks = [];
+    var isRecording = false;
+    var lastRecordedBlob = null;
+    var lastRecordedMime = "";
+
+    // 세션 기록 로그 배열
+    var currentSessionFaultLogs = [];
+
+    // 자세 판정 추적 변수
+    var minElbowInCurrentRep = 180;
+    var maxElbowInCurrentRep = 90;
+    var repHasFault = false;
+    var faultReasonCurrentRep = "";
+    var currentFaultBannerText = "정자세 유지 중 (DOWN 각도: ≤90°)";
+    var isCurrentFaultWarn = false;
+    var failCount = 0;
+    var totalFaultWarningCount = 0;
+
+    var faultCooldowns = {
+        WAVE: 0, SAG: 0, PIKE: 0, KNEE: 0, HEAD: 0, SHALLOW: 0, INCOMPLETE: 0
+    };
+
+    var isSpeaking = false;
+
+    // ==========================================
+    // [IndexedDB 스마트폰 내부 영구 저장소 엔진]
+    // ==========================================
+    var db = null;
+    function initIndexedDB() {
+        var req = indexedDB.open("ArmyPushupDB_v2", 1);
+        req.onupgradeneeded = function(e) {
+            var database = e.target.result;
+            if (!database.objectStoreNames.contains("sessions")) {
+                database.createObjectStore("sessions", { keyPath: "id", autoIncrement: true });
+            }
+        };
+        req.onsuccess = function(e) {
+            db = e.target.result;
+            renderHistoryList();
+        };
+        req.onerror = function() {
+            console.warn("IndexedDB 활성화 실패");
+        };
+    }
+
+    function saveSessionToDB(videoBlob, faultLogs) {
+        if (!db) return;
+        var now = new Date();
+        var dateFormatted = now.getFullYear() + "." + (now.getMonth() + 1 < 10 ? "0" : "") + (now.getMonth() + 1) + "." + (now.getDate() < 10 ? "0" : "") + now.getDate() + " " + (now.getHours() < 10 ? "0" : "") + now.getHours() + ":" + (now.getMinutes() < 10 ? "0" : "") + now.getMinutes();
+
+        var cId = document.getElementById('inCadetId').value.trim() || "000";
+        var cName = document.getElementById('inCadetName').value.trim() || "후보생";
+
+        var sessionData = {
+            timestamp: Date.now(),
+            dateStr: dateFormatted,
+            cadetId: cId,
+            cadetName: cName,
+            repCount: repCount,
+            failCount: failCount,
+            totalSeconds: totalSeconds,
+            elapsedSeconds: totalSeconds - remainingSeconds,
+            faultLogs: faultLogs,
+            videoBlob: videoBlob
+        };
+
+        var tx = db.transaction(["sessions"], "readwrite");
+        var store = tx.objectStore("sessions");
+        store.add(sessionData);
+        tx.oncomplete = function() {
+            renderHistoryList();
+        };
+    }
+
+    function renderHistoryList() {
+        if (!db) return;
+        var container = document.getElementById('historyContainer');
+        var tx = db.transaction(["sessions"], "readonly");
+        var store = tx.objectStore("sessions");
+        var req = store.getAll();
+
+        req.onsuccess = function() {
+            var list = req.result || [];
+            if (list.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#8b9b8e; font-size:11px; padding:15px;">저장된 측정 이력이 없습니다.</div>';
+                return;
+            }
+
+            list.sort(function(a, b) { return b.timestamp - a.timestamp; }); // 최신순
+
+            var html = "";
+            for (var i = 0; i < list.length; i++) {
+                var item = list[i];
+                html += '<div class="history-item">';
+                html += '  <div class="history-header">';
+                html += '    <span class="history-date">📅 ' + item.dateStr + '</span>';
+                html += '    <span class="history-stats">' + item.cadetId + '번 ' + item.cadetName + ' | 정자세 <b>' + item.repCount + '회</b> (부정 ' + item.failCount + '건)</span>';
+                html += '  </div>';
+                html += '  <div class="history-btns">';
+                html += '    <button type="button" class="btn-mini" onclick="playHistoryVideo(' + item.id + ')">▶️ 영상 재생</button>';
+                html += '    <button type="button" class="btn-mini" onclick="downloadHistoryVideo(' + item.id + ')">💾 영상 다운로드</button>';
+                html += '    <button type="button" class="btn-mini" onclick="downloadHistoryCSV(' + item.id + ')">📊 엑셀 다운로드</button>';
+                html += '    <button type="button" class="btn-mini" style="color:#ff6b6b;" onclick="deleteHistoryItem(' + item.id + ')">🗑️ 삭제</button>';
+                html += '  </div>';
+                html += '</div>';
+            }
+            container.innerHTML = html;
+        };
+    }
+
+    function playHistoryVideo(id) {
+        if (!db) return;
+        var tx = db.transaction(["sessions"], "readonly");
+        var store = tx.objectStore("sessions");
+        var req = store.get(id);
+
+        req.onsuccess = function() {
+            var item = req.result;
+            if (!item || !item.videoBlob) {
+                alert("영상 데이터가 존재하지 않습니다.");
+                return;
+            }
+
+            var player = document.getElementById('historyVideoPlayer');
+            var url = URL.createObjectURL(item.videoBlob);
+            player.src = url;
+            player.playbackRate = 1.0;
+            player.play();
+
+            document.getElementById('playerModalTitle').innerText = "📹 " + item.dateStr + " - " + item.cadetName + " 후보생 측정 영상";
+
+            var tbody = document.getElementById('playerModalFaultBody');
+            var fLogs = item.faultLogs || [];
+            if (fLogs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#8b9b8e;">부정자세 기록 없음</td></tr>';
+            } else {
+                var trs = "";
+                for (var j = 0; j < fLogs.length; j++) {
+                    trs += '<tr><td class="td-time">' + fLogs[j].time + '</td><td class="td-reason">' + fLogs[j].reason + '</td><td class="td-detail">' + fLogs[j].detail + '</td></tr>';
+                }
+                tbody.innerHTML = trs;
+            }
+
+            document.getElementById('videoPlayerModal').style.display = 'flex';
+        };
+    }
+
+    function setPlaySpeed(speed) {
+        var player = document.getElementById('historyVideoPlayer');
+        if (player) player.playbackRate = speed;
+    }
+
+    function closeVideoPlayerModal() {
+        var player = document.getElementById('historyVideoPlayer');
+        if (player) {
+            player.pause();
+            player.src = "";
+        }
+        document.getElementById('videoPlayerModal').style.display = 'none';
+    }
+
+    function downloadHistoryVideo(id) {
+        if (!db) return;
+        var tx = db.transaction(["sessions"], "readonly");
+        var store = tx.objectStore("sessions");
+        var req = store.get(id);
+        req.onsuccess = function() {
+            var item = req.result;
+            if (!item || !item.videoBlob) return;
+            var ext = (item.videoBlob.type && item.videoBlob.type.indexOf("mp4") !== -1) ? "mp4" : "webm";
+            var fileName = item.dateStr.replace(/[^0-9]/g, "_") + "_" + item.cadetId + "_" + item.cadetName + "_측정영상." + ext;
+            downloadBlobFile(item.videoBlob, fileName);
+        };
+    }
+
+    function downloadHistoryCSV(id) {
+        if (!db) return;
+        var tx = db.transaction(["sessions"], "readonly");
+        var store = tx.objectStore("sessions");
+        var req = store.get(id);
+        req.onsuccess = function() {
+            var item = req.result;
+            if (!item) return;
+            generateAndDownloadCSV(item.cadetId, item.cadetName, item.dateStr, item.repCount, item.failCount, item.totalSeconds, item.elapsedSeconds, item.faultLogs);
+        };
+    }
+
+    function deleteHistoryItem(id) {
+        if (!confirm("해당 측정 기록과 영상을 삭제하시겠습니까?")) return;
+        var tx = db.transaction(["sessions"], "readwrite");
+        var store = tx.objectStore("sessions");
+        store.delete(id);
+        tx.oncomplete = function() {
+            renderHistoryList();
+        };
+    }
+
+    function clearAllHistoryDB() {
+        if (!confirm("스마트폰에 저장된 모든 날짜별 측정 이력과 영상을 영구 삭제하시겠습니까?")) return;
+        var tx = db.transaction(["sessions"], "readwrite");
+        var store = tx.objectStore("sessions");
+        store.clear();
+        tx.oncomplete = function() {
+            renderHistoryList();
+        };
+    }
+
+    // ==========================================
+    // [음성 TTS 및 부정자세 3단계 판정]
+    // ==========================================
+    function speak(text) {
+        if (!('speechSynthesis' in window)) return;
+        if (window.speechSynthesis.speaking || isSpeaking) return;
+
+        isSpeaking = true;
+        var msg = new SpeechSynthesisUtterance(text);
+        msg.lang = 'ko-KR';
+        msg.rate = 1.15;
+        msg.pitch = 1.0;
+
+        msg.onend = function() { isSpeaking = false; };
+        msg.onerror = function() { isSpeaking = false; };
+        setTimeout(function() { isSpeaking = false; }, 2600);
+
+        window.speechSynthesis.speak(msg);
+    }
+
+    function triggerFault(typeKey, reason, ttsSpeech, detail) {
+        var now = Date.now();
+        if (now - faultCooldowns[typeKey] >= 3000) {
+            faultCooldowns[typeKey] = now;
+            totalFaultWarningCount++;
+
+            var warnText = "";
+            var ttsSuffix = "";
+
+            if (totalFaultWarningCount === 1) {
+                warnText = "1차 경고";
+                ttsSuffix = "부정자세 1차경고입니다.";
+            } else if (totalFaultWarningCount === 2) {
+                warnText = "2차 경고";
+                ttsSuffix = "부정자세 2차경고입니다.";
+            } else {
+                warnText = "노카운트";
+                ttsSuffix = "부정자세 노카운트입니다.";
+                repHasFault = true;
+                faultReasonCurrentRep = reason;
+            }
+
+            var fullTTS = ttsSpeech + ". " + ttsSuffix;
+            currentFaultBannerText = "⚠️ " + reason + " [" + warnText + "]";
+            isCurrentFaultWarn = true;
+            speak(fullTTS);
+            logInvalidRep(reason + " (" + warnText + ")", detail);
+        } else {
+            if (totalFaultWarningCount >= 3) {
+                repHasFault = true;
+                faultReasonCurrentRep = reason;
+            }
+        }
+    }
+
+    function getAngle(A, B, C) {
+        var rad = Math.atan2(C.y - B.y, C.x - B.x) - Math.atan2(A.y - B.y, A.x - B.x);
+        var deg = Math.abs(rad * 180.0 / Math.PI);
+        if (deg > 180.0) deg = 360.0 - deg;
+        return Math.round(deg);
+    }
+
+    function logInvalidRep(reason, detail) {
+        failCount++;
+        document.getElementById('failCount').innerText = failCount + "건";
+
+        var emptyRow = document.getElementById('emptyRow');
+        if (emptyRow) emptyRow.remove();
+
+        var elapsedSec = totalSeconds - remainingSeconds;
+        var m = Math.floor(elapsedSec / 60);
+        var s = elapsedSec % 60;
+        var timeStr = (m < 10 ? "0" + m : m) + "분 " + (s < 10 ? "0" + s : s) + "초";
+
+        currentSessionFaultLogs.push({
+            time: timeStr,
+            reason: reason,
+            detail: detail
+        });
+
+        var tbody = document.getElementById('logTableBody');
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td class="td-time">' + timeStr + '</td>' +
+                       '<td class="td-reason">' + reason + '</td>' +
+                       '<td class="td-detail">' + detail + '</td>';
+        tbody.insertBefore(tr, tbody.firstChild);
+    }
+
+    function toggleFullscreen() {
+        var btn = document.getElementById('btnFullscreen');
+        if (!cameraBox.classList.contains('is-fullscreen')) {
+            cameraBox.classList.add('is-fullscreen');
+            btn.innerText = "✖ 창모드";
+            if (cameraBox.requestFullscreen) {
+                cameraBox.requestFullscreen().catch(function(){});
+            } else if (cameraBox.webkitRequestFullscreen) {
+                cameraBox.webkitRequestFullscreen();
+            }
+        } else {
+            cameraBox.classList.remove('is-fullscreen');
+            btn.innerText = "⛶ 16:9 전체화면";
+            if (document.exitFullscreen) {
+                document.exitFullscreen().catch(function(){});
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
+        }
+    }
+
+    function setTimerPreset(sec) {
+        if (isTimerRunning || isCountingDown) return;
+        totalSeconds = sec;
+        remainingSeconds = sec;
+        updateTimerDisplay();
+        document.getElementById('btnPreset2m').classList.add('active');
+        document.getElementById('boxCustomTimer').classList.remove('active');
+        document.getElementById('inCustomSec').value = "";
+    }
+
+    function applyCustomTimer() {
+        if (isTimerRunning || isCountingDown) return;
+        var val = parseInt(document.getElementById('inCustomSec').value, 10);
+        if (!isNaN(val) && val >= 10 && val <= 600) {
+            totalSeconds = val;
+            remainingSeconds = val;
+            updateTimerDisplay();
+            document.getElementById('btnPreset2m').classList.remove('active');
+            document.getElementById('boxCustomTimer').classList.add('active');
+        }
+    }
+
+    function updateTimerDisplay() {
+        var m = Math.floor(remainingSeconds / 60);
+        var s = remainingSeconds % 60;
+        return (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+    }
+
+    function handleStartOrToggle() {
+        if (!cameraStarted) {
+            initPoseModel();
+            startCameraStream();
+            cameraStarted = true;
+            runPreCountdown();
+        } else {
+            if (isTimerRunning) {
+                stopTimer();
+                stopRecording();
+                updateActionButtons("▶️ 측정 재개", "btn-start");
+                document.getElementById('txtTimerState').innerText = "일시 정지";
+                document.getElementById('txtTimerState').style.color = "#e67e22";
+            } else {
+                if (remainingSeconds === totalSeconds) {
+                    runPreCountdown();
+                } else {
+                    startTimer();
+                    startRecording();
+                }
+            }
+        }
+    }
+
+    function updateActionButtons(text, cls) {
+        var btn1 = document.getElementById('btnMainAction');
+        var btn2 = document.getElementById('btnFsAction');
+        btn1.innerText = text; btn1.className = "action-btn " + cls;
+        btn2.innerText = text; btn2.className = "action-btn " + cls;
+    }
+
+    function runPreCountdown() {
+        isCountingDown = true;
+        var count = 5;
+        var overlay = document.getElementById('countdownOverlay');
+        var countText = document.getElementById('countdownText');
+        overlay.style.display = 'flex';
+        countText.innerText = count;
+        speak(count + "");
+
+        var cdInterval = setInterval(function() {
+            count--;
+            if (count > 0) {
+                countText.innerText = count;
+                speak(count + "");
+            } else {
+                clearInterval(cdInterval);
+                overlay.style.display = 'none';
+                isCountingDown = false;
+                speak("시작");
+                startTimer();
+                startRecording();
+            }
+        }, 1000);
+    }
+
+    function startTimer() {
+        if (isTimerRunning) return;
+        isTimerRunning = true;
+        updateActionButtons("⏸️ 일시 정지", "btn-pause");
+        document.getElementById('txtTimerState').innerText = "측정 및 녹화 진행 중";
+        document.getElementById('txtTimerState').style.color = "#39e75f";
+
+        timerInterval = setInterval(function() {
+            remainingSeconds--;
+
+            if (remainingSeconds === 30) speak("30초 남았습니다");
+            if (remainingSeconds === 10) speak("10초 전");
+
+            if (remainingSeconds <= 0) {
+                stopTimer();
+                stopRecording();
+                speak("측정 종료! 최종 " + repCount + "회입니다");
+                document.getElementById('txtTimerState').innerText = "측정 완료";
+                document.getElementById('txtTimerState').style.color = "#e5a93c";
+                updateActionButtons("📹 측정 시작", "btn-start");
+            }
+        }, 1000);
+    }
+
+    function stopTimer() {
+        isTimerRunning = false;
+        clearInterval(timerInterval);
+    }
+
+    // ==========================================
+    // [480p 16:9 MediaRecorder 비디오 인코딩]
+    // ==========================================
+    function startRecording() {
+        if (isRecording) return;
+        recordedChunks = [];
+
+        try {
+            var stream = canvasElement.captureStream(30);
+
+            var mimeType = "video/webm;codecs=vp8";
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                if (MediaRecorder.isTypeSupported("video/mp4")) {
+                    mimeType = "video/mp4";
+                } else {
+                    mimeType = "";
+                }
+            }
+            lastRecordedMime = mimeType;
+
+            var options = mimeType ? { mimeType: mimeType, videoBitsPerSecond: 1600000 } : { videoBitsPerSecond: 1600000 };
+            mediaRecorder = new MediaRecorder(stream, options);
+
+            mediaRecorder.ondataavailable = function(e) {
+                if (e.data && e.data.size > 0) {
+                    recordedChunks.push(e.data);
+                }
+            };
+
+            mediaRecorder.onstop = function() {
+                var blob = new Blob(recordedChunks, { type: lastRecordedMime || "video/webm" });
+                lastRecordedBlob = blob;
+
+                // 1. 스마트폰 내부 IndexedDB에 자동 보관
+                saveSessionToDB(blob, currentSessionFaultLogs.slice());
+
+                // 2. 파일 미저장 방지 모달 알림창 팝업
+                document.getElementById('saveAlertModal').style.display = 'flex';
+            };
+
+            mediaRecorder.start(1000);
+            isRecording = true;
+        } catch (err) {
+            console.warn("녹화 실패: " + err.message);
+        }
+    }
+
+    function stopRecording() {
+        if (!isRecording || !mediaRecorder) return;
+        try { mediaRecorder.stop(); } catch (e) {}
+        isRecording = false;
+    }
+
+    function downloadLastRecordedVideo() {
+        if (!lastRecordedBlob) {
+            alert("다운로드할 영상 데이터가 없습니다.");
+            return;
+        }
+        var ext = (lastRecordedMime && lastRecordedMime.indexOf("mp4") !== -1) ? "mp4" : "webm";
+        var cId = document.getElementById('inCadetId').value.trim() || "000";
+        var cName = document.getElementById('inCadetName').value.trim() || "후보생";
+        var now = new Date();
+        var datePrefix = now.getFullYear() + "" + (now.getMonth() + 1 < 10 ? "0" : "") + (now.getMonth() + 1) + "" + (now.getDate() < 10 ? "0" : "") + now.getDate() + "_" + (now.getHours() < 10 ? "0" : "") + now.getHours() + (now.getMinutes() < 10 ? "0" : "") + now.getMinutes();
+        var fileName = datePrefix + "_" + cId + "_" + cName + "_측정영상." + ext;
+        downloadBlobFile(lastRecordedBlob, fileName);
+    }
+
+    function closeSaveModal() {
+        document.getElementById('saveAlertModal').style.display = 'none';
+    }
+
+    // ==========================================
+    // [엑셀 CSV 생성 엔진 - UTF-8 BOM 완벽 적용]
+    // ==========================================
+    function exportCurrentSessionCSV() {
+        var cId = document.getElementById('inCadetId').value.trim() || "000";
+        var cName = document.getElementById('inCadetName').value.trim() || "후보생";
+        var dateFormatted = new Date().toLocaleString();
+        generateAndDownloadCSV(cId, cName, dateFormatted, repCount, failCount, totalSeconds, totalSeconds - remainingSeconds, currentSessionFaultLogs);
+    }
+
+    function generateAndDownloadCSV(cId, cName, dateStr, rCount, fCount, tSec, elSec, logs) {
+        var csv = "\uFEFF";
+        csv += "=== 육군 팔굽혀펴기 정밀측정 종합결과표 ===\r\n";
+        csv += "측정일시," + dateStr + "\r\n";
+        csv += "교번," + cId + ",성명," + cName + "\r\n";
+        csv += "설정시간," + tSec + "초,실제측정시간," + elSec + "초\r\n";
+        csv += "정자세 인정횟수," + rCount + "회,부정자세 누적건수," + fCount + "건\r\n\r\n";
+
+        csv += "순번,발생시간,불합격 사유 및 판정단계,관측 각도 및 수치\r\n";
+        if (!logs || logs.length === 0) {
+            csv += "1,-,부정자세 없음 (완전 정자세),-\r\n";
+        } else {
+            for (var i = 0; i < logs.length; i++) {
+                var itm = logs[i];
+                csv += (i + 1) + ',"' + itm.time + '","' + itm.reason + '","' + itm.detail + '"\r\n';
+            }
+        }
+
+        var fileName = dateStr.replace(/[^0-9]/g, "_") + "_" + cId + "_" + cName + "_측정기록.csv";
+        var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        downloadBlobFile(blob, fileName);
+    }
+
+    function downloadBlobFile(blob, fileName) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function() {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 150);
+    }
+
+    function resetAll() {
+        stopTimer();
+        stopRecording();
+        isCountingDown = false;
+        document.getElementById('countdownOverlay').style.display = 'none';
+        remainingSeconds = totalSeconds;
+        repCount = 0;
+        failCount = 0;
+        totalFaultWarningCount = 0;
+        state = "UP";
+        minElbowInCurrentRep = 180;
+        maxElbowInCurrentRep = 90;
+        repHasFault = false;
+        faultReasonCurrentRep = "";
+        currentFaultBannerText = "정자세 유지 중 (DOWN 각도: ≤90°)";
+        isCurrentFaultWarn = false;
+        isSpeaking = false;
+        currentSessionFaultLogs = [];
+        for (var k in faultCooldowns) faultCooldowns[k] = 0;
+
+        document.getElementById('repCount').innerText = "0";
+        document.getElementById('failCount').innerText = "0건";
+        document.getElementById('logTableBody').innerHTML = '<tr id="emptyRow"><td colspan="3" style="text-align:center; color:#8b9b8e; padding:12px;">부정자세 기록이 없습니다.</td></tr>';
+        document.getElementById('txtTimerState').innerText = "대기 중";
+        document.getElementById('txtTimerState').style.color = "#8b9b8e";
+        updateActionButtons("📹 측정 시작 (녹화 ON)", "btn-start");
+    }
+
+    function initPoseModel() {
+        pose = new Pose({
+            locateFile: function(file) {
+                return "https://cdn.jsdelivr.net/npm/@mediapipe/pose/" + file;
+            }
+        });
+
+        pose.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
+            minDetectionConfidence: 0.6,
+            minTrackingConfidence: 0.6
+        });
+
+        pose.onResults(onPoseResults);
+    }
+
+    function startCameraStream() {
+        if (camera) camera.stop();
+        camera = new Camera(videoElement, {
+            onFrame: async function() {
+                if (cameraStarted) {
+                    await pose.send({ image: videoElement });
+                }
+            },
+            width: 854,
+            height: 480,
+            facingMode: facingMode
+        });
+        camera.start();
+    }
+
+    function switchCamera() {
+        facingMode = (facingMode === "user") ? "environment" : "user";
+        startCameraStream();
+    }
+
+    // ==========================================
+    // [메인 캔버스 렌더링 & 영상 직각인(Burn-in)]
+    // ==========================================
+    function onPoseResults(results) {
+        var cw = canvasElement.width;
+        var ch = canvasElement.height;
+
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, cw, ch);
+
+        // 전면 카메라 좌우 반전
+        if (facingMode === "user") {
+            canvasCtx.translate(cw, 0);
+            canvasCtx.scale(-1, 1);
+        }
+        canvasCtx.drawImage(results.image, 0, 0, cw, ch);
+        canvasCtx.restore(); // OSD 텍스트 및 스켈레톤 정상 방향 복귀
+
+        var now = new Date();
+        var dateFormatted = now.getFullYear() + "-" + (now.getMonth() + 1 < 10 ? "0" : "") + (now.getMonth() + 1) + "-" + (now.getDate() < 10 ? "0" : "") + now.getDate() + " " + (now.getHours() < 10 ? "0" : "") + now.getHours() + ":" + (now.getMinutes() < 10 ? "0" : "") + now.getMinutes() + ":" + (now.getSeconds() < 10 ? "0" : "") + now.getSeconds();
+
+        if (!results.poseLandmarks) {
+            renderBurnInOverlay(cw, ch, 0, 0, 0, "⚠️ 전신이 화면에 온전히 나오도록 거리를 조정하십시오", true, dateFormatted);
+            return;
+        }
+
+        var lm = results.poseLandmarks;
+        var leftVis = (lm[11].visibility + lm[23].visibility + lm[27].visibility) / 3;
+        var rightVis = (lm[12].visibility + lm[24].visibility + lm[28].visibility) / 3;
+        var isLeft = leftVis >= rightVis;
+
+        var nose = lm[0];
+        var shoulder = isLeft ? lm[11] : lm[12];
+        var elbow = isLeft ? lm[13] : lm[14];
+        var wrist = isLeft ? lm[15] : lm[16];
+        var hip = isLeft ? lm[23] : lm[24];
+        var knee = isLeft ? lm[25] : lm[26];
+        var ankle = isLeft ? lm[27] : lm[28];
+        var toe = isLeft ? lm[31] : lm[32];
+
+        // 좌표 매핑 (전면 카메라 미러링 반영)
+        function mapX(valX) {
+            return (facingMode === "user") ? (1 - valX) * cw : valX * cw;
+        }
+
+        var pN = { x: mapX(nose.x), y: nose.y * ch };
+        var pS = { x: mapX(shoulder.x), y: shoulder.y * ch };
+        var pE = { x: mapX(elbow.x), y: elbow.y * ch };
+        var pW = { x: mapX(wrist.x), y: wrist.y * ch };
+        var pP = { x: mapX(hip.x), y: hip.y * ch };
+        var pK = { x: mapX(knee.x), y: knee.y * ch };
+        var pA = { x: mapX(ankle.x), y: ankle.y * ch };
+        var pT = { x: mapX(toe.x), y: toe.y * ch };
+
+        var elbowAng = getAngle(pS, pE, pW);
+        var coreAng = getAngle(pS, pP, pA);
+        var kneeAng = getAngle(pP, pK, pA);
+
+        // 엄격한 부정자세 감지
+        var isCoreSag = (coreAng < 155);
+        var isCorePike = (coreAng > 180);
+        var isKneeTouch = (kneeAng < 155);
+        var isHeadBob = (elbowAng > 110) && ((pN.y - pS.y) > 35);
+
+        var isWaveFault = false;
+        if (state === "DOWN" && elbowAng > 100 && elbowAng < 155) {
+            if (coreAng < 155) {
+                isWaveFault = true;
+            }
+        }
+
+        var isCurrentlyBad = isCoreSag || isCorePike || isKneeTouch || isHeadBob || isWaveFault;
+        var boneColor = (isCurrentlyBad || repHasFault) ? "#ff3333" : (state === "DOWN" ? "#e5a93c" : "#39e75f");
+
+        // 1. 관절 스켈레톤 렌더링
+        drawBone(pN, pS, boneColor, 4);
+        drawBone(pS, pE, boneColor, 5);
+        drawBone(pE, pW, boneColor, 5);
+        drawBone(pS, pP, boneColor, 5);
+        drawBone(pP, pK, boneColor, 4);
+        drawBone(pK, pA, boneColor, 4);
+        drawBone(pA, pT, boneColor, 4);
+
+        drawJoint(pN, "#ffffff", "머리");
+        drawJoint(pS, "#39e75f", "어깨");
+        drawJoint(pE, "#e5a93c", "팔꿈치 " + elbowAng + "°");
+        drawJoint(pW, "#5dade2", "손목");
+        drawJoint(pP, "#f4d03f", "골반 " + coreAng + "°");
+        drawJoint(pK, isKneeTouch ? "#ff3333" : "#39e75f", "무릎 " + kneeAng + "°");
+        drawJoint(pA, "#5dade2", "발끝");
+
+        // 2. 측정 중 자세 판정 및 카운트
+        if (isTimerRunning) {
+            if (isWaveFault) {
+                triggerFault("WAVE", "상체 선행 상승 (배치기)", "상체만 먼저 일어납니다", "상승 코어: " + coreAng + "°");
+            } else if (isCoreSag) {
+                triggerFault("SAG", "허리 숙여짐 (처짐)", "허리가 숙여졌습니다", "코어: " + coreAng + "°");
+            } else if (isCorePike) {
+                triggerFault("PIKE", "허리 세워짐 (솟음)", "허리가 세워졌습니다", "코어: " + coreAng + "°");
+            }
+
+            if (isKneeTouch) {
+                triggerFault("KNEE", "무릎 닿음 (다리 굽힘)", "무릎이 닿았습니다", "무릎각: " + kneeAng + "°");
+            }
+
+            if (isHeadBob) {
+                triggerFault("HEAD", "고개만 숙임 (헤드 봅)", "고개만 숙였습니다", "팔꿈치: " + elbowAng + "°");
+            }
+
+            if (state === "UP") {
+                if (elbowAng < minElbowInCurrentRep) {
+                    minElbowInCurrentRep = elbowAng;
+                }
+
+                if (elbowAng <= 90 && !isCurrentlyBad) {
+                    state = "DOWN";
+                    maxElbowInCurrentRep = elbowAng;
+                    currentFaultBannerText = "✅ 충분 하강! 팔을 밀어 올리십시오";
+                    isCurrentFaultWarn = false;
+                } else if (minElbowInCurrentRep <= 130 && (elbowAng - minElbowInCurrentRep > 15) && elbowAng > 105) {
+                    triggerFault("SHALLOW", "덜 내려감 (가슴 미도달)", "덜 내려갔습니다", "최저: " + minElbowInCurrentRep + "°");
+                    minElbowInCurrentRep = 180;
+                }
+            } else if (state === "DOWN") {
+                if (elbowAng > maxElbowInCurrentRep) {
+                    maxElbowInCurrentRep = elbowAng;
+                }
+
+                if (elbowAng >= 160) {
+                    if (!repHasFault) {
+                        repCount++;
+                        currentFaultBannerText = "정자세 인정 (" + repCount + "회)";
+                        isCurrentFaultWarn = false;
+                        speak(repCount + "");
+                    } else {
+                        currentFaultBannerText = "❌ 노카운트 처리 (" + faultReasonCurrentRep + ")";
+                        isCurrentFaultWarn = true;
+                    }
+
+                    state = "UP";
+                    minElbowInCurrentRep = 180;
+                    maxElbowInCurrentRep = 90;
+                    repHasFault = false;
+                    faultReasonCurrentRep = "";
+                } else if (maxElbowInCurrentRep >= 115 && (maxElbowInCurrentRep - elbowAng > 15) && elbowAng < 150) {
+                    triggerFault("INCOMPLETE", "팔꿈치 안 펴짐 (미신전)", "팔꿈치가 안 펴집니다", "최대: " + maxElbowInCurrentRep + "°");
+                    maxElbowInCurrentRep = 90;
+                }
+            }
+        }
+
+        // 3. [핵심] 녹화 영상에 타이머, 카운트, 부정자세 자막 실시간 직각인 (OSD Burn-In)
+        renderBurnInOverlay(cw, ch, elbowAng, coreAng, kneeAng, currentFaultBannerText, isCurrentFaultWarn, dateFormatted);
+    }
+
+    // 영상 파일에 직접 구워지는 그래픽 오버레이 (Burn-in OSD)
+    function renderBurnInOverlay(cw, ch, elbow, core, knee, bannerText, isWarn, dateStr) {
+        var cId = document.getElementById('inCadetId').value.trim() || "000";
+        var cName = document.getElementById('inCadetName').value.trim() || "후보생";
+        var timeStr = updateTimerDisplay();
+
+        canvasCtx.save();
+
+        // (1) 좌측 상단: 녹화 인디케이터, 일시, 교번/성명
+        canvasCtx.fillStyle = "rgba(0, 0, 0, 0.75)";
+        canvasCtx.fillRect(10, 10, 230, 68);
+        canvasCtx.strokeStyle = "#233827";
+        canvasCtx.strokeRect(10, 10, 230, 68);
+
+        if (isRecording) {
+            canvasCtx.fillStyle = "#ff4444";
+            canvasCtx.beginPath();
+            canvasCtx.arc(24, 26, 5, 0, Math.PI * 2);
+            canvasCtx.fill();
+            canvasCtx.font = "bold 11px monospace";
+            canvasCtx.fillText("REC 480p", 35, 30);
+        } else {
+            canvasCtx.fillStyle = "#8b9b8e";
+            canvasCtx.font = "bold 11px monospace";
+            canvasCtx.fillText("STANDBY", 20, 30);
+        }
+
+        canvasCtx.fillStyle = "#ffffff";
+        canvasCtx.font = "11px monospace";
+        canvasCtx.fillText(dateStr, 20, 48);
+
+        canvasCtx.fillStyle = "#39e75f";
+        canvasCtx.font = "bold 12px sans-serif";
+        canvasCtx.fillText("교번 " + cId + " " + cName, 20, 68);
+
+        // (2) 우측 상단: 잔여시간, 대형 정자세 카운트, 관절 각도
+        canvasCtx.fillStyle = "rgba(0, 0, 0, 0.75)";
+        canvasCtx.fillRect(cw - 240, 10, 230, 68);
+        canvasCtx.strokeStyle = repHasFault ? "#ff4444" : "#233827";
+        canvasCtx.strokeRect(cw - 240, 10, 230, 68);
+
+        canvasCtx.fillStyle = "#e5a93c";
+        canvasCtx.font = "bold 16px monospace";
+        canvasCtx.fillText("⏱ " + timeStr, cw - 225, 32);
+
+        canvasCtx.fillStyle = repHasFault ? "#ff4444" : "#39e75f";
+        canvasCtx.font = "bold 20px monospace";
+        canvasCtx.textAlign = "right";
+        canvasCtx.fillText((repHasFault ? "❌ " : "") + repCount + " 회", cw - 20, 35);
+        canvasCtx.textAlign = "left";
+
+        canvasCtx.fillStyle = "#a3b8a6";
+        canvasCtx.font = "10.5px sans-serif";
+        canvasCtx.fillText("팔 " + elbow + "° | 코어 " + core + "° | 무릎 " + knee + "°", cw - 225, 64);
+
+        // (3) 하단 배너: 순간순간 발생하는 부정자세 및 가이드 자막
+        var bannerBg = isWarn ? "rgba(90, 15, 15, 0.9)" : "rgba(10, 30, 15, 0.85)";
+        var bannerBorder = isWarn ? "#ff4444" : "#39e75f";
+        var bannerColor = isWarn ? "#ff6b6b" : "#39e75f";
+
+        canvasCtx.fillStyle = bannerBg;
+        canvasCtx.fillRect(15, ch - 48, cw - 30, 36);
+        canvasCtx.strokeStyle = bannerBorder;
+        canvasCtx.lineWidth = 1.5;
+        canvasCtx.strokeRect(15, ch - 48, cw - 30, 36);
+
+        canvasCtx.fillStyle = bannerColor;
+        canvasCtx.font = "bold 14px sans-serif";
+        canvasCtx.textAlign = "center";
+        canvasCtx.fillText(bannerText, cw / 2, ch - 25);
+
+        canvasCtx.restore();
+    }
+
+    function drawBone(p1, p2, color, width) {
+        canvasCtx.strokeStyle = color;
+        canvasCtx.lineWidth = width;
+        canvasCtx.lineCap = "round";
+        canvasCtx.beginPath();
+        canvasCtx.moveTo(p1.x, p1.y);
+        canvasCtx.lineTo(p2.x, p2.y);
+        canvasCtx.stroke();
+    }
+
+    function drawJoint(p, color, label) {
+        canvasCtx.fillStyle = color;
+        canvasCtx.strokeStyle = "#ffffff";
+        canvasCtx.lineWidth = 2;
+        canvasCtx.beginPath();
+        canvasCtx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+        canvasCtx.fill();
+        canvasCtx.stroke();
+
+        if (label) {
+            canvasCtx.font = "bold 10px sans-serif";
+            canvasCtx.fillStyle = "#ffffff";
+            canvasCtx.fillText(label, p.x + 8, p.y - 4);
+        }
+    }
+
+    window.onload = function() {
+        initIndexedDB();
+    };
+</script>
+</body>
+</html>"viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>육군 정자세 팔굽혀펴기 AI 정밀 측정체계</title>
     <!-- MediaPipe Pose CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
