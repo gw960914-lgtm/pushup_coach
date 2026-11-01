@@ -313,7 +313,7 @@
 
 <header>
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
-    <div class="badge">동작 중 엄격 판정 · 실시간 반응형</div>
+    <div class="badge">실시간 녹화 복구 엔진 탑재</div>
 </header>
 
 <div class="camera-container" id="cameraBox">
@@ -459,7 +459,7 @@
             <span style="color:#e5a93c;">⚠️ 브라우저 캐시 삭제 시 소실될 수 있으므로, 카카오톡 제출이나 갤러리 보관을 위해 지금 다운로드하십시오.</span>
         </div>
         <div class="btn-group">
-            <button type="button" class="action-btn btn-start" onclick="downloadLastRecordedVideo()">📥 영상 파일 다운로드 (.mp4)</button>
+            <button type="button" class="action-btn btn-start" onclick="downloadLastRecordedVideo()">📥 영상 파일 다운로드</button>
             <button type="button" class="action-btn btn-excel" onclick="exportCurrentSessionCSV()">📊 엑셀 로그 다운로드 (.csv)</button>
         </div>
         <button type="button" class="action-btn btn-sub" onclick="closeSaveModal()">확인 및 닫기</button>
@@ -501,7 +501,7 @@
     var recCtx = recCanvas.getContext('2d');
 
     var repCount = 0;
-    var state = "UP"; // UP -> DOWN -> UP
+    var state = "UP";
     var facingMode = "user";
     var pose = null;
     var camera = null;
@@ -514,11 +514,11 @@
     var isTimerRunning = false;
     var isCountingDown = false;
 
-    // [요구사항 1] 전신 인식 상태 전이 추적 변수
-    var wasFullBodyDetected = true; // 이전 프레임의 전신 인식 상태
+    // 전신 인식 전이 추적
+    var wasFullBodyDetected = true;
     var isPausedDueToNoBody = false;
 
-    // [요구사항 3] 부정자세 TTS 스마트 쿨다운 추적 (중복 3초, 신규 즉각)
+    // 부정자세 스마트 쿨다운 추적
     var lastFaultKey = "";
     var lastFaultTime = 0;
 
@@ -553,7 +553,7 @@
     // ==========================================
     var db = null;
     function initIndexedDB() {
-        var req = indexedDB.open("ArmyPushupDB_ProV3", 1);
+        var req = indexedDB.open("ArmyPushupDB_KB_Fixed", 1);
         req.onupgradeneeded = function(e) {
             var database = e.target.result;
             if (!database.objectStoreNames.contains("sessions")) {
@@ -690,7 +690,7 @@
         req.onsuccess = function() {
             var item = req.result;
             if (!item || !item.videoBlob) return;
-            var ext = (item.videoBlob.type && item.videoBlob.type.indexOf("webm") !== -1) ? "webm" : "mp4";
+            var ext = (item.videoBlob.type && item.videoBlob.type.indexOf("mp4") !== -1) ? "mp4" : "webm";
             var fileName = item.dateStr.replace(/[^0-9]/g, "_") + "_" + item.cadetId + "_" + item.cadetName + "_측정영상." + ext;
             downloadBlobFile(item.videoBlob, fileName);
         };
@@ -741,13 +741,11 @@
         window.speechSynthesis.speak(msg);
     }
 
-    // [요구사항 3 핵심] 중복된 부정자세는 3초에 1회, 다른 부정자세는 즉각 TTS 발화
     function triggerMovementFault(typeKey, reason, ttsSpeech, detail) {
         var now = Date.now();
         var isNewFault = (typeKey !== lastFaultKey);
         var isCooldownPassed = (now - lastFaultTime >= 3000);
 
-        // 신규 부정자세이거나, 동일 자세의 3초 쿨다운이 지난 경우에만 TTS 발화 및 로그 기록
         if (isNewFault || isCooldownPassed) {
             lastFaultKey = typeKey;
             lastFaultTime = now;
@@ -767,7 +765,7 @@
             } else {
                 warnText = "노카운트";
                 ttsSuffix = "부정자세 노카운트입니다.";
-                repHasFault = true; // 3차부터 노카운트 확정
+                repHasFault = true;
             }
 
             var fullTTS = ttsSpeech + ". " + ttsSuffix;
@@ -776,7 +774,6 @@
             speak(fullTTS);
             logInvalidRep(reason + " (" + warnText + ")", detail);
         } else {
-            // 쿨다운 대기 중이라도 3차 이상 누적 상태라면 회차 오염 상태는 유지
             if (totalFaultWarningCount >= 3) {
                 repHasFault = true;
                 faultReasonCurrentRep = reason;
@@ -933,7 +930,6 @@
         document.getElementById('txtTimerState').style.color = "#39e75f";
 
         timerInterval = setInterval(function() {
-            // 전신 미인식 상태인 경우 타이머 진행 차단
             if (isPausedDueToNoBody) {
                 return;
             }
@@ -961,7 +957,7 @@
     }
 
     // ==========================================
-    // [프레임 동기화 480p 녹화 엔진]
+    // [프레임 누락 원천 해결: 15 FPS 고정 480p 녹화 엔진]
     // ==========================================
     function startRecording() {
         if (isRecording) return;
@@ -979,12 +975,13 @@
             recCanvas.width = rw;
             recCanvas.height = rh;
 
-            var stream = recCanvas.captureStream ? recCanvas.captureStream(0) : recCanvas.mozCaptureStream(0);
+            // [핵심 수정 1] 0 대신 모바일 브라우저 안정 규격인 15 FPS 고정 스트림 생성
+            var stream = recCanvas.captureStream ? recCanvas.captureStream(15) : recCanvas.mozCaptureStream(15);
 
+            // [핵심 수정 2] 스마트폰별 실제 지원 코덱 정밀 분기
             var candidateTypes = [
                 "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
                 "video/mp4;codecs=avc1",
-                "video/mp4;codecs=h264",
                 "video/mp4",
                 "video/webm;codecs=vp8",
                 "video/webm"
@@ -999,7 +996,7 @@
             }
             lastRecordedMime = selectedMime;
 
-            var options = selectedMime ? { mimeType: selectedMime, videoBitsPerSecond: 1500000 } : { videoBitsPerSecond: 1500000 };
+            var options = selectedMime ? { mimeType: selectedMime, videoBitsPerSecond: 1600000 } : { videoBitsPerSecond: 1600000 };
             mediaRecorder = new MediaRecorder(stream, options);
 
             mediaRecorder.ondataavailable = function(e) {
@@ -1016,27 +1013,34 @@
                 document.getElementById('saveAlertModal').style.display = 'flex';
             };
 
+            // 1초 단위 버퍼링 수집
             mediaRecorder.start(1000);
             isRecording = true;
-            document.getElementById('fsRecStatus').innerText = "🔴 REC (" + ((lastRecordedMime && lastRecordedMime.indexOf("webm") !== -1) ? "WEBM" : "MP4") + ")";
+            document.getElementById('fsRecStatus').innerText = "🔴 REC (" + ((lastRecordedMime && lastRecordedMime.indexOf("mp4") !== -1) ? "MP4" : "WEBM") + ")";
         } catch (err) {
-            console.warn("녹화 실패: " + err.message);
+            console.warn("녹화 시작 실패: " + err.message);
         }
     }
 
     function stopRecording() {
         if (!isRecording || !mediaRecorder) return;
-        try { mediaRecorder.stop(); } catch (e) {}
+        try {
+            // [핵심 수정 3] 잔여 메모리 버퍼의 데이터를 즉시 강제 수집 후 정지
+            if (mediaRecorder.state !== "inactive") {
+                mediaRecorder.requestData();
+                mediaRecorder.stop();
+            }
+        } catch (e) {}
         isRecording = false;
         document.getElementById('fsRecStatus').innerText = "⚪ STANDBY";
     }
 
     function downloadLastRecordedVideo() {
-        if (!lastRecordedBlob) {
-            alert("다운로드할 영상 데이터가 없습니다.");
+        if (!lastRecordedBlob || lastRecordedBlob.size < 1000) {
+            alert("유효한 영상 데이터가 없습니다. 다시 측정해 주십시오.");
             return;
         }
-        var ext = (lastRecordedMime && lastRecordedMime.indexOf("webm") !== -1) ? "webm" : "mp4";
+        var ext = (lastRecordedMime && lastRecordedMime.indexOf("mp4") !== -1) ? "mp4" : "webm";
         var cId = document.getElementById('inCadetId').value.trim() || "000";
         var cName = document.getElementById('inCadetName').value.trim() || "후보생";
         var now = new Date();
@@ -1200,7 +1204,6 @@
         var dateFormatted = now.getFullYear() + "-" + (now.getMonth() + 1 < 10 ? "0" : "") + (now.getMonth() + 1) + "-" + (now.getDate() < 10 ? "0" : "") + now.getDate() + " " + (now.getHours() < 10 ? "0" : "") + now.getHours() + ":" + (now.getMinutes() < 10 ? "0" : "") + now.getMinutes() + ":" + (now.getSeconds() < 10 ? "0" : "") + now.getSeconds();
         document.getElementById('fsClockTime').innerText = dateFormatted;
 
-        // 1. 관절 랜드마크 존재 여부 검사
         if (!results.poseLandmarks) {
             handleFullBodyLoss();
             renderRecordFrame(0, 0, 0, "⚠️ 전신 미감지 (측정 일시정지)", true, dateFormatted);
@@ -1221,7 +1224,6 @@
         var ankle = isLeft ? lm[27] : lm[28];
         var toe = isLeft ? lm[31] : lm[32];
 
-        // 7대 핵심 관절 가시도 엄격 검사
         function isPointInScreen(pt, minVis) {
             if (!pt) return false;
             if (pt.visibility < (minVis || 0.45)) return false;
@@ -1236,14 +1238,12 @@
                              isPointInScreen(knee, 0.5) &&
                              (isPointInScreen(ankle, 0.45) || isPointInScreen(toe, 0.45));
 
-        // 전신 이탈 발생 시 -> 즉시 카운트 차단 및 타이머 정지
         if (!isBodyComplete) {
             handleFullBodyLoss();
             renderRecordFrame(0, 0, 0, "⚠️ 전신 미인식 (측정 및 타이머 정지)", true, dateFormatted);
             return;
         }
 
-        // 전신이 완벽하게 감지됨
         handleFullBodyRecovered();
 
         function mapX(valX) {
@@ -1265,23 +1265,11 @@
 
         updateHUDData(elbowAng, coreAng, kneeAng);
 
-        // ==========================================
-        // [요구사항 2] 휴식자세 예외 및 부정자세 전면 감지
-        // ==========================================
-        // 유일한 정상 휴식 자세: 팔을 펴고(elbow >= 145°) 엉덩이를 천장으로 올린 상태(core > 180°)
         var isPikeRest = (elbowAng >= 145 && coreAng > 180);
-
-        // 부정자세 플래그 판정
-        // 1. 허리 숙여짐 (처짐): 휴식자세가 아닌데 코어가 155° 미만으로 꺾여있는 경우 (준비자세/동작중 모두 감지)
         var isCoreSag = !isPikeRest && (coreAng < 155);
-
-        // 2. 무릎 닿음 / 무릎 굽힘: 무릎 각도가 155° 미만인 경우
         var isKneeTouch = (kneeAng < 155);
-
-        // 3. 고개만 숙임 (헤드 봅): 팔은 안 굽히고(elbow > 110°) 머리만 아래로 꺾는 경우
         var isHeadBob = !isPikeRest && (elbowAng > 110) && ((pN.y - pS.y) > (ch * 0.05));
 
-        // 4. 상체 선행 상승 (웨이브/배치기): 최저점에서 올라올 때 코어가 155° 미만으로 무너지며 상체만 드는 경우
         var isWaveFault = false;
         if (state === "DOWN" && elbowAng > 100 && elbowAng < 155) {
             if (coreAng < 155) {
@@ -1292,7 +1280,6 @@
         var isCurrentMotionBad = isCoreSag || isKneeTouch || isHeadBob || isWaveFault;
         var boneColor = isCurrentMotionBad ? "#ff3333" : (isPikeRest ? "#5dade2" : (state === "DOWN" ? "#e5a93c" : "#39e75f"));
 
-        // 관절 스켈레톤 렌더링
         drawBone(pN, pS, boneColor, 5);
         drawBone(pS, pE, boneColor, 6);
         drawBone(pE, pW, boneColor, 6);
@@ -1309,9 +1296,7 @@
         drawJoint(pK, isKneeTouch ? "#ff3333" : "#39e75f", "무릎 " + kneeAng + "°");
         drawJoint(pA, "#5dade2", "발끝");
 
-        // 측정 상태 머신
         if (isTimerRunning && !isPausedDueToNoBody) {
-            // (1) 실시간 자세 감지
             if (isPikeRest) {
                 currentFaultBannerText = "🧘 엉덩이 솟음 휴식 중 (정상 휴식)";
                 isCurrentFaultWarn = false;
@@ -1325,32 +1310,25 @@
                 triggerMovementFault("HEAD", "고개만 숙임 (헤드 봅)", "고개만 숙였습니다", "팔꿈치: " + elbowAng + "°");
             }
 
-            // (2) 하강 단계
             if (state === "UP") {
                 if (elbowAng < minElbowInCurrentRep) {
                     minElbowInCurrentRep = elbowAng;
                 }
 
-                // 올바른 정자세 하강 (90도 이하 도달)
                 if (elbowAng <= 90 && !isCurrentMotionBad) {
                     state = "DOWN";
                     maxElbowInCurrentRep = elbowAng;
                     currentFaultBannerText = "✅ 충분 하강! 팔을 밀어 올리십시오";
                     isCurrentFaultWarn = false;
-                } 
-                // 덜 내려가고 올라오는 경우
-                else if (minElbowInCurrentRep <= 130 && (elbowAng - minElbowInCurrentRep > 15) && elbowAng > 105) {
+                } else if (minElbowInCurrentRep <= 130 && (elbowAng - minElbowInCurrentRep > 15) && elbowAng > 105) {
                     triggerMovementFault("SHALLOW", "덜 내려감 (가슴 미도달)", "덜 내려갔습니다", "최저: " + minElbowInCurrentRep + "°");
                     minElbowInCurrentRep = 180;
                 }
-            } 
-            // (3) 상승 단계
-            else if (state === "DOWN") {
+            } else if (state === "DOWN") {
                 if (elbowAng > maxElbowInCurrentRep) {
                     maxElbowInCurrentRep = elbowAng;
                 }
 
-                // 160도 완전 복귀
                 if (elbowAng >= 160) {
                     if (!repHasFault && !isCurrentMotionBad) {
                         repCount++;
@@ -1362,15 +1340,12 @@
                         isCurrentFaultWarn = true;
                     }
 
-                    // 즉각 리셋하여 다음 회차 카운트 누락 방지
                     state = "UP";
                     minElbowInCurrentRep = 180;
                     maxElbowInCurrentRep = 90;
                     repHasFault = false;
                     faultReasonCurrentRep = "";
-                } 
-                // 팔을 다 안 펴고 다시 내려가는 경우
-                else if (maxElbowInCurrentRep >= 115 && (maxElbowInCurrentRep - elbowAng > 15) && elbowAng < 150) {
+                } else if (maxElbowInCurrentRep >= 115 && (maxElbowInCurrentRep - elbowAng > 15) && elbowAng < 150) {
                     triggerMovementFault("INCOMPLETE", "팔꿈치 안 펴짐 (미신전)", "팔꿈치가 안 펴집니다", "최대: " + maxElbowInCurrentRep + "°");
                     maxElbowInCurrentRep = 90;
                 }
@@ -1380,14 +1355,10 @@
         renderRecordFrame(elbowAng, coreAng, kneeAng, currentFaultBannerText, isCurrentFaultWarn, dateFormatted);
     }
 
-    // ==========================================
-    // [요구사항 1 핵심: 전신 이탈/복구 엣지 트리거 핸들러]
-    // ==========================================
     function handleFullBodyLoss() {
         document.getElementById('fullbodyWarnOverlay').style.display = 'flex';
         isPausedDueToNoBody = true;
 
-        // 부분 동작 치팅 차단
         state = "UP";
         minElbowInCurrentRep = 180;
         maxElbowInCurrentRep = 90;
@@ -1395,7 +1366,6 @@
         document.getElementById('txtTimerState').innerText = "⚠️ 전신 미인식 (측정 정지)";
         document.getElementById('txtTimerState').style.color = "#ff4d4d";
 
-        // 이전에 전신이 보이다가 이번에 처음으로 벗어난 순간에만 "단 1회" 출력!
         if (wasFullBodyDetected) {
             wasFullBodyDetected = false;
             speak("전신이 인식되지 않았습니다");
@@ -1403,7 +1373,6 @@
     }
 
     function handleFullBodyRecovered() {
-        // 이탈 상태였다가 다시 전신이 복구된 순간
         if (!wasFullBodyDetected) {
             wasFullBodyDetected = true;
             document.getElementById('fullbodyWarnOverlay').style.display = 'none';
@@ -1440,6 +1409,7 @@
         document.getElementById('fsAngleSummary').innerText = "팔 " + elbow + "° | 코어 " + core + "° | 무릎 " + knee + "°";
     }
 
+    // 480p 녹화 캔버스 렌더링
     function renderRecordFrame(elbow, core, knee, bannerText, isWarn, dateStr) {
         if (!isRecording) return;
         var rw = recCanvas.width;
@@ -1512,10 +1482,6 @@
         recCtx.fillText(bannerText, rw / 2, rh - 20);
 
         recCtx.restore();
-
-        if (recCanvas.captureStream && recCanvas.captureStream(0).requestFrame) {
-            recCanvas.captureStream(0).requestFrame();
-        }
     }
 
     function drawBone(p1, p2, color, width) {
