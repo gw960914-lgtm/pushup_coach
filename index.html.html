@@ -152,18 +152,59 @@
             margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;
         }
 
-        .timer-presets { display: flex; gap: 5px; margin-bottom: 6px; }
-        .btn-preset {
-            flex: 1; padding: 6px; font-size: 11px; font-weight: bold;
-            background: #1c2a1f; border: 1px solid #2d4233; color: #a3b8a6;
-            border-radius: 4px; cursor: pointer;
+        /* [개편] 확장형 타이머 입력 레이아웃 */
+        .timer-input-group {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
         }
-        .btn-preset.active { background: #218c39; color: #ffffff; border-color: #39e75f; }
-
-        .timer-custom-row { display: flex; gap: 6px; align-items: center; }
-        .timer-custom-row input {
-            width: 70px; background: #0d120e; border: 1px solid #2d4233; color: #fff;
-            padding: 5px; border-radius: 4px; font-size: 11px; text-align: center;
+        .btn-preset {
+            flex: 1;
+            padding: 10px 8px;
+            font-size: 12px;
+            font-weight: bold;
+            background: #1c2a1f;
+            border: 1px solid #2d4233;
+            color: #a3b8a6;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-preset.active {
+            background: #218c39;
+            color: #ffffff;
+            border-color: #39e75f;
+        }
+        .custom-timer-box {
+            flex: 1.4;
+            display: flex;
+            align-items: center;
+            background: #0d120e;
+            border: 1px solid #2d4233;
+            border-radius: 5px;
+            padding: 0 10px;
+            transition: border-color 0.2s;
+        }
+        .custom-timer-box.active {
+            border-color: #39e75f;
+        }
+        .custom-timer-box input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: bold;
+            text-align: center;
+            outline: none;
+            padding: 8px 0;
+        }
+        .custom-timer-box .sec-label {
+            color: #8b9b8e;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 5px;
+            white-space: nowrap;
         }
 
         .btn-group { display: flex; gap: 6px; margin-top: 4px; }
@@ -201,7 +242,7 @@
 
 <header>
     <div class="header-title">🛡️ 육군 팔굽혀펴기 AI 정밀 측정체계</div>
-    <div class="badge">보수적 엄격 판정 모드</div>
+    <div class="badge">3단계 경고·노카운트 판정</div>
 </header>
 
 <div class="camera-container" id="cameraBox">
@@ -254,20 +295,18 @@
 </div>
 
 <div class="main-panel">
+    <!-- [개편] 확장형 타이머 카드 -->
     <div class="card">
         <div class="card-title">
             <span>⏱️ 측정 시간 설정</span>
             <span id="txtTimerState" style="font-size:10px; color:#8b9b8e;">대기 중</span>
         </div>
-        <div class="timer-presets">
-            <button type="button" class="btn-preset active" onclick="setTimerPreset(120, this)">2분 (육군검정)</button>
-            <button type="button" class="btn-preset" onclick="setTimerPreset(60, this)">1분 (단련)</button>
-            <button type="button" class="btn-preset" onclick="setTimerPreset(30, this)">30초</button>
-        </div>
-        <div class="timer-custom-row">
-            <span style="font-size:11px; color:#8b9b8e;">직접 입력:</span>
-            <input type="number" id="inCustomSec" placeholder="초" min="10" max="600" onchange="applyCustomTimer()">
-            <span style="font-size:11px; color:#8b9b8e;">초 설정</span>
+        <div class="timer-input-group">
+            <button type="button" class="btn-preset active" id="btnPreset2m" onclick="setTimerPreset(120)">2분 (육군검정)</button>
+            <div class="custom-timer-box" id="boxCustomTimer">
+                <input type="number" id="inCustomSec" placeholder="시간(초) 직접입력" min="10" max="600" oninput="applyCustomTimer()">
+                <span class="sec-label">초</span>
+            </div>
         </div>
     </div>
 
@@ -280,7 +319,7 @@
     <!-- 부정자세 실시간 로그 카드 -->
     <div class="card">
         <div class="card-title">
-            <span>⚠️ 부정자세(No-Count) 타임스탬프 이력 (3초 쿨다운 적용)</span>
+            <span>⚠️ 부정자세 이력 (1·2차 경고 / 3차부터 노카운트)</span>
             <span id="failCount" style="color:#ff6b6b; font-size:11px;">0건</span>
         </div>
         <div class="log-table-wrap">
@@ -288,7 +327,7 @@
                 <thead>
                     <tr>
                         <th style="width: 25%;">경과 시간</th>
-                        <th style="width: 45%;">불합격 사유</th>
+                        <th style="width: 45%;">불합격 사유 (판정 단계)</th>
                         <th style="width: 30%;">관측 수치</th>
                     </tr>
                 </thead>
@@ -304,7 +343,7 @@
     <!-- 부정자세 원인 해설 백과 사전 -->
     <div class="card">
         <div class="card-title">
-            <span>📖 육군 표준 팔굽혀펴기 부정자세 원인 및 엄격 판정 기준</span>
+            <span>📖 육군 표준 팔굽혀펴기 부정자세 원인 및 3단계 판정 기준</span>
         </div>
 
         <div class="guide-item">
@@ -312,7 +351,7 @@
                 <span class="guide-title">1. 상체 선행 상승 (웨이브/배치기)</span>
                 <span class="guide-tts">🔊 "상체만 먼저 일어납니다"</span>
             </div>
-            <div class="guide-desc">내려갈 땐 일자지만 올라올 때 골반을 바닥에 남겨두고 가슴만 젖혀 올라오는 행위. 밀어 올리는 구간에서 코어가 155° 미만으로 꺾이면 즉시 노카운트 처리됩니다.</div>
+            <div class="guide-desc">내려갈 땐 일자지만 올라올 때 골반을 바닥에 남겨두고 가슴만 젖혀 올라오는 행위. 밀어 올리는 구간에서 코어가 155° 미만으로 꺾이면 감지됩니다.</div>
         </div>
 
         <div class="guide-item">
@@ -377,14 +416,15 @@
     var isTimerRunning = false;
     var isCountingDown = false;
 
-    // 보수적 자세 판정 추적 변수
+    // 자세 판정 추적 변수
     var minElbowInCurrentRep = 180;
     var maxElbowInCurrentRep = 90;
-    var repHasFault = false; // 이번 회차에서 단 한 번이라도 부정자세가 발생했는지 여부 (영구 낙인)
-    var faultReasonCurrentRep = ""; // 노카운트 주원인
+    var repHasFault = false; // 이번 회차 노카운트 여부
+    var faultReasonCurrentRep = "";
     var failCount = 0;
+    var totalFaultWarningCount = 0; // 누적 부정자세 발생 횟수 (1차, 2차 경고, 3차부터 노카운트)
 
-    // 부정자세 유형별 독립 3초 쿨다운 (음성 & 로그 전용)
+    // 부정자세 유형별 독립 3초 쿨다운
     var faultCooldowns = {
         WAVE: 0,
         SAG: 0,
@@ -410,28 +450,49 @@
 
         msg.onend = function() { isSpeaking = false; };
         msg.onerror = function() { isSpeaking = false; };
-        setTimeout(function() { isSpeaking = false; }, 2400);
+        setTimeout(function() { isSpeaking = false; }, 2600);
 
         window.speechSynthesis.speak(msg);
     }
 
-    // [핵심] 보수적 부정자세 트리거:
-    // repHasFault는 쿨다운과 무관하게 즉시 true로 낙인 찍어 카운트를 원천 차단함!
-    // 음성과 테이블 로그만 3초 쿨다운을 적용함.
+    // [핵심] 3단계 누적 경고 체계:
+    // 1차 경고, 2차 경고까지는 경고를 주고, 3차 이상부터는 해당 회차를 노카운트 처리!
     function triggerFault(typeKey, reason, ttsSpeech, detail) {
-        repHasFault = true;
-        faultReasonCurrentRep = reason;
-
-        // UI에 즉시 노카운트 상태 반영
-        document.getElementById('cardCount').classList.add('fault-active');
-        document.getElementById('lblCount').innerText = "❌ 노카운트";
-
         var now = Date.now();
         if (now - faultCooldowns[typeKey] >= 3000) {
             faultCooldowns[typeKey] = now;
-            setFeedback("⚠️ " + reason, true);
-            speak(ttsSpeech);
-            logInvalidRep(reason, detail);
+            totalFaultWarningCount++;
+
+            var warnText = "";
+            var ttsSuffix = "";
+
+            if (totalFaultWarningCount === 1) {
+                warnText = "1차 경고";
+                ttsSuffix = "부정자세 1차경고입니다.";
+            } else if (totalFaultWarningCount === 2) {
+                warnText = "2차 경고";
+                ttsSuffix = "부정자세 2차경고입니다.";
+            } else {
+                warnText = "노카운트";
+                ttsSuffix = "부정자세 노카운트입니다.";
+                repHasFault = true; // 3차부터 노카운트 확정
+                faultReasonCurrentRep = reason;
+                document.getElementById('cardCount').classList.add('fault-active');
+                document.getElementById('lblCount').innerText = "❌ 노카운트";
+            }
+
+            var fullTTS = ttsSpeech + ". " + ttsSuffix;
+            setFeedback("⚠️ " + reason + " [" + warnText + "]", true);
+            speak(fullTTS);
+            logInvalidRep(reason + " (" + warnText + ")", detail);
+        } else {
+            // 쿨다운 중이라도 이미 3차 이상 누적된 상태라면 이번 회차는 노카운트 유지
+            if (totalFaultWarningCount >= 3) {
+                repHasFault = true;
+                faultReasonCurrentRep = reason;
+                document.getElementById('cardCount').classList.add('fault-active');
+                document.getElementById('lblCount').innerText = "❌ 노카운트";
+            }
         }
     }
 
@@ -489,14 +550,14 @@
         }
     }
 
-    function setTimerPreset(sec, btn) {
+    // [개편] 타이머 설정 제어
+    function setTimerPreset(sec) {
         if (isTimerRunning || isCountingDown) return;
         totalSeconds = sec;
         remainingSeconds = sec;
         updateTimerDisplay();
-        var btns = document.querySelectorAll('.btn-preset');
-        for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
-        if (btn) btn.classList.add('active');
+        document.getElementById('btnPreset2m').classList.add('active');
+        document.getElementById('boxCustomTimer').classList.remove('active');
         document.getElementById('inCustomSec').value = "";
     }
 
@@ -507,8 +568,8 @@
             totalSeconds = val;
             remainingSeconds = val;
             updateTimerDisplay();
-            var btns = document.querySelectorAll('.btn-preset');
-            for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+            document.getElementById('btnPreset2m').classList.remove('active');
+            document.getElementById('boxCustomTimer').classList.add('active');
         }
     }
 
@@ -609,6 +670,7 @@
         updateTimerDisplay();
         repCount = 0;
         failCount = 0;
+        totalFaultWarningCount = 0;
         state = "UP";
         minElbowInCurrentRep = 180;
         maxElbowInCurrentRep = 90;
@@ -718,24 +780,13 @@
         document.getElementById('coreAngle').innerText = coreAng + "°";
         document.getElementById('kneeAngle').innerText = kneeAng + "°";
 
-        // ==========================================
-        // [엄격하고 보수적인 부정자세 판정 로직]
-        // ==========================================
-        
-        // 1. 코어 처짐 (155도 미만 엄격 적용)
+        // 보수적 부정자세 판정
         var isCoreSag = (coreAng < 155);
-        
-        // 2. 엉덩이 솟음 (180도 초과 피라미드)
         var isCorePike = (coreAng > 180);
-
-        // 3. 무릎 닿음 및 굽힘 (155도 미만 엄격 적용)
         var isKneeTouch = (kneeAng < 155);
-
-        // 4. 고개만 숙임 (헤드 봅)
         var isHeadBob = (elbowAng > 110) && ((pN.y - pS.y) > 35);
 
-        // 5. [결정적 보완] 순간적인 웨이브(배치기 / 상체 선행 상승):
-        // 바닥에서 올라오는 구간(state === "DOWN"에서 팔꿈치가 펴지는 중)에 코어 각도가 158도 미만으로 꺾이며 상체만 들리는 현상
+        // 상체 선행 상승 (웨이브/배치기)
         var isWaveFault = false;
         if (state === "DOWN" && elbowAng > 100 && elbowAng < 155) {
             if (coreAng < 155) {
@@ -743,7 +794,6 @@
             }
         }
 
-        // 골격 렌더링 색상 (현재 프레임이 불량이거나 이번 회차가 이미 오염되었으면 붉은색)
         var isCurrentlyBad = isCoreSag || isCorePike || isKneeTouch || isHeadBob || isWaveFault;
         var boneColor = (isCurrentlyBad || repHasFault) ? "#ff3333" : (state === "DOWN" ? "#e5a93c" : "#39e75f");
 
@@ -763,9 +813,9 @@
         drawJoint(pK, isKneeTouch ? "#ff3333" : "#39e75f", "무릎 " + kneeAng + "°");
         drawJoint(pA, "#5dade2", "발끝");
 
-        // 측정 모드 계측 및 무관용 상태 머신
+        // 측정 모드 계측 및 3단계 판정 머신
         if (isTimerRunning) {
-            // (1) 실시간 부정자세 즉시 트리거 (repHasFault를 즉시 true로 굳힘)
+            // (1) 실시간 부정자세 감지 및 3단계 경고 트리거
             if (isWaveFault) {
                 triggerFault("WAVE", "상체 선행 상승 (배치기)", "상체만 먼저 일어납니다", "상승 코어: " + coreAng + "°");
             } else if (isCoreSag) {
@@ -808,7 +858,7 @@
 
                 // 160도 이상 완전히 밀어 올려 복귀 완료
                 if (elbowAng >= 160) {
-                    // [핵심] 단 한 번이라도 부정자세가 감지되었으면 절대로 카운트를 올리지 않음!
+                    // 3차 이상 부정자세가 걸린 경우만 카운트를 올리지 않고 노카운트 처리!
                     if (!repHasFault) {
                         repCount++;
                         document.getElementById('repCount').innerText = repCount;
@@ -818,7 +868,7 @@
                         setFeedback("❌ 노카운트 처리 (" + faultReasonCurrentRep + ")", true);
                     }
 
-                    // 다음 횟수를 위해 상태 및 플래그 초기화
+                    // 다음 횟수를 위해 상태 및 회차 플래그 초기화
                     state = "UP";
                     minElbowInCurrentRep = 180;
                     maxElbowInCurrentRep = 90;
@@ -827,7 +877,7 @@
                     document.getElementById('cardCount').classList.remove('fault-active');
                     document.getElementById('lblCount').innerText = "정자세";
                 } 
-                // 완전히 안 펴고 다시 굽혀 내려갈 때 (팔꿈치 미신전 깔짝거림)
+                // 완전히 안 펴고 다시 굽혀 내려갈 때 (팔꿈치 미신전)
                 else if (maxElbowInCurrentRep >= 115 && (maxElbowInCurrentRep - elbowAng > 15) && elbowAng < 150) {
                     triggerFault("INCOMPLETE", "팔꿈치 안 펴짐 (미신전)", "팔꿈치가 안 펴집니다", "최대: " + maxElbowInCurrentRep + "°");
                     maxElbowInCurrentRep = 90;
