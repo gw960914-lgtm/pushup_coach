@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>육군 정자세 팔굽혀펴기 AI 정밀 측정체계 (9:16 세로형)</title>
+    <title>육군 정자세 팔굽혀펴기 AI 정밀 측정체계</title>
     <!-- MediaPipe Pose CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
@@ -38,12 +38,11 @@
             border-radius: 3px;
         }
 
-        /* 9:16 비율 세로 화면 컨테이너 */
+        /* 스마트폰 고유 카메라 비율 자동 적응 컨테이너 */
         .camera-container {
             position: relative;
             width: 100%;
-            max-width: 420px;
-            aspect-ratio: 9 / 16;
+            max-width: 540px;
             background: #000;
             display: flex;
             justify-content: center;
@@ -55,16 +54,91 @@
         .camera-container.is-fullscreen {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
-            max-width: none; aspect-ratio: auto; z-index: 99999;
+            max-width: none; z-index: 99999;
             border: none; background: #000;
         }
 
-        canvas {
+        canvas#outputCanvas {
+            width: 100%;
+            height: auto;
+            max-height: 75vh;
+            object-fit: contain;
+            display: block;
+        }
+        .camera-container.is-fullscreen canvas#outputCanvas {
             width: 100%;
             height: 100%;
-            object-fit: contain; /* 9:16 세로 화면 완벽 유지 */
+            max-height: 100vh;
+            object-fit: contain;
         }
         video { display: none; }
+
+        /* [창모드용 HUD 레이아웃] */
+        .window-hud {
+            position: absolute;
+            top: 8px; left: 8px; right: 8px;
+            display: flex; justify-content: space-between;
+            pointer-events: none; gap: 4px; z-index: 10;
+        }
+        .hud-card {
+            background: rgba(11, 17, 12, 0.88);
+            border: 1px solid #233827;
+            padding: 5px 4px;
+            border-radius: 5px;
+            text-align: center;
+            flex: 1;
+            transition: all 0.2s;
+        }
+        .hud-card.fault-active {
+            border-color: #e74c3c;
+            background: rgba(60, 15, 15, 0.9);
+        }
+        .hud-val { font-size: 17px; font-weight: bold; color: #ffffff; font-family: monospace; }
+        .hud-lbl { font-size: 9px; color: #8b9b8e; }
+
+        /* [전체화면 전용 50:50 분할 HUD 레이아웃] */
+        .fs-hud-container {
+            display: none;
+            position: absolute;
+            top: 10px; left: 10px; right: 10px;
+            z-index: 40;
+            pointer-events: none;
+            gap: 8px;
+        }
+        .camera-container.is-fullscreen .window-hud {
+            display: none; /* 창모드 HUD 숨김 */
+        }
+        .camera-container.is-fullscreen .fs-hud-container {
+            display: flex; /* 50:50 전체화면 HUD 활성화 */
+        }
+
+        .fs-hud-half {
+            flex: 1;
+            background: rgba(10, 16, 11, 0.88);
+            border: 1.5px solid #233827;
+            border-radius: 7px;
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+            transition: border-color 0.2s;
+        }
+        .fs-hud-half.fault-active {
+            border-color: #e74c3c;
+            background: rgba(50, 12, 12, 0.92);
+        }
+        .fs-line-sub { font-size: 10.5px; color: #8b9b8e; font-family: monospace; }
+        .fs-line-main { font-size: 14px; font-weight: bold; color: #ffffff; margin-top: 2px; }
+        .fs-line-main b { color: #39e75f; }
+
+        .fs-hud-right {
+            text-align: right;
+        }
+        .fs-count-highlight {
+            font-size: 26px; font-weight: 900; font-family: monospace; color: #39e75f; line-height: 1;
+        }
+        .fs-count-highlight.warn { color: #ff5252; }
 
         /* 5초 카운트다운 레이어 */
         .countdown-overlay {
@@ -92,7 +166,7 @@
 
         .btn-fullscreen-toggle {
             position: absolute;
-            top: 125px; right: 8px; z-index: 25;
+            top: 50px; right: 8px; z-index: 25;
             background: rgba(17, 26, 19, 0.85);
             border: 1px solid #39e75f; color: #39e75f;
             padding: 5px 9px; font-size: 11px; font-weight: bold;
@@ -109,7 +183,7 @@
         .camera-container.is-fullscreen .btn-fullscreen-toggle { display: none; }
 
         .main-panel {
-            width: 100%; max-width: 420px; padding: 10px;
+            width: 100%; max-width: 540px; padding: 10px;
             display: flex; flex-direction: column; gap: 8px;
         }
 
@@ -201,35 +275,68 @@
         }
         .modal-card {
             background: #131c15; border: 2px solid #39e75f;
-            border-radius: 8px; width: 100%; max-width: 440px; padding: 14px;
+            border-radius: 8px; width: 100%; max-width: 480px; padding: 14px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.9); display: flex; flex-direction: column; gap: 10px;
         }
         .modal-title { font-size: 14px; font-weight: bold; color: #39e75f; border-bottom: 1px solid #233827; padding-bottom: 6px; }
         .modal-body { font-size: 11.5px; color: #e2eae3; line-height: 1.5; }
-        .modal-video-wrap { width: 100%; aspect-ratio: 9 / 16; max-height: 55vh; background: #000; border-radius: 4px; overflow: hidden; margin: 0 auto; }
+        .modal-video-wrap { width: 100%; max-height: 55vh; background: #000; border-radius: 4px; overflow: hidden; margin: 0 auto; }
         .modal-video-wrap video { width: 100%; height: 100%; display: block; object-fit: contain; }
-
-        .guide-item {
-            background: #0d140e; border: 1px solid #1a261c;
-            border-radius: 4px; padding: 7px 9px; margin-bottom: 5px;
-        }
-        .guide-head { display: flex; justify-content: space-between; margin-bottom: 3px; }
-        .guide-title { color: #e5a93c; font-weight: bold; font-size: 11px; }
-        .guide-tts { color: #39e75f; font-size: 10px; font-family: monospace; }
-        .guide-desc { color: #a3b8a6; font-size: 10px; line-height: 1.45; }
     </style>
 </head>
 <body>
 
 <header>
-    <div class="header-title">🛡️ 육군 팔굽혀펴기 AI 정밀 측정체계</div>
-    <div class="badge">9:16 세로 녹화 모드</div>
+    <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
+    <div class="badge">네이티브 화각 · 480p 다운스케일 저장</div>
 </header>
 
-<!-- 9:16 비율 세로 뷰어 (가로 480 × 세로 854) -->
+<!-- 카메라 뷰어 컨테이너 -->
 <div class="camera-container" id="cameraBox">
-    <canvas id="outputCanvas" width="480" height="854"></canvas>
+    <canvas id="outputCanvas"></canvas>
     <video id="inputVideo" playsinline webkit-playsinline muted autoplay></video>
+
+    <!-- 1. 창모드 전용 HUD -->
+    <div class="window-hud" id="windowHud">
+        <div class="hud-card" id="cardCountWin">
+            <div class="hud-val" id="repCountWin">0</div>
+            <div class="hud-lbl" id="lblCountWin">정자세</div>
+        </div>
+        <div class="hud-card">
+            <div class="hud-val" id="dispTimerWin" style="color:#e5a93c;">02:00</div>
+            <div class="hud-lbl">잔여시간</div>
+        </div>
+        <div class="hud-card">
+            <div class="hud-val" id="elbowAngleWin">0°</div>
+            <div class="hud-lbl">팔꿈치(≤90°)</div>
+        </div>
+        <div class="hud-card">
+            <div class="hud-val" id="coreAngleWin">0°</div>
+            <div class="hud-lbl">코어(≥155°)</div>
+        </div>
+        <div class="hud-card">
+            <div class="hud-val" id="kneeAngleWin">0°</div>
+            <div class="hud-lbl">무릎(≥155°)</div>
+        </div>
+    </div>
+
+    <!-- 2. 전체화면 전용 50:50 상단 분할 HUD -->
+    <div class="fs-hud-container" id="fsHud">
+        <!-- 좌측 50%: 실시간 시각 + 교번/성명 -->
+        <div class="fs-hud-half" id="fsHudLeft">
+            <div class="fs-line-sub" id="fsRecStatus">🔴 REC 480p</div>
+            <div class="fs-line-sub" id="fsClockTime">2026-11-02 00:00:00</div>
+            <div class="fs-line-main">후보생: <b id="fsCadetInfo">118번 홍길동</b></div>
+        </div>
+        <!-- 우측 50%: 잔여시간 + 카운트 개수 + 각도 -->
+        <div class="fs-hud-half fs-hud-right" id="fsHudRight">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="fs-line-sub" style="color:#e5a93c; font-size:12px; font-weight:bold;" id="fsTimer">⏱ 02:00</span>
+                <span class="fs-count-highlight" id="fsCount">0 회</span>
+            </div>
+            <div class="fs-line-sub" id="fsAngleSummary" style="margin-top:2px;">팔 0° | 코어 0° | 무릎 0°</div>
+        </div>
+    </div>
 
     <!-- 5초 카운트다운 레이어 -->
     <div class="countdown-overlay" id="countdownOverlay">
@@ -237,8 +344,8 @@
         <div class="countdown-sub">자세를 취하십시오 (준비 카운트)</div>
     </div>
 
-    <!-- 일반 모드 전체화면 버튼 -->
-    <button type="button" class="btn-fullscreen-toggle" id="btnFullscreen" onclick="toggleFullscreen()">⛶ 9:16 전체화면</button>
+    <!-- 창모드 전체화면 전환 버튼 -->
+    <button type="button" class="btn-fullscreen-toggle" id="btnFullscreen" onclick="toggleFullscreen()">⛶ 전체화면</button>
 
     <!-- 전체화면 플로팅 컨트롤 바 -->
     <div class="fullscreen-controls" id="fsControls">
@@ -256,8 +363,8 @@
             <span>👤 후보생 정보 (영상 및 엑셀 로그 각인용)</span>
         </div>
         <div class="user-info-row">
-            <input type="text" id="inCadetId" placeholder="교번 (예: 118)" value="118">
-            <input type="text" id="inCadetName" placeholder="성명 (예: 홍길동)" value="홍길동">
+            <input type="text" id="inCadetId" placeholder="교번 (예: 118)" value="118" oninput="updateCadetDisplay()">
+            <input type="text" id="inCadetName" placeholder="성명 (예: 홍길동)" value="홍길동" oninput="updateCadetDisplay()">
         </div>
     </div>
 
@@ -317,61 +424,6 @@
             <div style="text-align:center; color:#8b9b8e; font-size:11px; padding:15px;">저장된 측정 이력이 없습니다.</div>
         </div>
     </div>
-
-    <!-- 부정자세 원인 해설 사전 -->
-    <div class="card">
-        <div class="card-title">
-            <span>📖 육군 표준 팔굽혀펴기 부정자세 원인 및 3단계 판정 기준</span>
-        </div>
-
-        <div class="guide-item">
-            <div class="guide-head">
-                <span class="guide-title">1. 상체 선행 상승 (웨이브/배치기)</span>
-                <span class="guide-tts">🔊 "상체만 먼저 일어납니다"</span>
-            </div>
-            <div class="guide-desc">내려갈 땐 일자지만 올라올 때 골반을 바닥에 남겨두고 가슴만 젖혀 올라오는 행위. 밀어 올리는 구간에서 코어가 155° 미만으로 꺾이면 감지됩니다.</div>
-        </div>
-
-        <div class="guide-item">
-            <div class="guide-head">
-                <span class="guide-title">2. 허리 숙여짐 (처짐/요추 과신전)</span>
-                <span class="guide-tts">🔊 "허리가 숙여졌습니다"</span>
-            </div>
-            <div class="guide-desc">복근 긴장이 풀려 골반이 바닥으로 처지는 자세(코어각 &lt; 155° 엄격 적용). 머리부터 발목까지 일직선 판자를 유지해야 합니다.</div>
-        </div>
-
-        <div class="guide-item">
-            <div class="guide-head">
-                <span class="guide-title">3. 무릎 닿음 (무릎 굴곡 치팅)</span>
-                <span class="guide-tts">🔊 "무릎이 닿았습니다"</span>
-            </div>
-            <div class="guide-desc">무릎이 바닥에 닿거나 체중 분산을 위해 다리를 구부리는 행위(무릎각 &lt; 155°). 다리를 완전히 펴야 합니다.</div>
-        </div>
-
-        <div class="guide-item">
-            <div class="guide-head">
-                <span class="guide-title">4. 허리 세워짐 (엉덩이 솟음)</span>
-                <span class="guide-tts">🔊 "허리가 세워졌습니다"</span>
-            </div>
-            <div class="guide-desc">하중을 덜기 위해 엉덩이를 천장으로 치켜세워 'ㅅ'자 피라미드가 되는 자세(코어각 &gt; 180°).</div>
-        </div>
-
-        <div class="guide-item">
-            <div class="guide-head">
-                <span class="guide-title">5. 덜 내려감 (가슴 미도달)</span>
-                <span class="guide-tts">🔊 "덜 내려갔습니다"</span>
-            </div>
-            <div class="guide-desc">팔꿈치를 90° 이하로 충분히 굽히지 않고 중간 깊이에서 성급하게 올라오는 동작(깔짝거림). 턱/가슴이 기준 깊이까지 하강해야 합니다.</div>
-        </div>
-
-        <div class="guide-item">
-            <div class="guide-head">
-                <span class="guide-title">6. 팔꿈치 안 펴짐 (불완전 신전)</span>
-                <span class="guide-tts">🔊 "팔꿈치가 안 펴집니다"</span>
-            </div>
-            <div class="guide-desc">상승 시 팔꿈치를 160° 이상 끝까지 펴지 않고 반동으로 다시 내려가는 행위. 팔을 완전히 펴야만 카운트가 올라갑니다.</div>
-        </div>
-    </div>
 </div>
 
 <!-- 모달 1: 측정 완료 후 다운로드 안내 팝업 -->
@@ -379,21 +431,21 @@
     <div class="modal-card">
         <div class="modal-title">🎉 측정 종료 및 데이터 보관 안내</div>
         <div class="modal-body">
-            측정 영상(9:16)과 부정자세 로그가 <b>스마트폰 내부 저장소(IndexedDB)</b>에 안전하게 자동 보관되었습니다.<br><br>
+            측정 영상(480p 다운스케일)과 부정자세 로그가 <b>스마트폰 내부 저장소(IndexedDB)</b>에 안전하게 보관되었습니다.<br><br>
             <span style="color:#e5a93c;">⚠️ 브라우저 캐시 삭제 시 소실될 수 있으므로, 갤러리나 파일 앱에 보관하려면 지금 다운로드하십시오.</span>
         </div>
         <div class="btn-group">
-            <button type="button" class="action-btn btn-start" onclick="downloadLastRecordedVideo()">📥 9:16 영상 파일 다운로드</button>
+            <button type="button" class="action-btn btn-start" onclick="downloadLastRecordedVideo()">📥 480p 영상 파일 다운로드</button>
             <button type="button" class="action-btn btn-excel" onclick="exportCurrentSessionCSV()">📊 엑셀 로그 다운로드</button>
         </div>
         <button type="button" class="action-btn btn-sub" onclick="closeSaveModal()">확인 및 닫기</button>
     </div>
 </div>
 
-<!-- 모달 2: 과거 날짜 영상 다시보기 플레이어 모달 (9:16 세로형) -->
+<!-- 모달 2: 과거 날짜 영상 다시보기 플레이어 모달 -->
 <div class="modal-overlay" id="videoPlayerModal">
     <div class="modal-card">
-        <div class="modal-title" id="playerModalTitle">📹 측정 영상 다시보기 (9:16)</div>
+        <div class="modal-title" id="playerModalTitle">📹 측정 영상 다시보기</div>
         <div class="modal-video-wrap">
             <video id="historyVideoPlayer" controls playsinline></video>
         </div>
@@ -421,6 +473,10 @@
     var canvasCtx = canvasElement.getContext('2d');
     var cameraBox = document.getElementById('cameraBox');
 
+    // [핵심] 480p 다운스케일 저장 전용 오프스크린 캔버스
+    var recCanvas = document.createElement('canvas');
+    var recCtx = recCanvas.getContext('2d');
+
     var repCount = 0;
     var state = "UP"; // UP -> DOWN -> UP
     var facingMode = "user";
@@ -435,7 +491,7 @@
     var isTimerRunning = false;
     var isCountingDown = false;
 
-    // MediaRecorder 480p 9:16 비디오 녹화 객체
+    // MediaRecorder 480p 다운스케일 녹화 객체
     var mediaRecorder = null;
     var recordedChunks = [];
     var isRecording = false;
@@ -450,7 +506,7 @@
     var maxElbowInCurrentRep = 90;
     var repHasFault = false;
     var faultReasonCurrentRep = "";
-    var currentFaultBannerText = "정자세 유지 중 (DOWN 각도: ≤90°)";
+    var currentFaultBannerText = "정자세 유지 중 (DOWN: ≤90°)";
     var isCurrentFaultWarn = false;
     var failCount = 0;
     var totalFaultWarningCount = 0;
@@ -461,12 +517,18 @@
 
     var isSpeaking = false;
 
+    function updateCadetDisplay() {
+        var cId = document.getElementById('inCadetId').value.trim() || "000";
+        var cName = document.getElementById('inCadetName').value.trim() || "후보생";
+        document.getElementById('fsCadetInfo').innerText = cId + "번 " + cName;
+    }
+
     // ==========================================
     // [IndexedDB 영구 저장소 엔진]
     // ==========================================
     var db = null;
     function initIndexedDB() {
-        var req = indexedDB.open("ArmyPushupDB_9_16", 1);
+        var req = indexedDB.open("ArmyPushupDB_Native480p", 1);
         req.onupgradeneeded = function(e) {
             var database = e.target.result;
             if (!database.objectStoreNames.contains("sessions")) {
@@ -566,7 +628,7 @@
             player.playbackRate = 1.0;
             player.play();
 
-            document.getElementById('playerModalTitle').innerText = "📹 " + item.dateStr + " - " + item.cadetName + " 후보생 측정 영상 (9:16)";
+            document.getElementById('playerModalTitle').innerText = "📹 " + item.dateStr + " - " + item.cadetName + " 후보생 측정 영상 (480p)";
 
             var tbody = document.getElementById('playerModalFaultBody');
             var fLogs = item.faultLogs || [];
@@ -744,7 +806,7 @@
             }
         } else {
             cameraBox.classList.remove('is-fullscreen');
-            btn.innerText = "⛶ 9:16 전체화면";
+            btn.innerText = "⛶ 전체화면";
             if (document.exitFullscreen) {
                 document.exitFullscreen().catch(function(){});
             } else if (document.webkitExitFullscreen) {
@@ -778,7 +840,10 @@
     function updateTimerDisplay() {
         var m = Math.floor(remainingSeconds / 60);
         var s = remainingSeconds % 60;
-        return (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+        var str = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+        document.getElementById('dispTimerWin').innerText = str;
+        document.getElementById('fsTimer').innerText = "⏱ " + str;
+        return str;
     }
 
     function handleStartOrToggle() {
@@ -841,11 +906,12 @@
         if (isTimerRunning) return;
         isTimerRunning = true;
         updateActionButtons("⏸️ 일시 정지", "btn-pause");
-        document.getElementById('txtTimerState').innerText = "측정 및 9:16 녹화 중";
+        document.getElementById('txtTimerState').innerText = "측정 및 480p 녹화 중";
         document.getElementById('txtTimerState').style.color = "#39e75f";
 
         timerInterval = setInterval(function() {
             remainingSeconds--;
+            updateTimerDisplay();
 
             if (remainingSeconds === 30) speak("30초 남았습니다");
             if (remainingSeconds === 10) speak("10초 전");
@@ -867,14 +933,26 @@
     }
 
     // ==========================================
-    // [480p 9:16 MediaRecorder 녹화]
+    // [480p 다운스케일 MediaRecorder 녹화 엔진]
     // ==========================================
     function startRecording() {
         if (isRecording) return;
         recordedChunks = [];
 
         try {
-            var stream = canvasElement.captureStream(30);
+            // 카메라 원본 비율을 유지하면서 짧은 쪽 축을 480px로 다운스케일
+            var vw = canvasElement.width || 640;
+            var vh = canvasElement.height || 480;
+            var scale = 480 / Math.min(vw, vh);
+            var rw = Math.round(vw * scale);
+            var rh = Math.round(vh * scale);
+            if (rw % 2 !== 0) rw++;
+            if (rh % 2 !== 0) rh++;
+
+            recCanvas.width = rw;
+            recCanvas.height = rh;
+
+            var stream = recCanvas.captureStream(30);
 
             var mimeType = "video/webm;codecs=vp8";
             if (!MediaRecorder.isTypeSupported(mimeType)) {
@@ -886,7 +964,7 @@
             }
             lastRecordedMime = mimeType;
 
-            var options = mimeType ? { mimeType: mimeType, videoBitsPerSecond: 1600000 } : { videoBitsPerSecond: 1600000 };
+            var options = mimeType ? { mimeType: mimeType, videoBitsPerSecond: 1500000 } : { videoBitsPerSecond: 1500000 };
             mediaRecorder = new MediaRecorder(stream, options);
 
             mediaRecorder.ondataavailable = function(e) {
@@ -899,15 +977,16 @@
                 var blob = new Blob(recordedChunks, { type: lastRecordedMime || "video/webm" });
                 lastRecordedBlob = blob;
 
-                // 1. 스마트폰 내부 IndexedDB 자동 보관
+                // 스마트폰 내부 IndexedDB 자동 보관
                 saveSessionToDB(blob, currentSessionFaultLogs.slice());
 
-                // 2. 모달 팝업
+                // 다운로드 안내 모달 팝업
                 document.getElementById('saveAlertModal').style.display = 'flex';
             };
 
             mediaRecorder.start(1000);
             isRecording = true;
+            document.getElementById('fsRecStatus').innerText = "🔴 REC 480p";
         } catch (err) {
             console.warn("녹화 실패: " + err.message);
         }
@@ -917,6 +996,7 @@
         if (!isRecording || !mediaRecorder) return;
         try { mediaRecorder.stop(); } catch (e) {}
         isRecording = false;
+        document.getElementById('fsRecStatus').innerText = "⚪ STANDBY";
     }
 
     function downloadLastRecordedVideo() {
@@ -929,7 +1009,7 @@
         var cName = document.getElementById('inCadetName').value.trim() || "후보생";
         var now = new Date();
         var datePrefix = now.getFullYear() + "" + (now.getMonth() + 1 < 10 ? "0" : "") + (now.getMonth() + 1) + "" + (now.getDate() < 10 ? "0" : "") + now.getDate() + "_" + (now.getHours() < 10 ? "0" : "") + now.getHours() + (now.getMinutes() < 10 ? "0" : "") + now.getMinutes();
-        var fileName = datePrefix + "_" + cId + "_" + cName + "_측정영상." + ext;
+        var fileName = datePrefix + "_" + cId + "_" + cName + "_측정영상(480p)." + ext;
         downloadBlobFile(lastRecordedBlob, fileName);
     }
 
@@ -990,6 +1070,7 @@
         isCountingDown = false;
         document.getElementById('countdownOverlay').style.display = 'none';
         remainingSeconds = totalSeconds;
+        updateTimerDisplay();
         repCount = 0;
         failCount = 0;
         totalFaultWarningCount = 0;
@@ -998,13 +1079,18 @@
         maxElbowInCurrentRep = 90;
         repHasFault = false;
         faultReasonCurrentRep = "";
-        currentFaultBannerText = "정자세 유지 중 (DOWN 각도: ≤90°)";
+        currentFaultBannerText = "정자세 유지 중 (DOWN: ≤90°)";
         isCurrentFaultWarn = false;
         isSpeaking = false;
         currentSessionFaultLogs = [];
         for (var k in faultCooldowns) faultCooldowns[k] = 0;
 
-        document.getElementById('repCount').innerText = "0";
+        document.getElementById('cardCountWin').classList.remove('fault-active');
+        document.getElementById('lblCountWin').innerText = "정자세";
+        document.getElementById('repCountWin').innerText = "0";
+        document.getElementById('fsCount').innerText = "0 회";
+        document.getElementById('fsCount').className = "fs-count-highlight";
+        document.getElementById('fsHudRight').classList.remove('fault-active');
         document.getElementById('failCount').innerText = "0건";
         document.getElementById('logTableBody').innerHTML = '<tr id="emptyRow"><td colspan="3" style="text-align:center; color:#8b9b8e; padding:12px;">부정자세 기록이 없습니다.</td></tr>';
         document.getElementById('txtTimerState').innerText = "대기 중";
@@ -1029,6 +1115,7 @@
         pose.onResults(onPoseResults);
     }
 
+    // 스마트폰 카메라 원본 해상도 수신
     function startCameraStream() {
         if (camera) camera.stop();
         camera = new Camera(videoElement, {
@@ -1037,8 +1124,8 @@
                     await pose.send({ image: videoElement });
                 }
             },
-            width: 480,
-            height: 854,
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
             facingMode: facingMode
         });
         camera.start();
@@ -1050,11 +1137,20 @@
     }
 
     // ==========================================
-    // [메인 캔버스 렌더링 & 9:16 OSD Burn-in]
+    // [메인 캔버스 렌더링 & 480p OSD 직각인]
     // ==========================================
     function onPoseResults(results) {
-        var cw = canvasElement.width;   // 480
-        var ch = canvasElement.height;  // 854
+        var vw = videoElement.videoWidth || 640;
+        var vh = videoElement.videoHeight || 480;
+
+        // 카메라 본래 해상도 1:1 매칭 (비율 왜곡 및 뭉개짐 원천 제거)
+        if (canvasElement.width !== vw || canvasElement.height !== vh) {
+            canvasElement.width = vw;
+            canvasElement.height = vh;
+        }
+
+        var cw = canvasElement.width;
+        var ch = canvasElement.height;
 
         canvasCtx.save();
         canvasCtx.clearRect(0, 0, cw, ch);
@@ -1068,9 +1164,10 @@
 
         var now = new Date();
         var dateFormatted = now.getFullYear() + "-" + (now.getMonth() + 1 < 10 ? "0" : "") + (now.getMonth() + 1) + "-" + (now.getDate() < 10 ? "0" : "") + now.getDate() + " " + (now.getHours() < 10 ? "0" : "") + now.getHours() + ":" + (now.getMinutes() < 10 ? "0" : "") + now.getMinutes() + ":" + (now.getSeconds() < 10 ? "0" : "") + now.getSeconds();
+        document.getElementById('fsClockTime').innerText = dateFormatted;
 
         if (!results.poseLandmarks) {
-            renderBurnInOverlay916(cw, ch, 0, 0, 0, "⚠️ 전신이 화면에 온전히 나오도록 거리를 조정하십시오", true, dateFormatted);
+            updateHUDData(0, 0, 0);
             return;
         }
 
@@ -1105,11 +1202,13 @@
         var coreAng = getAngle(pS, pP, pA);
         var kneeAng = getAngle(pP, pK, pA);
 
+        updateHUDData(elbowAng, coreAng, kneeAng);
+
         // 엄격한 부정자세 판정
         var isCoreSag = (coreAng < 155);
         var isCorePike = (coreAng > 180);
         var isKneeTouch = (kneeAng < 155);
-        var isHeadBob = (elbowAng > 110) && ((pN.y - pS.y) > 40);
+        var isHeadBob = (elbowAng > 110) && ((pN.y - pS.y) > (ch * 0.05));
 
         var isWaveFault = false;
         if (state === "DOWN" && elbowAng > 100 && elbowAng < 155) {
@@ -1121,14 +1220,14 @@
         var isCurrentlyBad = isCoreSag || isCorePike || isKneeTouch || isHeadBob || isWaveFault;
         var boneColor = (isCurrentlyBad || repHasFault) ? "#ff3333" : (state === "DOWN" ? "#e5a93c" : "#39e75f");
 
-        // 1. 관절 스켈레톤 렌더링
-        drawBone(pN, pS, boneColor, 4);
-        drawBone(pS, pE, boneColor, 5);
-        drawBone(pE, pW, boneColor, 5);
-        drawBone(pS, pP, boneColor, 5);
-        drawBone(pP, pK, boneColor, 4);
-        drawBone(pK, pA, boneColor, 4);
-        drawBone(pA, pT, boneColor, 4);
+        // 1. 관절 스켈레톤 선명한 렌더링
+        drawBone(pN, pS, boneColor, 5);
+        drawBone(pS, pE, boneColor, 6);
+        drawBone(pE, pW, boneColor, 6);
+        drawBone(pS, pP, boneColor, 6);
+        drawBone(pP, pK, boneColor, 5);
+        drawBone(pK, pA, boneColor, 5);
+        drawBone(pA, pT, boneColor, 5);
 
         drawJoint(pN, "#ffffff", "머리");
         drawJoint(pS, "#39e75f", "어깨");
@@ -1138,7 +1237,7 @@
         drawJoint(pK, isKneeTouch ? "#ff3333" : "#39e75f", "무릎 " + kneeAng + "°");
         drawJoint(pA, "#5dade2", "발끝");
 
-        // 2. 측정 중 자세 판정 및 카운트
+        // 2. 측정 중 판정 루프
         if (isTimerRunning) {
             if (isWaveFault) {
                 triggerFault("WAVE", "상체 선행 상승 (배치기)", "상체만 먼저 일어납니다", "상승 코어: " + coreAng + "°");
@@ -1198,83 +1297,113 @@
             }
         }
 
-        // 3. [9:16 최적화] OSD 직각인 렌더링
-        renderBurnInOverlay916(cw, ch, elbowAng, coreAng, kneeAng, currentFaultBannerText, isCurrentFaultWarn, dateFormatted);
+        // 3. [저장 전용] 480p 다운스케일 캔버스에 OSD 직각인 복사
+        if (isRecording) {
+            renderTo480pRecordCanvas(elbowAng, coreAng, kneeAng, currentFaultBannerText, isCurrentFaultWarn, dateFormatted);
+        }
     }
 
-    // 9:16 세로형 OSD Burn-In 각인 함수 (가로 480 × 세로 854 기준)
-    function renderBurnInOverlay916(cw, ch, elbow, core, knee, bannerText, isWarn, dateStr) {
+    // HTML HUD 값 동기화
+    function updateHUDData(elbow, core, knee) {
+        document.getElementById('elbowAngleWin').innerText = elbow + "°";
+        document.getElementById('coreAngleWin').innerText = core + "°";
+        document.getElementById('kneeAngleWin').innerText = knee + "°";
+        document.getElementById('repCountWin').innerText = repCount;
+
+        var fsCountEl = document.getElementById('fsCount');
+        if (repHasFault) {
+            fsCountEl.innerText = "❌ " + repCount + " 회";
+            fsCountEl.className = "fs-count-highlight warn";
+            document.getElementById('fsHudRight').classList.add('fault-active');
+            document.getElementById('cardCountWin').classList.add('fault-active');
+            document.getElementById('lblCountWin').innerText = "❌ 노카운트";
+        } else {
+            fsCountEl.innerText = repCount + " 회";
+            fsCountEl.className = "fs-count-highlight";
+            document.getElementById('fsHudRight').classList.remove('fault-active');
+            document.getElementById('cardCountWin').classList.remove('fault-active');
+            document.getElementById('lblCountWin').innerText = "정자세";
+        }
+
+        document.getElementById('fsAngleSummary').innerText = "팔 " + elbow + "° | 코어 " + core + "° | 무릎 " + knee + "°";
+    }
+
+    // 480p 다운스케일 녹화용 OSD 각인 함수
+    function renderTo480pRecordCanvas(elbow, core, knee, bannerText, isWarn, dateStr) {
+        var rw = recCanvas.width;
+        var rh = recCanvas.height;
+
+        recCtx.clearRect(0, 0, rw, rh);
+        // 메인 캔버스 영상을 480p 크기로 정밀 리사이징 드로우
+        recCtx.drawImage(canvasElement, 0, 0, rw, rh);
+
         var cId = document.getElementById('inCadetId').value.trim() || "000";
         var cName = document.getElementById('inCadetName').value.trim() || "후보생";
         var timeStr = updateTimerDisplay();
 
-        canvasCtx.save();
+        recCtx.save();
 
-        // 1단 상단 바: REC 표시 / 측정 시각 / 인적사항 (w: 460, h: 48)
-        canvasCtx.fillStyle = "rgba(0, 0, 0, 0.82)";
-        canvasCtx.fillRect(10, 10, cw - 20, 48);
-        canvasCtx.strokeStyle = "#233827";
-        canvasCtx.lineWidth = 1.5;
-        canvasCtx.strokeRect(10, 10, cw - 20, 48);
+        // 1. 상단 좌측 OSD (REC, 시각, 인적사항)
+        recCtx.fillStyle = "rgba(0, 0, 0, 0.82)";
+        recCtx.fillRect(8, 8, (rw * 0.48), 52);
+        recCtx.strokeStyle = "#233827";
+        recCtx.lineWidth = 1.5;
+        recCtx.strokeRect(8, 8, (rw * 0.48), 52);
 
-        if (isRecording) {
-            canvasCtx.fillStyle = "#ff4444";
-            canvasCtx.beginPath();
-            canvasCtx.arc(24, 25, 5, 0, Math.PI * 2);
-            canvasCtx.fill();
-            canvasCtx.font = "bold 11px monospace";
-            canvasCtx.fillText("REC 9:16", 35, 29);
-        } else {
-            canvasCtx.fillStyle = "#8b9b8e";
-            canvasCtx.font = "bold 11px monospace";
-            canvasCtx.fillText("STANDBY", 20, 29);
-        }
+        recCtx.fillStyle = "#ff4444";
+        recCtx.beginPath();
+        recCtx.arc(18, 22, 4, 0, Math.PI * 2);
+        recCtx.fill();
+        recCtx.font = "bold 10px monospace";
+        recCtx.fillText("REC 480p", 26, 25);
 
-        canvasCtx.fillStyle = "#ffffff";
-        canvasCtx.font = "10.5px monospace";
-        canvasCtx.fillText(dateStr, 115, 29);
+        recCtx.fillStyle = "#ffffff";
+        recCtx.font = "9px monospace";
+        recCtx.fillText(dateStr, 18, 38);
 
-        canvasCtx.fillStyle = "#39e75f";
-        canvasCtx.font = "bold 12px sans-serif";
-        canvasCtx.fillText("교번 " + cId + " " + cName, 20, 48);
+        recCtx.fillStyle = "#39e75f";
+        recCtx.font = "bold 10.5px sans-serif";
+        recCtx.fillText("교번 " + cId + " " + cName, 18, 52);
 
-        // 2단 상단 바: 타이머 / 대형 카운트 / 관절 각도 (w: 460, h: 56)
-        canvasCtx.fillStyle = "rgba(0, 0, 0, 0.82)";
-        canvasCtx.fillRect(10, 64, cw - 20, 56);
-        canvasCtx.strokeStyle = repHasFault ? "#ff4444" : "#233827";
-        canvasCtx.strokeRect(10, 64, cw - 20, 56);
+        // 2. 상단 우측 OSD (잔여시간, 카운트, 각도)
+        var rightW = (rw * 0.48);
+        var rightX = rw - rightW - 8;
+        recCtx.fillStyle = "rgba(0, 0, 0, 0.82)";
+        recCtx.fillRect(rightX, 8, rightW, 52);
+        recCtx.strokeStyle = repHasFault ? "#ff4444" : "#233827";
+        recCtx.strokeRect(rightX, 8, rightW, 52);
 
-        canvasCtx.fillStyle = "#e5a93c";
-        canvasCtx.font = "bold 18px monospace";
-        canvasCtx.fillText("⏱ " + timeStr, 20, 92);
+        recCtx.fillStyle = "#e5a93c";
+        recCtx.font = "bold 13px monospace";
+        recCtx.fillText("⏱ " + timeStr, rightX + 8, 26);
 
-        canvasCtx.fillStyle = repHasFault ? "#ff4444" : "#39e75f";
-        canvasCtx.font = "bold 22px monospace";
-        canvasCtx.textAlign = "right";
-        canvasCtx.fillText((repHasFault ? "❌ " : "") + repCount + " 회", cw - 25, 93);
-        canvasCtx.textAlign = "left";
+        recCtx.fillStyle = repHasFault ? "#ff4444" : "#39e75f";
+        recCtx.font = "bold 16px monospace";
+        recCtx.textAlign = "right";
+        recCtx.fillText((repHasFault ? "❌ " : "") + repCount + " 회", rw - 14, 27);
+        recCtx.textAlign = "left";
 
-        canvasCtx.fillStyle = "#a3b8a6";
-        canvasCtx.font = "10.5px sans-serif";
-        canvasCtx.fillText("팔 " + elbow + "° | 코어 " + core + "° | 무릎 " + knee + "°", 20, 112);
+        recCtx.fillStyle = "#a3b8a6";
+        recCtx.font = "9.5px sans-serif";
+        recCtx.fillText("팔 " + elbow + "° | 코어 " + core + "° | 무릎 " + knee + "°", rightX + 8, 48);
 
-        // 하단 안내 배너 (w: 460, h: 42)
+        // 3. 하단 부정자세 배너
         var bannerBg = isWarn ? "rgba(90, 15, 15, 0.92)" : "rgba(10, 30, 15, 0.88)";
         var bannerBorder = isWarn ? "#ff4444" : "#39e75f";
         var bannerColor = isWarn ? "#ff6b6b" : "#39e75f";
 
-        canvasCtx.fillStyle = bannerBg;
-        canvasCtx.fillRect(10, ch - 54, cw - 20, 42);
-        canvasCtx.strokeStyle = bannerBorder;
-        canvasCtx.lineWidth = 1.5;
-        canvasCtx.strokeRect(10, ch - 54, cw - 20, 42);
+        recCtx.fillStyle = bannerBg;
+        recCtx.fillRect(8, rh - 42, rw - 16, 34);
+        recCtx.strokeStyle = bannerBorder;
+        recCtx.lineWidth = 1.5;
+        recCtx.strokeRect(8, rh - 42, rw - 16, 34);
 
-        canvasCtx.fillStyle = bannerColor;
-        canvasCtx.font = "bold 13px sans-serif";
-        canvasCtx.textAlign = "center";
-        canvasCtx.fillText(bannerText, cw / 2, ch - 28);
+        recCtx.fillStyle = bannerColor;
+        recCtx.font = "bold 12px sans-serif";
+        recCtx.textAlign = "center";
+        recCtx.fillText(bannerText, rw / 2, rh - 20);
 
-        canvasCtx.restore();
+        recCtx.restore();
     }
 
     function drawBone(p1, p2, color, width) {
@@ -1297,7 +1426,7 @@
         canvasCtx.stroke();
 
         if (label) {
-            canvasCtx.font = "bold 10px sans-serif";
+            canvasCtx.font = "bold 11px sans-serif";
             canvasCtx.fillStyle = "#ffffff";
             canvasCtx.fillText(label, p.x + 8, p.y - 4);
         }
@@ -1305,6 +1434,7 @@
 
     window.onload = function() {
         initIndexedDB();
+        updateCadetDisplay();
     };
 </script>
 </body>
