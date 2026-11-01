@@ -300,6 +300,7 @@
         }
         .btn-mini:hover { border-color: #39e75f; color: #39e75f; }
 
+        /* 정자세/부정자세 안내 카드 */
         .guide-box {
             background: #0d140e;
             border: 1px solid #1a261c;
@@ -317,6 +318,7 @@
         .guide-tag-bad { color: #ff6b6b; font-weight: bold; font-size: 11px; }
         .guide-desc { font-size: 10.5px; color: #a3b8a6; line-height: 1.45; }
 
+        /* 모달 레이어 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.85); display: none;
@@ -350,7 +352,7 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">실시간 녹화 보정 v4.6</div>
+        <div class="badge">통합 최종본 v5.0</div>
     </div>
 </header>
 
@@ -500,10 +502,10 @@
                 <span class="guide-tag-good">✅ 정자세 인정 기준 (Count 인정)</span>
             </div>
             <div class="guide-desc">
-                1. <b>준비 정렬</b>: 머리부터 어깨, 골반, 발끝까지 일직선 플랭크 자세를 유지합니다.<br>
-                2. <b>하강 깊이</b>: 팔꿈치를 90° 이하(봉 모드: 92° 이하)로 충분히 굽혀 내려갑니다.<br>
-                3. <b>완전 신전</b>: 밀고 올라왔을 때 팔꿈치를 155° 이상 끝까지 펴야 횟수가 카운트됩니다.<br>
-                4. <b>유일한 휴식(Pike Rest)</b>: 팔을 완전히 펴고 엉덩이를 천장으로 올리는 자세만 감점 없이 휴식으로 인정됩니다.
+                1. <b>준비 정렬</b>: 머리-어깨-골반-발끝 플랭크 일직선 정렬을 유지합니다.<br>
+                2. <b>하강 깊이(심부선)</b>: 맨땅은 팔꿈치 90° 이하, 봉 모드는 팔꿈치 95° 이하 또는 어깨가 팔꿈치 높이 이하로 완전히 내려갑니다.<br>
+                3. <b>완전 신전</b>: 올라올 때는 팔꿈치를 155° 이상 끝까지 펴야 카운트가 올라갑니다.<br>
+                4. <b>유일한 휴식(Pike Rest)</b>: 팔을 펴고 엉덩이를 천장으로 치켜올리는 동작만 합법 휴식으로 인정됩니다.
             </div>
         </div>
 
@@ -512,12 +514,12 @@
                 <span class="guide-tag-bad">❌ 대표 부정자세 6종 (경고 및 노카운트)</span>
             </div>
             <div class="guide-desc">
-                • <b>허리 숙여짐 (처짐)</b>: 코어가 바닥으로 푹 꺼지는 자세 (코어각 &lt; 155°)<br>
+                • <b>허리 숙여짐 (처짐)</b>: 코어가 바닥으로 푹 꺼지는 자세 (코어각 &lt; 155° / 봉: &lt; 148°)<br>
                 • <b>무릎 닿음</b>: 하강 또는 상승 시 무릎이 지면에 닿거나 굽혀지는 행위<br>
                 • <b>상체 선행 상승 (웨이브)</b>: 골반을 바닥에 남겨두고 가슴만 젖혀 일어나는 배치기<br>
-                • <b>덜 내려감 (심도 미도달)</b>: 팔꿈치를 90°(봉 92°)까지 굽히지 않고 반동으로 올라오는 행위<br>
+                • <b>덜 내려감 (심도 미도달)</b>: 팔꿈치를 기준선까지 굽히지 않고 튕겨 올라오는 행위<br>
                 • <b>팔꿈치 안 펴짐 (미신전)</b>: 올라왔을 때 팔을 끝까지 펴지 않고 다시 내려가는 행위<br>
-                • <b>고개만 숙임 (헤드 봅)</b>: 팔은 안 굽히고 머리만 까딱여 센서를 속이는 편법
+                • <b>고개만 숙임 (헤드 봅)</b>: 팔은 안 굽히고 머리만 까딱여 하강한 척하는 편법
             </div>
         </div>
     </div>
@@ -544,35 +546,28 @@
             <div class="help-step">
                 <div class="help-step-title">1. 스마트폰 카메라 세팅</div>
                 <div class="help-step-desc">
-                    스마트폰을 신체 <b>측면 2.0m ~ 2.5m 거리</b>, 바닥에서 20~30cm 높이에 똑바로 세워둡니다. <b>어깨, 팔꿈치, 손목, 골반, 무릎</b>이 모두 화면에 들어와야 합니다. (머리와 발끝은 잘려도 정상 허용됩니다)
+                    스마트폰을 신체 <b>측면 2.0m ~ 2.5m 거리</b>, 바닥에서 20~30cm 높이에 거치합니다. <b>어깨, 팔꿈치, 손목, 골반, 무릎</b>이 화면에 들어오면 머리와 발끝은 잘려도 정상 측정됩니다.
                 </div>
             </div>
 
             <div class="help-step">
                 <div class="help-step-title">2. 측정 환경 모드 선택</div>
                 <div class="help-step-desc">
-                    평지 바닥에서 실시할 때는 <b>[🏃 맨땅 평지]</b>, 봉을 잡고 실시할 때는 <b>[🛑 30cm 봉]</b> 버튼을 선택하십시오.
+                    평지 바닥에서 실시할 때는 <b>[🏃 맨땅 평지]</b>, 30cm 봉/손잡이를 잡고 실시할 때는 <b>[🛑 30cm 봉]</b> 버튼을 선택하십시오.
                 </div>
             </div>
 
             <div class="help-step">
-                <div class="help-step-title">3. 측정 시작 및 5초 대기</div>
+                <div class="help-step-title">3. 30cm 봉 정자세 팁</div>
                 <div class="help-step-desc">
-                    <b>[📹 측정 시작]</b>을 누르면 "5, 4, 3, 2, 1, 시작!" 음성과 함께 대형 숫자가 뜹니다. 5초 동안 엎드려뻗쳐 정자세를 잡으십시오.
+                    봉 모드에서는 어깨가 팔꿈치 높이 이하로 깊게 내려가야 하강으로 인정되며, 팔을 완전히 펴야 카운트됩니다. 가만히 버티는 상태에서는 카운트가 올라가지 않습니다.
                 </div>
             </div>
 
             <div class="help-step">
-                <div class="help-step-title">4. 정자세 요령 및 스마트 코칭</div>
+                <div class="help-step-title">4. 다시보기 및 PiP 저장</div>
                 <div class="help-step-desc">
-                    팔꿈치를 90° 이하(봉 92° 이하)로 충분히 굽히고 올라올 때는 완전히 펴십시오. 부정자세 발생 시 1차·2차 경고 후 3차부터 노카운트 음성 안내가 나옵니다.
-                </div>
-            </div>
-
-            <div class="help-step">
-                <div class="help-step-title">5. 풀타임 480p 영상 다운로드</div>
-                <div class="help-step-desc">
-                    카메라 하드웨어 스트림을 직접 저장하므로, 카카오톡 전송 시 앞부분이 잘리지 않고 실제 측정한 시간(예: 50초) 그대로 전송·재생됩니다.
+                    측정이 끝나면 관절선과 수치가 각인된 영상이 저장됩니다. 다시보기 창에서 <b>[📺 PiP 모드]</b>를 누르면 화면 팝업으로 띄워 감상하거나 브라우저 메뉴로 바로 저장할 수 있습니다.
                 </div>
             </div>
         </div>
@@ -596,10 +591,13 @@
     </div>
 </div>
 
-<!-- 모달 3: 영상 다시보기 -->
+<!-- 모달 3: 영상 다시보기 (PiP 및 시간 점프 지원) -->
 <div class="modal-overlay" id="videoPlayerModal">
     <div class="modal-card">
-        <div class="modal-title" id="playerModalTitle">📹 측정 영상 다시보기</div>
+        <div class="modal-title" id="playerModalTitle">
+            <span>📹 측정 영상 다시보기</span>
+            <button type="button" class="btn-mini" onclick="togglePiP()">📺 PiP 모드</button>
+        </div>
         <div class="modal-video-wrap">
             <video id="historyVideoPlayer" controls playsinline></video>
         </div>
@@ -617,7 +615,10 @@
                 <tbody id="playerModalFaultBody"></tbody>
             </table>
         </div>
-        <button type="button" class="action-btn btn-sub" onclick="closeVideoPlayerModal()">닫기</button>
+        <div class="btn-group">
+            <button type="button" class="action-btn btn-start" onclick="downloadPlayingVideo()">💾 이 영상 다운로드</button>
+            <button type="button" class="action-btn btn-sub" onclick="closeVideoPlayerModal()">닫기</button>
+        </div>
     </div>
 </div>
 
@@ -643,7 +644,6 @@
     var timerInterval = null;
     var isTimerRunning = false;
     var isCountingDown = false;
-    var recordingStartTimestamp = 0;
 
     // 비동기 렌더링 및 핵심 관절 감지 상태
     var renderLoopId = null;
@@ -669,12 +669,13 @@
     var failCount = 0;
     var totalFaultWarningCount = 0;
 
-    // MediaRecorder 하드웨어 스트림 직접 녹화
+    // MediaRecorder 직접 활성 캔버스 캡처
     var mediaRecorder = null;
     var recordedChunks = [];
     var isRecording = false;
     var lastRecordedBlob = null;
     var lastRecordedMime = "";
+    var currentPlayingBlob = null;
 
     var currentSessionFaultLogs = [];
 
@@ -698,8 +699,8 @@
         } else {
             document.getElementById('btnModeBar').classList.add('active');
             document.getElementById('btnModeFloor').classList.remove('active');
-            document.getElementById('txtModeDesc').innerText = "30cm 봉 (팔꿈치 92° 이하)";
-            document.getElementById('lblElbowThreshold').innerText = "팔꿈치(≤92°/봉)";
+            document.getElementById('txtModeDesc').innerText = "30cm 봉 (팔꿈치 95° 이하 또는 어깨 심부선)";
+            document.getElementById('lblElbowThreshold').innerText = "팔꿈치(≤95°/봉)";
             document.getElementById('fsModeTag').innerText = "30cm 봉";
         }
     }
@@ -742,10 +743,13 @@
             canvasCtx.drawImage(videoElement, 0, 0, cw, ch);
             canvasCtx.restore();
 
-            // 2. 관절 스켈레톤 렌더링
+            // 2. 관절 스켈레톤 렌더링 (영상에 직접 구워짐)
             if (isCoreBodyDetected && latestPoseLandmarks) {
                 drawSkeletonOverlay(canvasCtx, cw, ch, latestPoseLandmarks);
             }
+
+            // 3. 실시간 OSD 직각인 (녹화 영상에 시간/카운트/경고가 그대로 박힘)
+            drawDirectOSD(canvasCtx, cw, ch);
         }
         renderLoopId = requestAnimationFrame(loop);
     }
@@ -778,7 +782,7 @@
         var pT = { x: mapX(toe.x), y: toe.y * ch };
 
         var isPikeRest = (currentElbowAng >= 145 && currentCoreAng > 180);
-        var isBad = (currentCoreAng < 155 && !isPikeRest) || (currentKneeAng < 155) || repHasFault;
+        var isBad = (currentCoreAng < (exerciseMode === "BAR" ? 148 : 155) && !isPikeRest) || (currentKneeAng < 150) || repHasFault;
         var boneColor = isBad ? "#ff3333" : (isPikeRest ? "#5dade2" : (state === "DOWN" ? "#e5a93c" : "#39e75f"));
 
         if (nose && nose.visibility > 0.2) drawBone(ctx, pN, pS, boneColor, 5);
@@ -797,12 +801,85 @@
         drawJoint(ctx, pE, "#e5a93c", "팔 " + currentElbowAng + "°");
         drawJoint(ctx, pW, "#5dade2", exerciseMode === "BAR" ? "봉 손목" : "손목");
         drawJoint(ctx, pP, isPikeRest ? "#5dade2" : "#f4d03f", "골반 " + currentCoreAng + "°");
-        drawJoint(ctx, pK, (currentKneeAng < 155) ? "#ff3333" : "#39e75f", "무릎 " + currentKneeAng + "°");
+        drawJoint(ctx, pK, (currentKneeAng < 150) ? "#ff3333" : "#39e75f", "무릎 " + currentKneeAng + "°");
         if (ankle && ankle.visibility > 0.2) drawJoint(ctx, pA, "#5dade2", "발");
     }
 
+    function drawDirectOSD(ctx, cw, ch) {
+        var cId = document.getElementById('inCadetId').value.trim() || "000";
+        var cName = document.getElementById('inCadetName').value.trim() || "후보생";
+        var timeStr = updateTimerDisplay();
+
+        var now = new Date();
+        var dateFormatted = now.getFullYear() + "-" + (now.getMonth() + 1 < 10 ? "0" : "") + (now.getMonth() + 1) + "-" + (now.getDate() < 10 ? "0" : "") + now.getDate() + " " + (now.getHours() < 10 ? "0" : "") + now.getHours() + ":" + (now.getMinutes() < 10 ? "0" : "") + now.getMinutes() + ":" + (now.getSeconds() < 10 ? "0" : "") + now.getSeconds();
+
+        ctx.save();
+
+        // 상단 좌측 OSD
+        ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
+        ctx.fillRect(8, 8, Math.min(260, cw * 0.48), 54);
+        ctx.strokeStyle = "#233827";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(8, 8, Math.min(260, cw * 0.48), 54);
+
+        ctx.fillStyle = isPausedDueToNoBody ? "#ffae19" : (isRecording ? "#ff4444" : "#8b9b8e");
+        ctx.beginPath();
+        ctx.arc(20, 24, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.font = "bold 10.5px monospace";
+        ctx.fillText(isPausedDueToNoBody ? "PAUSED" : (isRecording ? "REC (" + (exerciseMode === "BAR" ? "봉" : "맨땅") + ")" : "STANDBY"), 28, 27);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "9.5px monospace";
+        ctx.fillText(dateFormatted, 18, 41);
+
+        ctx.fillStyle = "#39e75f";
+        ctx.font = "bold 11px sans-serif";
+        ctx.fillText("교번 " + cId + " " + cName, 18, 55);
+
+        // 상단 우측 OSD
+        var rightW = Math.min(260, cw * 0.48);
+        var rightX = cw - rightW - 8;
+        ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
+        ctx.fillRect(rightX, 8, rightW, 54);
+        ctx.strokeStyle = repHasFault ? "#ff4444" : "#233827";
+        ctx.strokeRect(rightX, 8, rightW, 54);
+
+        ctx.fillStyle = "#e5a93c";
+        ctx.font = "bold 14px monospace";
+        ctx.fillText("⏱ " + timeStr, rightX + 8, 28);
+
+        ctx.fillStyle = repHasFault ? "#ff4444" : "#39e75f";
+        ctx.font = "bold 18px monospace";
+        ctx.textAlign = "right";
+        ctx.fillText((repHasFault ? "❌ " : "") + repCount + " 회", cw - 16, 29);
+        ctx.textAlign = "left";
+
+        ctx.fillStyle = "#a3b8a6";
+        ctx.font = "10px sans-serif";
+        ctx.fillText("팔 " + currentElbowAng + "° | 코어 " + currentCoreAng + "° | 무릎 " + currentKneeAng + "°", rightX + 8, 51);
+
+        // 하단 상태 배너
+        var bannerBg = isCurrentFaultWarn ? "rgba(90, 15, 15, 0.92)" : "rgba(10, 30, 15, 0.88)";
+        var bannerBorder = isCurrentFaultWarn ? "#ff4444" : "#39e75f";
+        var bannerColor = isCurrentFaultWarn ? "#ff6b6b" : "#39e75f";
+
+        ctx.fillStyle = bannerBg;
+        ctx.fillRect(8, ch - 44, cw - 16, 36);
+        ctx.strokeStyle = bannerBorder;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(8, ch - 44, cw - 16, 36);
+
+        ctx.fillStyle = bannerColor;
+        ctx.font = "bold 12.5px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(currentFaultBannerText, cw / 2, ch - 21);
+
+        ctx.restore();
+    }
+
     // ==========================================
-    // [MediaPipe AI 자세 판정 (봉/맨땅 정밀화)]
+    // [MediaPipe AI 자세 판정 (봉 심부선 및 관절 로직)]
     // ==========================================
     function onPoseResults(results) {
         if (!results.poseLandmarks) {
@@ -829,12 +906,12 @@
             return (pt.visibility >= minVis && pt.x >= -0.05 && pt.x <= 1.05 && pt.y >= -0.05 && pt.y <= 1.05);
         }
 
-        // 5대 핵심 관절만 검사: 어깨, 팔꿈치, 손목, 골반, 무릎 (머리/발끝 잘림 허용)
-        var isCoreComplete = isPointValid(shoulder, 0.35) &&
-                             isPointValid(elbow, 0.35) &&
-                             isPointValid(wrist, 0.35) &&
-                             isPointValid(hip, 0.35) &&
-                             isPointValid(knee, 0.35);
+        // 5대 핵심 관절만 검사: 어깨, 팔꿈치, 손목, 골반, 무릎 (머리/발끝 잘림 100% 허용)
+        var isCoreComplete = isPointValid(shoulder, 0.30) &&
+                             isPointValid(elbow, 0.30) &&
+                             isPointValid(wrist, 0.30) &&
+                             isPointValid(hip, 0.30) &&
+                             isPointValid(knee, 0.30);
 
         if (!isCoreComplete) {
             latestPoseLandmarks = null;
@@ -870,8 +947,8 @@
         updateHUDData(currentElbowAng, currentCoreAng, currentKneeAng);
 
         var isPikeRest = (currentElbowAng >= 145 && currentCoreAng > 180);
-        var isCoreSag = !isPikeRest && (currentCoreAng < 155);
-        var isKneeTouch = (currentKneeAng < 155);
+        var isCoreSag = !isPikeRest && (currentCoreAng < (exerciseMode === "BAR" ? 148 : 155));
+        var isKneeTouch = (currentKneeAng < 150);
 
         var isHeadBob = false;
         if (nose && nose.visibility >= 0.4 && !isPikeRest) {
@@ -881,12 +958,12 @@
 
         var isWaveFault = false;
         if (state === "DOWN" && currentElbowAng > 100 && currentElbowAng < 155) {
-            if (currentCoreAng < 155) isWaveFault = true;
+            if (currentCoreAng < (exerciseMode === "BAR" ? 148 : 155)) isWaveFault = true;
         }
 
-        var isCurrentMotionBad = isCoreSag || isKneeTouch || isHeadBob || isWaveFault;
-
-        // [핵심] 정밀 팔굽혀펴기 상태 머신 (ROM 기반)
+        // ==========================================
+        // [정밀 생체역학 판정 및 하강 심도 분기]
+        // ==========================================
         if (isTimerRunning && !isPausedDueToNoBody) {
             if (isPikeRest) {
                 currentFaultBannerText = "🧘 엉덩이 솟음 휴식 중 (정상 휴식)";
@@ -901,17 +978,22 @@
                 triggerMovementFault("HEAD", "고개만 숙임 (헤드 봅)", "고개만 숙였습니다", "팔꿈치: " + currentElbowAng + "°");
             }
 
-            // 1. 하강 단계
+            // 하강 단계
             if (state === "UP") {
                 if (currentElbowAng < minElbowInCurrentRep) {
                     minElbowInCurrentRep = currentElbowAng;
                 }
 
-                // 모드별 하강 임계치 (맨땅: 90도 이하, 봉: 92도 이하)
-                var downAngleTarget = (exerciseMode === "BAR") ? 92 : 90;
+                // [요구사항 2 해결] 봉 모드 심부선 판정:
+                // 팔꿈치가 95° 이하로 굽혀지거나, 어깨 Y좌표가 팔꿈치 Y좌표 수준 이하로 깊게 내려가면 즉시 DOWN 인정!
+                var isDownTargetReached = false;
+                if (exerciseMode === "BAR") {
+                    isDownTargetReached = (currentElbowAng <= 95) || (pS.y >= pE.y - 5);
+                } else {
+                    isDownTargetReached = (currentElbowAng <= 90);
+                }
 
-                // 85도까지 내려가면 92도 이하이므로 확실하게 DOWN 진입!
-                if (currentElbowAng <= downAngleTarget) {
+                if (isDownTargetReached) {
                     state = "DOWN";
                     maxElbowInCurrentRep = currentElbowAng;
                     currentFaultBannerText = "✅ 충분 하강! 팔을 밀어 올리십시오";
@@ -921,15 +1003,15 @@
                     minElbowInCurrentRep = 180;
                 }
             } 
-            // 2. 상승 단계
+            // 상승 단계
             else if (state === "DOWN") {
                 if (currentElbowAng > maxElbowInCurrentRep) {
                     maxElbowInCurrentRep = currentElbowAng;
                 }
 
-                // 155도 이상 팔을 완전히 폈을 때 카운트 인정
+                // 팔을 155° 이상 펴서 올라온 경우
                 if (currentElbowAng >= 155) {
-                    if (!repHasFault && !isCurrentMotionBad) {
+                    if (!repHasFault && !isCoreSag && !isKneeTouch && !isWaveFault) {
                         repCount++;
                         currentFaultBannerText = "정자세 인정 (" + repCount + "회)";
                         isCurrentFaultWarn = false;
@@ -1210,20 +1292,15 @@
     }
 
     // ==========================================
-    // [하드웨어 카메라 스트림 직접 녹화 (50초 풀타임 보장)]
+    // [메인 캔버스 30 FPS 직접 녹화 (OSD 각인 & 풀타임 보장)]
     // ==========================================
     function startRecording() {
         if (isRecording) return;
         recordedChunks = [];
-        recordingStartTimestamp = Date.now();
 
         try {
-            // [핵심] 캔버스 조작을 거치지 않고 실제 카메라 스트림을 다이렉트로 전달하여 프레임 누락 원천 방지
-            var cameraStream = videoElement.srcObject;
-            if (!cameraStream) {
-                console.warn("카메라 스트림을 찾을 수 없습니다.");
-                return;
-            }
+            // 메인 캔버스에서 직접 30 FPS 스트림을 추출하여 수치/각도/스켈레톤 각인 영상 생성
+            var stream = canvasElement.captureStream(30);
 
             var candidateTypes = [
                 "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
@@ -1242,8 +1319,8 @@
             }
             lastRecordedMime = selectedMime;
 
-            var options = selectedMime ? { mimeType: selectedMime, videoBitsPerSecond: 2000000 } : { videoBitsPerSecond: 2000000 };
-            mediaRecorder = new MediaRecorder(cameraStream, options);
+            var options = selectedMime ? { mimeType: selectedMime, videoBitsPerSecond: 1800000 } : { videoBitsPerSecond: 1800000 };
+            mediaRecorder = new MediaRecorder(stream, options);
 
             mediaRecorder.ondataavailable = function(e) {
                 if (e.data && e.data.size > 0) {
@@ -1259,7 +1336,7 @@
                 document.getElementById('saveAlertModal').style.display = 'flex';
             };
 
-            // 1초 단위 버퍼 수집
+            // 1초 단위 버퍼링 수집
             mediaRecorder.start(1000);
             isRecording = true;
             document.getElementById('fsRecStatus').innerText = "🔴 REC (" + ((lastRecordedMime && lastRecordedMime.indexOf("mp4") !== -1) ? "MP4" : "WEBM") + ")";
@@ -1299,11 +1376,11 @@
     }
 
     // ==========================================
-    // [IndexedDB & 다시보기 플레이어]
+    // [IndexedDB & 다시보기 플레이어 (PiP 연동)]
     // ==========================================
     var db = null;
     function initIndexedDB() {
-        var req = indexedDB.open("ArmyPushupDB_Hardware_V6", 1);
+        var req = indexedDB.open("ArmyPushupDB_Final_V5_Clean", 1);
         req.onupgradeneeded = function(e) {
             var database = e.target.result;
             if (!database.objectStoreNames.contains("sessions")) {
@@ -1394,13 +1471,14 @@
                 return;
             }
 
+            currentPlayingBlob = item.videoBlob;
             var player = document.getElementById('historyVideoPlayer');
             var url = URL.createObjectURL(item.videoBlob);
             player.src = url;
             player.playbackRate = 1.0;
             player.play();
 
-            document.getElementById('playerModalTitle').innerText = "📹 " + item.dateStr + " - " + item.cadetName + " 후보생 측정 영상";
+            document.getElementById('playerModalTitle').querySelector('span').innerText = "📹 " + item.dateStr + " - " + item.cadetName + " 후보생 측정 영상";
 
             var tbody = document.getElementById('playerModalFaultBody');
             var fLogs = item.faultLogs || [];
@@ -1421,6 +1499,25 @@
 
             document.getElementById('videoPlayerModal').style.display = 'flex';
         };
+    }
+
+    function togglePiP() {
+        var player = document.getElementById('historyVideoPlayer');
+        if (player) {
+            if (document.pictureInPictureElement) {
+                document.exitPictureInPicture().catch(function(){});
+            } else if (player.requestPictureInPicture) {
+                player.requestPictureInPicture().catch(function(err){
+                    alert("이 브라우저에서는 PiP 모드를 지원하지 않습니다: " + err.message);
+                });
+            }
+        }
+    }
+
+    function downloadPlayingVideo() {
+        if (!currentPlayingBlob) return;
+        var ext = (currentPlayingBlob.type && currentPlayingBlob.type.indexOf("webm") !== -1) ? "webm" : "mp4";
+        downloadBlobFile(currentPlayingBlob, "측정다시보기영상." + ext);
     }
 
     function seekModalVideo(sec) {
