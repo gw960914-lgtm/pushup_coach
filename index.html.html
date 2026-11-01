@@ -133,11 +133,11 @@
         }
         .fs-count-highlight.warn { color: #ff5252; }
 
-        /* [신규] 전신 미인식 경고 대형 오버레이 */
+        /* 전신 미인식 대형 경고 오버레이 */
         .fullbody-warn-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(40, 5, 5, 0.78);
+            background: rgba(40, 5, 5, 0.82);
             display: none;
             flex-direction: column;
             justify-content: center;
@@ -313,17 +313,17 @@
 
 <header>
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
-    <div class="badge">전신 미인식 자동정지 엔진 탑재</div>
+    <div class="badge">동작 중 엄격 판정 · 실시간 반응형</div>
 </header>
 
 <div class="camera-container" id="cameraBox">
     <canvas id="outputCanvas"></canvas>
     <video id="inputVideo" playsinline webkit-playsinline muted autoplay></video>
 
-    <!-- [신설] 전신 미인식 대형 경고 오버레이 -->
+    <!-- 전신 미인식 대형 경고 오버레이 -->
     <div class="fullbody-warn-overlay" id="fullbodyWarnOverlay">
         <div class="warn-icon">⚠️</div>
-        <div class="warn-title">전신 미인식 (측정 정지)</div>
+        <div class="warn-title">전신 미인식 (측정 일시정지)</div>
         <div class="warn-desc">
             머리부터 발끝까지 전신이 카메라 안에 들어오지 않았습니다.<br>
             거리와 위치를 조정하십시오. (측정 및 타이머 정지 중)
@@ -514,10 +514,13 @@
     var isTimerRunning = false;
     var isCountingDown = false;
 
-    // [신규] 전신 감지 플래그 및 자동 일시정지 상태 관리
-    var isFullBodyDetected = false;
+    // [요구사항 1] 전신 인식 상태 전이 추적 변수
+    var wasFullBodyDetected = true; // 이전 프레임의 전신 인식 상태
     var isPausedDueToNoBody = false;
-    var lastNoBodySpeechTime = 0;
+
+    // [요구사항 3] 부정자세 TTS 스마트 쿨다운 추적 (중복 3초, 신규 즉각)
+    var lastFaultKey = "";
+    var lastFaultTime = 0;
 
     // MediaRecorder 녹화
     var mediaRecorder = null;
@@ -539,8 +542,6 @@
     var failCount = 0;
     var totalFaultWarningCount = 0;
 
-    var lastSpeechTime = 0;
-
     function updateCadetDisplay() {
         var cId = document.getElementById('inCadetId').value.trim() || "000";
         var cName = document.getElementById('inCadetName').value.trim() || "후보생";
@@ -552,7 +553,7 @@
     // ==========================================
     var db = null;
     function initIndexedDB() {
-        var req = indexedDB.open("ArmyPushupDB_FullBodySafe", 1);
+        var req = indexedDB.open("ArmyPushupDB_ProV3", 1);
         req.onupgradeneeded = function(e) {
             var database = e.target.result;
             if (!database.objectStoreNames.contains("sessions")) {
@@ -728,14 +729,10 @@
     }
 
     // ==========================================
-    // [음성 TTS 및 부정자세 3단계 판정]
+    // [음성 TTS 및 부정자세 3단계 스마트 판정]
     // ==========================================
-    function speak(text, forceImmediate) {
+    function speak(text) {
         if (!('speechSynthesis' in window)) return;
-        var now = Date.now();
-        if (!forceImmediate && (now - lastSpeechTime < 1400)) return;
-        lastSpeechTime = now;
-
         window.speechSynthesis.cancel();
         var msg = new SpeechSynthesisUtterance(text);
         msg.lang = 'ko-KR';
@@ -744,32 +741,47 @@
         window.speechSynthesis.speak(msg);
     }
 
-    function triggerMovementFault(reason, ttsSpeech, detail) {
-        if (repHasFault) return;
+    // [요구사항 3 핵심] 중복된 부정자세는 3초에 1회, 다른 부정자세는 즉각 TTS 발화
+    function triggerMovementFault(typeKey, reason, ttsSpeech, detail) {
+        var now = Date.now();
+        var isNewFault = (typeKey !== lastFaultKey);
+        var isCooldownPassed = (now - lastFaultTime >= 3000);
 
-        repHasFault = true;
-        totalFaultWarningCount++;
-        faultReasonCurrentRep = reason;
+        // 신규 부정자세이거나, 동일 자세의 3초 쿨다운이 지난 경우에만 TTS 발화 및 로그 기록
+        if (isNewFault || isCooldownPassed) {
+            lastFaultKey = typeKey;
+            lastFaultTime = now;
 
-        var warnText = "";
-        var ttsSuffix = "";
+            totalFaultWarningCount++;
+            faultReasonCurrentRep = reason;
 
-        if (totalFaultWarningCount === 1) {
-            warnText = "1차 경고";
-            ttsSuffix = "부정자세 1차경고입니다.";
-        } else if (totalFaultWarningCount === 2) {
-            warnText = "2차 경고";
-            ttsSuffix = "부정자세 2차경고입니다.";
+            var warnText = "";
+            var ttsSuffix = "";
+
+            if (totalFaultWarningCount === 1) {
+                warnText = "1차 경고";
+                ttsSuffix = "부정자세 1차경고입니다.";
+            } else if (totalFaultWarningCount === 2) {
+                warnText = "2차 경고";
+                ttsSuffix = "부정자세 2차경고입니다.";
+            } else {
+                warnText = "노카운트";
+                ttsSuffix = "부정자세 노카운트입니다.";
+                repHasFault = true; // 3차부터 노카운트 확정
+            }
+
+            var fullTTS = ttsSpeech + ". " + ttsSuffix;
+            currentFaultBannerText = "⚠️ " + reason + " [" + warnText + "]";
+            isCurrentFaultWarn = true;
+            speak(fullTTS);
+            logInvalidRep(reason + " (" + warnText + ")", detail);
         } else {
-            warnText = "노카운트";
-            ttsSuffix = "부정자세 노카운트입니다.";
+            // 쿨다운 대기 중이라도 3차 이상 누적 상태라면 회차 오염 상태는 유지
+            if (totalFaultWarningCount >= 3) {
+                repHasFault = true;
+                faultReasonCurrentRep = reason;
+            }
         }
-
-        var fullTTS = ttsSpeech + ". " + ttsSuffix;
-        currentFaultBannerText = "⚠️ " + reason + " [" + warnText + "]";
-        isCurrentFaultWarn = true;
-        speak(fullTTS, false);
-        logInvalidRep(reason + " (" + warnText + ")", detail);
     }
 
     function getAngle(A, B, C) {
@@ -895,18 +907,18 @@
         var countText = document.getElementById('countdownText');
         overlay.style.display = 'flex';
         countText.innerText = count;
-        speak(count + "", true);
+        speak(count + "");
 
         var cdInterval = setInterval(function() {
             count--;
             if (count > 0) {
                 countText.innerText = count;
-                speak(count + "", true);
+                speak(count + "");
             } else {
                 clearInterval(cdInterval);
                 overlay.style.display = 'none';
                 isCountingDown = false;
-                speak("시작", true);
+                speak("시작");
                 startTimer();
                 startRecording();
             }
@@ -921,7 +933,7 @@
         document.getElementById('txtTimerState').style.color = "#39e75f";
 
         timerInterval = setInterval(function() {
-            // [신설] 전신 미인식 상태인 경우 측정 시간 차감 중단 (정지 유지)
+            // 전신 미인식 상태인 경우 타이머 진행 차단
             if (isPausedDueToNoBody) {
                 return;
             }
@@ -929,13 +941,13 @@
             remainingSeconds--;
             updateTimerDisplay();
 
-            if (remainingSeconds === 30) speak("30초 남았습니다", true);
-            if (remainingSeconds === 10) speak("10초 전", true);
+            if (remainingSeconds === 30) speak("30초 남았습니다");
+            if (remainingSeconds === 10) speak("10초 전");
 
             if (remainingSeconds <= 0) {
                 stopTimer();
                 stopRecording();
-                speak("측정 종료! 최종 " + repCount + "회입니다", true);
+                speak("측정 종료! 최종 " + repCount + "회입니다");
                 document.getElementById('txtTimerState').innerText = "측정 완료";
                 document.getElementById('txtTimerState').style.color = "#e5a93c";
                 updateActionButtons("📹 측정 시작", "btn-start");
@@ -1091,6 +1103,10 @@
         document.getElementById('countdownOverlay').style.display = 'none';
         document.getElementById('fullbodyWarnOverlay').style.display = 'none';
         isPausedDueToNoBody = false;
+        wasFullBodyDetected = true;
+        lastFaultKey = "";
+        lastFaultTime = 0;
+
         remainingSeconds = totalSeconds;
         updateTimerDisplay();
         repCount = 0;
@@ -1187,7 +1203,7 @@
         // 1. 관절 랜드마크 존재 여부 검사
         if (!results.poseLandmarks) {
             handleFullBodyLoss();
-            renderRecordFrame(0, 0, 0, "⚠️ 전신이 감지되지 않습니다", true, dateFormatted);
+            renderRecordFrame(0, 0, 0, "⚠️ 전신 미감지 (측정 일시정지)", true, dateFormatted);
             return;
         }
 
@@ -1205,7 +1221,7 @@
         var ankle = isLeft ? lm[27] : lm[28];
         var toe = isLeft ? lm[31] : lm[32];
 
-        // [핵심 엔진] 7대 주요 관절이 화면 안(0.01~0.99)에 온전히 존재하며 신뢰도가 유효한지 검사
+        // 7대 핵심 관절 가시도 엄격 검사
         function isPointInScreen(pt, minVis) {
             if (!pt) return false;
             if (pt.visibility < (minVis || 0.45)) return false;
@@ -1220,14 +1236,14 @@
                              isPointInScreen(knee, 0.5) &&
                              (isPointInScreen(ankle, 0.45) || isPointInScreen(toe, 0.45));
 
-        // 전신 중 일부라도 이탈된 경우 -> 즉시 측정 차단 및 정지
+        // 전신 이탈 발생 시 -> 즉시 카운트 차단 및 타이머 정지
         if (!isBodyComplete) {
             handleFullBodyLoss();
             renderRecordFrame(0, 0, 0, "⚠️ 전신 미인식 (측정 및 타이머 정지)", true, dateFormatted);
             return;
         }
 
-        // 전신이 완벽하게 들어온 경우 -> 정상 상태 복구
+        // 전신이 완벽하게 감지됨
         handleFullBodyRecovered();
 
         function mapX(valX) {
@@ -1249,16 +1265,23 @@
 
         updateHUDData(elbowAng, coreAng, kneeAng);
 
-        // 플랭크 준비 및 휴식자세(엉덩이 솟음) 분기
-        var isPlankReady = (elbowAng >= 155 && coreAng >= 155 && coreAng <= 180);
-        var isPikeRest = (elbowAng >= 150 && coreAng > 180);
+        // ==========================================
+        // [요구사항 2] 휴식자세 예외 및 부정자세 전면 감지
+        // ==========================================
+        // 유일한 정상 휴식 자세: 팔을 펴고(elbow >= 145°) 엉덩이를 천장으로 올린 상태(core > 180°)
+        var isPikeRest = (elbowAng >= 145 && coreAng > 180);
 
-        // 동작 중 (하강 중 또는 상승 중)
-        var isMoving = (elbowAng < 155) || (state === "DOWN");
-        var isCoreSag = isMoving && (coreAng < 155);
-        var isKneeTouch = isMoving && (kneeAng < 155);
-        var isHeadBob = isMoving && (elbowAng > 110) && ((pN.y - pS.y) > (ch * 0.05));
+        // 부정자세 플래그 판정
+        // 1. 허리 숙여짐 (처짐): 휴식자세가 아닌데 코어가 155° 미만으로 꺾여있는 경우 (준비자세/동작중 모두 감지)
+        var isCoreSag = !isPikeRest && (coreAng < 155);
 
+        // 2. 무릎 닿음 / 무릎 굽힘: 무릎 각도가 155° 미만인 경우
+        var isKneeTouch = (kneeAng < 155);
+
+        // 3. 고개만 숙임 (헤드 봅): 팔은 안 굽히고(elbow > 110°) 머리만 아래로 꺾는 경우
+        var isHeadBob = !isPikeRest && (elbowAng > 110) && ((pN.y - pS.y) > (ch * 0.05));
+
+        // 4. 상체 선행 상승 (웨이브/배치기): 최저점에서 올라올 때 코어가 155° 미만으로 무너지며 상체만 드는 경우
         var isWaveFault = false;
         if (state === "DOWN" && elbowAng > 100 && elbowAng < 155) {
             if (coreAng < 155) {
@@ -1286,59 +1309,69 @@
         drawJoint(pK, isKneeTouch ? "#ff3333" : "#39e75f", "무릎 " + kneeAng + "°");
         drawJoint(pA, "#5dade2", "발끝");
 
-        // 측정 상태 머신 (전신이 완벽히 인식되고 있을 때만 판정)
+        // 측정 상태 머신
         if (isTimerRunning && !isPausedDueToNoBody) {
+            // (1) 실시간 자세 감지
             if (isPikeRest) {
                 currentFaultBannerText = "🧘 엉덩이 솟음 휴식 중 (정상 휴식)";
                 isCurrentFaultWarn = false;
             } else if (isWaveFault) {
-                triggerMovementFault("상체 선행 상승 (배치기)", "상체만 먼저 일어납니다", "상승 코어: " + coreAng + "°");
+                triggerMovementFault("WAVE", "상체 선행 상승 (배치기)", "상체만 먼저 일어납니다", "상승 코어: " + coreAng + "°");
             } else if (isCoreSag) {
-                triggerMovementFault("허리 숙여짐 (처짐)", "허리가 숙여졌습니다", "코어: " + coreAng + "°");
+                triggerMovementFault("SAG", "허리 숙여짐 (처짐)", "허리가 숙여졌습니다", "코어: " + coreAng + "°");
             } else if (isKneeTouch) {
-                triggerMovementFault("무릎 닿음 (다리 굽힘)", "무릎이 닿았습니다", "무릎각: " + kneeAng + "°");
+                triggerMovementFault("KNEE", "무릎 닿음 (다리 굽힘)", "무릎이 닿았습니다", "무릎각: " + kneeAng + "°");
             } else if (isHeadBob) {
-                triggerMovementFault("고개만 숙임 (헤드 봅)", "고개만 숙였습니다", "팔꿈치: " + elbowAng + "°");
+                triggerMovementFault("HEAD", "고개만 숙임 (헤드 봅)", "고개만 숙였습니다", "팔꿈치: " + elbowAng + "°");
             }
 
+            // (2) 하강 단계
             if (state === "UP") {
                 if (elbowAng < minElbowInCurrentRep) {
                     minElbowInCurrentRep = elbowAng;
                 }
 
+                // 올바른 정자세 하강 (90도 이하 도달)
                 if (elbowAng <= 90 && !isCurrentMotionBad) {
                     state = "DOWN";
                     maxElbowInCurrentRep = elbowAng;
                     currentFaultBannerText = "✅ 충분 하강! 팔을 밀어 올리십시오";
                     isCurrentFaultWarn = false;
-                } else if (minElbowInCurrentRep <= 130 && (elbowAng - minElbowInCurrentRep > 15) && elbowAng > 105) {
-                    triggerMovementFault("덜 내려감 (가슴 미도달)", "덜 내려갔습니다", "최저: " + minElbowInCurrentRep + "°");
+                } 
+                // 덜 내려가고 올라오는 경우
+                else if (minElbowInCurrentRep <= 130 && (elbowAng - minElbowInCurrentRep > 15) && elbowAng > 105) {
+                    triggerMovementFault("SHALLOW", "덜 내려감 (가슴 미도달)", "덜 내려갔습니다", "최저: " + minElbowInCurrentRep + "°");
                     minElbowInCurrentRep = 180;
                 }
-            } else if (state === "DOWN") {
+            } 
+            // (3) 상승 단계
+            else if (state === "DOWN") {
                 if (elbowAng > maxElbowInCurrentRep) {
                     maxElbowInCurrentRep = elbowAng;
                 }
 
+                // 160도 완전 복귀
                 if (elbowAng >= 160) {
-                    if (!repHasFault) {
+                    if (!repHasFault && !isCurrentMotionBad) {
                         repCount++;
                         currentFaultBannerText = "정자세 인정 (" + repCount + "회)";
                         isCurrentFaultWarn = false;
-                        speak(repCount + "", true);
+                        speak(repCount + "");
                     } else {
-                        currentFaultBannerText = "❌ 노카운트 (" + faultReasonCurrentRep + ")";
+                        currentFaultBannerText = "❌ 노카운트 (" + (faultReasonCurrentRep || "자세 불량") + ")";
                         isCurrentFaultWarn = true;
                     }
 
-                    // 즉각 리셋 (다음 회차 누락 방지)
+                    // 즉각 리셋하여 다음 회차 카운트 누락 방지
                     state = "UP";
                     minElbowInCurrentRep = 180;
                     maxElbowInCurrentRep = 90;
                     repHasFault = false;
                     faultReasonCurrentRep = "";
-                } else if (maxElbowInCurrentRep >= 115 && (maxElbowInCurrentRep - elbowAng > 15) && elbowAng < 150) {
-                    triggerMovementFault("팔꿈치 안 펴짐 (미신전)", "팔꿈치가 안 펴집니다", "최대: " + maxElbowInCurrentRep + "°");
+                } 
+                // 팔을 다 안 펴고 다시 내려가는 경우
+                else if (maxElbowInCurrentRep >= 115 && (maxElbowInCurrentRep - elbowAng > 15) && elbowAng < 150) {
+                    triggerMovementFault("INCOMPLETE", "팔꿈치 안 펴짐 (미신전)", "팔꿈치가 안 펴집니다", "최대: " + maxElbowInCurrentRep + "°");
                     maxElbowInCurrentRep = 90;
                 }
             }
@@ -1348,30 +1381,31 @@
     }
 
     // ==========================================
-    // [전신 미인식 시 자동 정지 및 차단 핸들러]
+    // [요구사항 1 핵심: 전신 이탈/복구 엣지 트리거 핸들러]
     // ==========================================
     function handleFullBodyLoss() {
         document.getElementById('fullbodyWarnOverlay').style.display = 'flex';
         isPausedDueToNoBody = true;
 
-        // 부분 관절 동작으로 인한 치팅 카운트 원천 방지
+        // 부분 동작 치팅 차단
         state = "UP";
         minElbowInCurrentRep = 180;
         maxElbowInCurrentRep = 90;
 
-        document.getElementById('txtTimerState').innerText = "⚠️ 전신 미인식 (일시정지)";
+        document.getElementById('txtTimerState').innerText = "⚠️ 전신 미인식 (측정 정지)";
         document.getElementById('txtTimerState').style.color = "#ff4d4d";
 
-        // TTS 음성 출력 (2.5초 간격으로 중복 도배 방지)
-        var now = Date.now();
-        if (now - lastNoBodySpeechTime > 2500) {
-            speak("전신이 인식되지 않았습니다", true);
-            lastNoBodySpeechTime = now;
+        // 이전에 전신이 보이다가 이번에 처음으로 벗어난 순간에만 "단 1회" 출력!
+        if (wasFullBodyDetected) {
+            wasFullBodyDetected = false;
+            speak("전신이 인식되지 않았습니다");
         }
     }
 
     function handleFullBodyRecovered() {
-        if (isPausedDueToNoBody) {
+        // 이탈 상태였다가 다시 전신이 복구된 순간
+        if (!wasFullBodyDetected) {
+            wasFullBodyDetected = true;
             document.getElementById('fullbodyWarnOverlay').style.display = 'none';
             isPausedDueToNoBody = false;
 
