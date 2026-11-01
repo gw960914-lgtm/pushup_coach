@@ -144,7 +144,7 @@
         }
         .fs-count-highlight.warn { color: #ff5252; }
 
-        /* 핵심 관절 미인식 경고 오버레이 */
+        /* 4대 핵심 관절 미인식 경고 오버레이 */
         .fullbody-warn-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -268,7 +268,6 @@
         .btn-start { background: #218c39; border-color: #39e75f; color: #fff; }
         .btn-pause { background: #d35400; border-color: #e67e22; color: #fff; }
         .btn-sub { background: #1f3323; border-color: #2d4233; color: #a3b8a6; }
-        .btn-lens { background: #234d31; border-color: #39e75f; color: #fff; }
         .btn-excel { background: #1f508a; border-color: #5dade2; color: #fff; }
         .btn-reset { background: #7a1f1f; border-color: #e74c3c; color: #fff; }
 
@@ -318,6 +317,7 @@
         .guide-tag-bad { color: #ff6b6b; font-weight: bold; font-size: 11px; }
         .guide-desc { font-size: 10.5px; color: #a3b8a6; line-height: 1.45; }
 
+        /* 모달 레이어 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.85); display: none;
@@ -351,7 +351,7 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">광각 지원 v5.2</div>
+        <div class="badge">4대 필수 관절 모드</div>
     </div>
 </header>
 
@@ -359,13 +359,13 @@
     <canvas id="outputCanvas"></canvas>
     <video id="inputVideo" playsinline webkit-playsinline muted autoplay></video>
 
-    <!-- 핵심 관절 미인식 경고 오버레이 -->
+    <!-- 4대 핵심 관절 미인식 경고 오버레이 -->
     <div class="fullbody-warn-overlay" id="fullbodyWarnOverlay">
         <div class="warn-icon">⚠️</div>
         <div class="warn-title">핵심 관절 미인식 (측정 일시정지)</div>
         <div class="warn-desc">
-            어깨, 팔꿈치, 손목, 골반, 무릎이 화면에 보여야 합니다.<br>
-            (머리와 발끝은 잘려도 정상 허용됩니다)
+            <b>어깨, 팔꿈치, 골반, 무릎</b> 4대 관절이 화면에 보여야 합니다.<br>
+            (머리, 손목, 발끝은 화면을 벗어나도 정상 측정됩니다)
         </div>
     </div>
 
@@ -389,7 +389,7 @@
         </div>
         <div class="hud-card">
             <div class="hud-val" id="kneeAngleWin">0°</div>
-            <div class="hud-lbl">무릎(≥155°)</div>
+            <div class="hud-lbl">무릎(≥150°)</div>
         </div>
     </div>
 
@@ -418,7 +418,7 @@
 
     <div class="fullscreen-controls" id="fsControls">
         <button type="button" class="action-btn btn-start" id="btnFsAction" onclick="handleStartOrToggle()">📹 측정 시작</button>
-        <button type="button" class="action-btn btn-lens" onclick="switchCamera()">🔭 렌즈/화각 전환</button>
+        <button type="button" class="action-btn btn-sub" onclick="switchCamera()">🔄 전/후면</button>
         <button type="button" class="action-btn btn-reset" onclick="resetAll()">0회 초기화</button>
         <button type="button" class="action-btn btn-sub" onclick="toggleFullscreen()">✖ 창모드</button>
     </div>
@@ -463,7 +463,7 @@
 
     <div class="btn-group">
         <button type="button" class="action-btn btn-start" id="btnMainAction" onclick="handleStartOrToggle()">📹 측정 시작 (녹화 ON)</button>
-        <button type="button" class="action-btn btn-lens" id="btnSwitchLens" onclick="switchCamera()">🔭 렌즈/화각 전환 (광각)</button>
+        <button type="button" class="action-btn btn-sub" onclick="switchCamera()">🔄 전/후면 카메라</button>
         <button type="button" class="action-btn btn-reset" onclick="resetAll()">0회 초기화</button>
     </div>
 
@@ -501,7 +501,7 @@
                 <span class="guide-tag-good">✅ 정자세 인정 기준 (Count 인정)</span>
             </div>
             <div class="guide-desc">
-                1. <b>준비 정렬</b>: 머리-어깨-골반-발끝 플랭크 일직선 정렬을 유지합니다.<br>
+                1. <b>4대 필수 정렬</b>: 어깨-팔꿈치-골반-무릎 4대 관절을 바르게 정렬합니다.<br>
                 2. <b>하강 깊이(심부선)</b>: 맨땅은 팔꿈치 90° 이하, 봉 모드는 팔꿈치 95° 이하 또는 어깨가 팔꿈치 높이 이하로 완전히 내려갑니다.<br>
                 3. <b>완전 신전</b>: 올라올 때는 팔꿈치를 155° 이상 끝까지 펴야 카운트가 올라갑니다.<br>
                 4. <b>유일한 휴식(Pike Rest)</b>: 팔을 펴고 엉덩이를 천장으로 치켜올리는 동작만 합법 휴식으로 인정됩니다.
@@ -543,30 +543,30 @@
         </div>
         <div class="modal-body">
             <div class="help-step">
-                <div class="help-step-title">1. 스마트폰 카메라 세팅 (광각 지원)</div>
+                <div class="help-step-title">1. 스마트폰 카메라 세팅 (4대 필수 관절)</div>
                 <div class="help-step-desc">
-                    스마트폰을 신체 <b>측면 1.5m ~ 2.0m 거리</b> 바닥에 세워둡니다. 거리가 가깝다면 <b>[🔭 렌즈/화각 전환]</b> 버튼을 눌러 후면 <b>0.5x 초광각 렌즈</b>로 전환하십시오. <b>어깨, 팔꿈치, 손목, 골반, 무릎</b>이 화면에 들어오면 머리와 발끝은 잘려도 정상 측정됩니다.
+                    스마트폰을 신체 <b>측면 1.5m ~ 2.0m 거리</b> 바닥에 세워둡니다. <b>어깨, 팔꿈치, 골반, 무릎</b> 4대 필수 관절만 화면에 들어오면 머리, 손목, 발끝은 잘려도 정상 측정됩니다.
                 </div>
             </div>
 
             <div class="help-step">
                 <div class="help-step-title">2. 측정 환경 모드 선택</div>
                 <div class="help-step-desc">
-                    평지 바닥에서 실시할 때는 <b>[🏃 맨땅 평지]</b>, 30cm 봉/손잡이를 잡고 실시할 때는 <b>[🛑 30cm 봉]</b> 버튼을 선택하십시오.
+                    평지 바닥에서 실시할 때는 <b>[🏃 맨땅 평지]</b>, 30cm 봉을 잡고 실시할 때는 <b>[🛑 30cm 봉]</b> 버튼을 선택하십시오.
                 </div>
             </div>
 
             <div class="help-step">
-                <div class="help-step-title">3. 30cm 봉 정자세 팁</div>
+                <div class="help-step-title">3. 30cm 봉 정자세 요령</div>
                 <div class="help-step-desc">
-                    봉 모드에서는 어깨가 팔꿈치 높이 이하로 깊게 내려가야 하강으로 인정되며, 팔을 완전히 펴야 카운트됩니다. 가만히 버티는 상태에서는 카운트가 올라가지 않습니다.
+                    봉 모드에서는 어깨가 팔꿈치 높이 이하로 깊게 내려가야 하강으로 인정되며, 팔을 완전히 펴야 카운트됩니다. 봉을 잡고 가만히 버티는 상태에서는 카운트가 올라가지 않습니다.
                 </div>
             </div>
 
             <div class="help-step">
-                <div class="help-step-title">4. 다시보기 및 PiP 저장</div>
+                <div class="help-step-title">4. 다시보기 및 PiP 모드</div>
                 <div class="help-step-desc">
-                    측정이 끝나면 관절선과 수치가 각인된 영상이 저장됩니다. 다시보기 창에서 <b>[📺 PiP 모드]</b>를 누르면 화면 팝업으로 띄워 감상하거나 브라우저 메뉴로 바로 저장할 수 있습니다.
+                    측정이 끝나면 관절선과 수치가 각인된 영상이 저장됩니다. 다시보기 창에서 <b>[📺 PiP 모드]</b>를 누르면 화면 팝업으로 분리하여 감상하거나 브라우저 메뉴로 바로 저장할 수 있습니다.
                 </div>
             </div>
         </div>
@@ -629,14 +629,10 @@
 
     var repCount = 0;
     var state = "UP";
+    var facingMode = "environment"; // 후면 카메라 기본 시작
     var pose = null;
     var camera = null;
     var cameraStarted = false;
-
-    // 다중 카메라 및 렌즈 제어 변수
-    var videoDevices = [];
-    var currentDeviceIndex = 0;
-    var currentFacingMode = "environment"; // 후면 카메라 기본 시작
 
     // 측정 환경 모드: FLOOR (맨땅) vs BAR (30cm 봉)
     var exerciseMode = "FLOOR";
@@ -648,7 +644,7 @@
     var isTimerRunning = false;
     var isCountingDown = false;
 
-    // 비동기 렌더링 및 핵심 관절 감지 상태
+    // 4대 핵심 관절(어깨, 팔꿈치, 골반, 무릎) 감지 상태
     var renderLoopId = null;
     var latestPoseLandmarks = null;
     var isCoreBodyDetected = false;
@@ -715,19 +711,6 @@
     }
 
     // ==========================================
-    // [다중 렌즈 탐색 및 초광각(0.5x) 연동]
-    // ==========================================
-    async function enumerateCameraDevices() {
-        try {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
-            var devices = await navigator.mediaDevices.enumerateDevices();
-            videoDevices = devices.filter(function(d) { return d.kind === 'videoinput'; });
-        } catch (e) {
-            console.warn("디바이스 열거 실패:", e);
-        }
-    }
-
-    // ==========================================
     // [메인 캔버스 30 FPS 직접 렌더링 파이프라인]
     // ==========================================
     function startRenderPipeline() {
@@ -752,14 +735,14 @@
             // 1. 카메라 영상 출력 (전면 카메라일 때만 좌우반전)
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, cw, ch);
-            if (currentFacingMode === "user") {
+            if (facingMode === "user") {
                 canvasCtx.translate(cw, 0);
                 canvasCtx.scale(-1, 1);
             }
             canvasCtx.drawImage(videoElement, 0, 0, cw, ch);
             canvasCtx.restore();
 
-            // 2. 관절 스켈레톤 렌더링 (영상에 직접 각인)
+            // 2. 관절 스켈레톤 렌더링 (4대 핵심 관절 중심)
             if (isCoreBodyDetected && latestPoseLandmarks) {
                 drawSkeletonOverlay(canvasCtx, cw, ch, latestPoseLandmarks);
             }
@@ -771,54 +754,60 @@
     }
 
     function drawSkeletonOverlay(ctx, cw, ch, lm) {
-        var leftVis = (lm[11].visibility + lm[23].visibility + lm[27].visibility) / 3;
-        var rightVis = (lm[12].visibility + lm[24].visibility + lm[28].visibility) / 3;
+        var leftVis = (lm[11].visibility + lm[23].visibility + lm[25].visibility) / 3;
+        var rightVis = (lm[12].visibility + lm[24].visibility + lm[26].visibility) / 3;
         var isLeft = leftVis >= rightVis;
 
-        var nose = lm[0];
         var shoulder = isLeft ? lm[11] : lm[12];
         var elbow = isLeft ? lm[13] : lm[14];
         var wrist = isLeft ? lm[15] : lm[16];
         var hip = isLeft ? lm[23] : lm[24];
         var knee = isLeft ? lm[25] : lm[26];
         var ankle = isLeft ? lm[27] : lm[28];
-        var toe = isLeft ? lm[31] : lm[32];
+        var nose = lm[0];
 
         function mapX(valX) {
-            return (currentFacingMode === "user") ? (1 - valX) * cw : valX * cw;
+            return (facingMode === "user") ? (1 - valX) * cw : valX * cw;
         }
 
-        var pN = { x: mapX(nose.x), y: nose.y * ch };
         var pS = { x: mapX(shoulder.x), y: shoulder.y * ch };
         var pE = { x: mapX(elbow.x), y: elbow.y * ch };
-        var pW = { x: mapX(wrist.x), y: wrist.y * ch };
         var pP = { x: mapX(hip.x), y: hip.y * ch };
         var pK = { x: mapX(knee.x), y: knee.y * ch };
-        var pA = { x: mapX(ankle.x), y: ankle.y * ch };
-        var pT = { x: mapX(toe.x), y: toe.y * ch };
 
         var isPikeRest = (currentElbowAng >= 145 && currentCoreAng > 180);
         var isBad = (currentCoreAng < (exerciseMode === "BAR" ? 148 : 155) && !isPikeRest) || (currentKneeAng < 150) || repHasFault;
         var boneColor = isBad ? "#ff3333" : (isPikeRest ? "#5dade2" : (state === "DOWN" ? "#e5a93c" : "#39e75f"));
 
-        if (nose && nose.visibility > 0.2) drawBone(ctx, pN, pS, boneColor, 5);
-        drawBone(ctx, pS, pE, boneColor, 6);
-        drawBone(ctx, pE, pW, boneColor, 6);
-        drawBone(ctx, pS, pP, boneColor, 6);
-        drawBone(ctx, pP, pK, boneColor, 5);
+        // [4대 필수 관절선 연결]
+        drawBone(ctx, pS, pE, boneColor, 6); // 어깨 - 팔꿈치
+        drawBone(ctx, pS, pP, boneColor, 6); // 어깨 - 골반
+        drawBone(ctx, pP, pK, boneColor, 5); // 골반 - 무릎
 
-        if (ankle && ankle.visibility > 0.2) {
-            drawBone(ctx, pK, pA, boneColor, 5);
-            if (toe && toe.visibility > 0.2) drawBone(ctx, pA, pT, boneColor, 5);
+        // 손목이 감지되면 연결
+        if (wrist && wrist.visibility > 0.2) {
+            var pW = { x: mapX(wrist.x), y: wrist.y * ch };
+            drawBone(ctx, pE, pW, boneColor, 5);
         }
 
-        if (nose && nose.visibility > 0.2) drawJoint(ctx, pN, "#ffffff", "머리");
+        // 발목이 감지되면 연결
+        if (ankle && ankle.visibility > 0.2) {
+            var pA = { x: mapX(ankle.x), y: ankle.y * ch };
+            drawBone(ctx, pK, pA, boneColor, 5);
+        }
+
+        // 머리가 감지되면 연결
+        if (nose && nose.visibility > 0.2) {
+            var pN = { x: mapX(nose.x), y: nose.y * ch };
+            drawBone(ctx, pN, pS, boneColor, 4);
+            drawJoint(ctx, pN, "#ffffff", "머리");
+        }
+
+        // [4대 필수 관절 노드 표시]
         drawJoint(ctx, pS, "#39e75f", "어깨");
         drawJoint(ctx, pE, "#e5a93c", "팔 " + currentElbowAng + "°");
-        drawJoint(ctx, pW, "#5dade2", exerciseMode === "BAR" ? "봉 손목" : "손목");
         drawJoint(ctx, pP, isPikeRest ? "#5dade2" : "#f4d03f", "골반 " + currentCoreAng + "°");
         drawJoint(ctx, pK, (currentKneeAng < 150) ? "#ff3333" : "#39e75f", "무릎 " + currentKneeAng + "°");
-        if (ankle && ankle.visibility > 0.2) drawJoint(ctx, pA, "#5dade2", "발");
     }
 
     function drawDirectOSD(ctx, cw, ch) {
@@ -895,7 +884,7 @@
     }
 
     // ==========================================
-    // [MediaPipe AI 자세 판정 (봉 심부선 및 관절 로직)]
+    // [MediaPipe AI 자세 판정 (4대 핵심 관절 중심)]
     // ==========================================
     function onPoseResults(results) {
         if (!results.poseLandmarks) {
@@ -905,27 +894,26 @@
         }
 
         var lm = results.poseLandmarks;
-        var leftVis = (lm[11].visibility + lm[23].visibility + lm[27].visibility) / 3;
-        var rightVis = (lm[12].visibility + lm[24].visibility + lm[28].visibility) / 3;
+        var leftVis = (lm[11].visibility + lm[23].visibility + lm[25].visibility) / 3;
+        var rightVis = (lm[12].visibility + lm[24].visibility + lm[26].visibility) / 3;
         var isLeft = leftVis >= rightVis;
 
-        var nose = lm[0];
         var shoulder = isLeft ? lm[11] : lm[12];
         var elbow = isLeft ? lm[13] : lm[14];
         var wrist = isLeft ? lm[15] : lm[16];
         var hip = isLeft ? lm[23] : lm[24];
         var knee = isLeft ? lm[25] : lm[26];
         var ankle = isLeft ? lm[27] : lm[28];
+        var nose = lm[0];
 
         function isPointValid(pt, minVis) {
             if (!pt) return false;
             return (pt.visibility >= minVis && pt.x >= -0.05 && pt.x <= 1.05 && pt.y >= -0.05 && pt.y <= 1.05);
         }
 
-        // 5대 핵심 관절만 검사: 어깨, 팔꿈치, 손목, 골반, 무릎 (머리/발끝 잘림 100% 허용)
+        // [4대 핵심 관절 감지: 어깨, 팔꿈치, 골반, 무릎]
         var isCoreComplete = isPointValid(shoulder, 0.30) &&
                              isPointValid(elbow, 0.30) &&
-                             isPointValid(wrist, 0.30) &&
                              isPointValid(hip, 0.30) &&
                              isPointValid(knee, 0.30);
 
@@ -942,23 +930,20 @@
         var ch = canvasElement.height || 720;
 
         function mapX(valX) {
-            return (currentFacingMode === "user") ? (1 - valX) * cw : valX * cw;
+            return (facingMode === "user") ? (1 - valX) * cw : valX * cw;
         }
 
         var pS = { x: mapX(shoulder.x), y: shoulder.y * ch };
         var pE = { x: mapX(elbow.x), y: elbow.y * ch };
-        var pW = { x: mapX(wrist.x), y: wrist.y * ch };
         var pP = { x: mapX(hip.x), y: hip.y * ch };
         var pK = { x: mapX(knee.x), y: knee.y * ch };
 
-        currentElbowAng = getAngle(pS, pE, pW);
-        currentKneeAng = (ankle && ankle.visibility > 0.3) ? getAngle(pP, pK, { x: mapX(ankle.x), y: ankle.y * ch }) : 175;
+        // 손목 위치가 잡히면 손목 기준, 손목이 잘려도 팔꿈치 연장선으로 보정
+        var pW = (wrist && wrist.visibility > 0.25) ? { x: mapX(wrist.x), y: wrist.y * ch } : { x: pE.x, y: pE.y + 40 };
 
-        if (ankle && ankle.visibility >= 0.4) {
-            currentCoreAng = getAngle(pS, pP, { x: mapX(ankle.x), y: ankle.y * ch });
-        } else {
-            currentCoreAng = getAngle(pS, pP, pK);
-        }
+        currentElbowAng = getAngle(pS, pE, pW);
+        currentCoreAng = getAngle(pS, pP, pK); // 4대 관절 중심: 어깨-골반-무릎 일직선성 계산
+        currentKneeAng = (ankle && ankle.visibility > 0.25) ? getAngle(pP, pK, { x: mapX(ankle.x), y: ankle.y * ch }) : 175;
 
         updateHUDData(currentElbowAng, currentCoreAng, currentKneeAng);
 
@@ -1000,7 +985,7 @@
                     minElbowInCurrentRep = currentElbowAng;
                 }
 
-                // 봉 모드 심부선 판정 (팔꿈치 95° 이하 또는 어깨 심부선 하강)
+                // 봉 모드: 팔꿈치 95° 이하 또는 어깨 심부선 하강 / 맨땅: 90° 이하
                 var isDownTargetReached = false;
                 if (exerciseMode === "BAR") {
                     isDownTargetReached = (currentElbowAng <= 95) || (pS.y >= pE.y - 5);
@@ -1393,7 +1378,7 @@
     // ==========================================
     var db = null;
     function initIndexedDB() {
-        var req = indexedDB.open("ArmyPushupDB_Final_V5_Clean", 1);
+        var req = indexedDB.open("ArmyPushupDB_Final_4Joints", 1);
         req.onupgradeneeded = function(e) {
             var database = e.target.result;
             if (!database.objectStoreNames.contains("sessions")) {
@@ -1704,63 +1689,27 @@
     }
 
     // ==========================================
-    // [16:9 와이드 화각 & 초광각(0.5x) 연동 스트림]
+    // [단순 전면/후면 카메라 스트림 전환]
     // ==========================================
-    async function startCameraStream(deviceId) {
+    function startCameraStream() {
         if (camera) camera.stop();
-        if (videoDevices.length === 0) await enumerateCameraDevices();
 
-        var constraints = {
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-        };
-
-        if (deviceId) {
-            constraints.deviceId = { exact: deviceId };
-        } else {
-            constraints.facingMode = { ideal: currentFacingMode };
-        }
-
-        try {
-            var stream = await navigator.mediaDevices.getUserMedia({ video: constraints, audio: false });
-            videoElement.srcObject = stream;
-            await videoElement.play();
-
-            // 카메라 하드웨어 줌 최소화(0.5x 광각 유도)
-            var track = stream.getVideoTracks()[0];
-            if (track && track.getCapabilities) {
-                var caps = track.getCapabilities();
-                if (caps.zoom) {
-                    track.applyConstraints({ advanced: [{ zoom: caps.zoom.min }] }).catch(function(){});
+        camera = new Camera(videoElement, {
+            onFrame: async function() {
+                if (cameraStarted) {
+                    await pose.send({ image: videoElement });
                 }
-            }
-
-            camera = new Camera(videoElement, {
-                onFrame: async function() {
-                    if (cameraStarted) {
-                        await pose.send({ image: videoElement });
-                    }
-                },
-                width: 1280,
-                height: 720
-            });
-            camera.start();
-        } catch (err) {
-            console.warn("카메라 스트림 시작 실패:", err);
-        }
+            },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: facingMode
+        });
+        camera.start();
     }
 
-    async function switchCamera() {
-        if (videoDevices.length > 1) {
-            currentDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length;
-            var targetDevice = videoDevices[currentDeviceIndex];
-            var label = targetDevice.label.toLowerCase();
-            currentFacingMode = (label.indexOf("front") !== -1 || label.indexOf("user") !== -1) ? "user" : "environment";
-            await startCameraStream(targetDevice.deviceId);
-        } else {
-            currentFacingMode = (currentFacingMode === "user") ? "environment" : "user";
-            await startCameraStream();
-        }
+    function switchCamera() {
+        facingMode = (facingMode === "user") ? "environment" : "user";
+        startCameraStream();
     }
 
     function updateHUDData(elbow, core, knee) {
@@ -1816,7 +1765,6 @@
     window.onload = function() {
         initIndexedDB();
         updateCadetDisplay();
-        enumerateCameraDevices();
     };
 </script>
 </body>
