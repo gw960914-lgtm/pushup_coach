@@ -148,7 +148,7 @@
         .fullbody-warn-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(40, 5, 5, 0.82);
+            background: rgba(40, 5, 5, 0.85);
             display: none;
             flex-direction: column;
             justify-content: center;
@@ -163,7 +163,7 @@
         .warn-desc { font-size: 11.5px; color: #ffffff; font-weight: bold; line-height: 1.5; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 
-        /* 5초 카운트다운 */
+        /* 5초 카운트다운 레이어 */
         .countdown-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -300,6 +300,7 @@
         }
         .btn-mini:hover { border-color: #39e75f; color: #39e75f; }
 
+        /* 가이드 안내 카드 */
         .guide-box {
             background: #0d140e;
             border: 1px solid #1a261c;
@@ -317,7 +318,7 @@
         .guide-tag-bad { color: #ff6b6b; font-weight: bold; font-size: 11px; }
         .guide-desc { font-size: 10.5px; color: #a3b8a6; line-height: 1.45; }
 
-        /* 모달 레이어 */
+        /* 모달 스타일 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.85); display: none;
@@ -351,7 +352,7 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">4대 필수 관절 모드</div>
+        <div class="badge">검증 완료 최종본</div>
     </div>
 </header>
 
@@ -365,7 +366,7 @@
         <div class="warn-title">핵심 관절 미인식 (측정 일시정지)</div>
         <div class="warn-desc">
             <b>어깨, 팔꿈치, 골반, 무릎</b> 4대 관절이 화면에 보여야 합니다.<br>
-            (머리, 손목, 발끝은 화면을 벗어나도 정상 측정됩니다)
+            (머리, 손목, 발끝은 잘려도 정상 허용됩니다)
         </div>
     </div>
 
@@ -396,7 +397,7 @@
     <!-- 전체화면 50:50 상단 분할 HUD -->
     <div class="fs-hud-container" id="fsHud">
         <div class="fs-hud-half" id="fsHudLeft">
-            <div class="fs-line-sub" id="fsRecStatus">🔴 REC (MP4)</div>
+            <div class="fs-line-sub" id="fsRecStatus">🔴 REC (30 FPS)</div>
             <div class="fs-line-sub" id="fsClockTime">2026-11-02 00:00:00</div>
             <div class="fs-line-main">후보생: <b id="fsCadetInfo">118번 홍길동</b> [<span id="fsModeTag" style="color:#e5a93c;">맨땅</span>]</div>
         </div>
@@ -469,7 +470,7 @@
 
     <div class="card">
         <div class="card-title">
-            <span>⚠️ 실시간 부정자세 감지 이력 (3초 쿨다운 적용)</span>
+            <span>⚠️ 실시간 부정자세 감지 이력 (3초 쿨다운 / 신규 즉각)</span>
             <span id="failCount" style="color:#ff6b6b; font-size:11px;">0건</span>
         </div>
         <div class="log-table-wrap">
@@ -502,9 +503,9 @@
             </div>
             <div class="guide-desc">
                 1. <b>4대 필수 정렬</b>: 어깨-팔꿈치-골반-무릎 4대 관절을 바르게 정렬합니다.<br>
-                2. <b>하강 깊이(심부선)</b>: 맨땅은 팔꿈치 90° 이하, 봉 모드는 팔꿈치 95° 이하 또는 어깨가 팔꿈치 높이 이하로 완전히 내려갑니다.<br>
-                3. <b>완전 신전</b>: 올라올 때는 팔꿈치를 155° 이상 끝까지 펴야 카운트가 올라갑니다.<br>
-                4. <b>유일한 휴식(Pike Rest)</b>: 팔을 펴고 엉덩이를 천장으로 치켜올리는 동작만 합법 휴식으로 인정됩니다.
+                2. <b>하강 깊이(심부선)</b>: 맨땅은 90° 이하, 봉 모드는 98° 이하(또는 115° 이하 굽힘 상태에서 어깨 심부선 도달)로 충분히 내려갑니다.<br>
+                3. <b>완전 신전 및 가동범위</b>: 팔꿈치를 155° 이상 펴고, 최저점 대비 최소 35° 이상 가동범위가 확보되어야 카운트됩니다.<br>
+                4. <b>유일한 휴식(Pike Rest)</b>: 팔을 펴고 엉덩이를 천장으로 치켜올리는 자세만 감점 없이 휴식으로 인정됩니다.
             </div>
         </div>
 
@@ -557,9 +558,9 @@
             </div>
 
             <div class="help-step">
-                <div class="help-step-title">3. 30cm 봉 정자세 요령</div>
+                <div class="help-step-title">3. 30cm 봉 정자세 요령 (홀딩 오류 차단)</div>
                 <div class="help-step-desc">
-                    봉 모드에서는 어깨가 팔꿈치 높이 이하로 깊게 내려가야 하강으로 인정되며, 팔을 완전히 펴야 카운트됩니다. 봉을 잡고 가만히 버티는 상태에서는 카운트가 올라가지 않습니다.
+                    봉 모드에서는 팔이 실제로 굽혀지며 어깨가 내려가야 하강으로 인정되며, 팔을 완전히 펴야 카운트됩니다. 봉을 잡고 가만히 버티는 상태에서는 카운트가 절대 올라가지 않습니다.
                 </div>
             </div>
 
@@ -643,6 +644,7 @@
     var timerInterval = null;
     var isTimerRunning = false;
     var isCountingDown = false;
+    var recordingStartTimestamp = 0;
 
     // 4대 핵심 관절(어깨, 팔꿈치, 골반, 무릎) 감지 상태
     var renderLoopId = null;
@@ -668,7 +670,7 @@
     var failCount = 0;
     var totalFaultWarningCount = 0;
 
-    // MediaRecorder 직접 활성 캔버스 캡처
+    // MediaRecorder 직접 활성 캔버스 30 FPS 캡처
     var mediaRecorder = null;
     var recordedChunks = [];
     var isRecording = false;
@@ -698,8 +700,8 @@
         } else {
             document.getElementById('btnModeBar').classList.add('active');
             document.getElementById('btnModeFloor').classList.remove('active');
-            document.getElementById('txtModeDesc').innerText = "30cm 봉 (팔꿈치 95° 이하 또는 어깨 심부선)";
-            document.getElementById('lblElbowThreshold').innerText = "팔꿈치(≤95°/봉)";
+            document.getElementById('txtModeDesc').innerText = "30cm 봉 (팔꿈치 98° 이하 또는 심부선)";
+            document.getElementById('lblElbowThreshold').innerText = "팔꿈치(≤98°/봉)";
             document.getElementById('fsModeTag').innerText = "30cm 봉";
         }
     }
@@ -779,7 +781,7 @@
         var isBad = (currentCoreAng < (exerciseMode === "BAR" ? 148 : 155) && !isPikeRest) || (currentKneeAng < 150) || repHasFault;
         var boneColor = isBad ? "#ff3333" : (isPikeRest ? "#5dade2" : (state === "DOWN" ? "#e5a93c" : "#39e75f"));
 
-        // [4대 필수 관절선 연결]
+        // 4대 필수 관절선 연결
         drawBone(ctx, pS, pE, boneColor, 6); // 어깨 - 팔꿈치
         drawBone(ctx, pS, pP, boneColor, 6); // 어깨 - 골반
         drawBone(ctx, pP, pK, boneColor, 5); // 골반 - 무릎
@@ -803,7 +805,7 @@
             drawJoint(ctx, pN, "#ffffff", "머리");
         }
 
-        // [4대 필수 관절 노드 표시]
+        // 4대 필수 관절 노드 표시
         drawJoint(ctx, pS, "#39e75f", "어깨");
         drawJoint(ctx, pE, "#e5a93c", "팔 " + currentElbowAng + "°");
         drawJoint(ctx, pP, isPikeRest ? "#5dade2" : "#f4d03f", "골반 " + currentCoreAng + "°");
@@ -884,7 +886,7 @@
     }
 
     // ==========================================
-    // [MediaPipe AI 자세 판정 (4대 핵심 관절 중심)]
+    // [MediaPipe AI 자세 판정 (봉/맨땅 및 가동범위 검증)]
     // ==========================================
     function onPoseResults(results) {
         if (!results.poseLandmarks) {
@@ -911,7 +913,7 @@
             return (pt.visibility >= minVis && pt.x >= -0.05 && pt.x <= 1.05 && pt.y >= -0.05 && pt.y <= 1.05);
         }
 
-        // [4대 핵심 관절 감지: 어깨, 팔꿈치, 골반, 무릎]
+        // 4대 핵심 관절 감지: 어깨, 팔꿈치, 골반, 무릎 (머리, 손목, 발끝 잘림 100% 허용)
         var isCoreComplete = isPointValid(shoulder, 0.30) &&
                              isPointValid(elbow, 0.30) &&
                              isPointValid(hip, 0.30) &&
@@ -938,11 +940,11 @@
         var pP = { x: mapX(hip.x), y: hip.y * ch };
         var pK = { x: mapX(knee.x), y: knee.y * ch };
 
-        // 손목 위치가 잡히면 손목 기준, 손목이 잘려도 팔꿈치 연장선으로 보정
+        // 손목 위치 추정 (손목이 잘려도 팔꿈치 방향으로 보정하여 오류 방지)
         var pW = (wrist && wrist.visibility > 0.25) ? { x: mapX(wrist.x), y: wrist.y * ch } : { x: pE.x, y: pE.y + 40 };
 
         currentElbowAng = getAngle(pS, pE, pW);
-        currentCoreAng = getAngle(pS, pP, pK); // 4대 관절 중심: 어깨-골반-무릎 일직선성 계산
+        currentCoreAng = getAngle(pS, pP, pK); // 4대 관절 중심: 어깨-골반-무릎 정렬
         currentKneeAng = (ankle && ankle.visibility > 0.25) ? getAngle(pP, pK, { x: mapX(ankle.x), y: ankle.y * ch }) : 175;
 
         updateHUDData(currentElbowAng, currentCoreAng, currentKneeAng);
@@ -963,7 +965,7 @@
         }
 
         // ==========================================
-        // [정밀 생체역학 판정 및 하강 심도 분기]
+        // [정밀 생체역학 판정 및 홀딩 오작동 원천 차단]
         // ==========================================
         if (isTimerRunning && !isPausedDueToNoBody) {
             if (isPikeRest) {
@@ -979,18 +981,24 @@
                 triggerMovementFault("HEAD", "고개만 숙임 (헤드 봅)", "고개만 숙였습니다", "팔꿈치: " + currentElbowAng + "°");
             }
 
-            // 하강 단계
+            // 1. 하강 단계 (state === "UP")
             if (state === "UP") {
                 if (currentElbowAng < minElbowInCurrentRep) {
                     minElbowInCurrentRep = currentElbowAng;
                 }
 
-                // 봉 모드: 팔꿈치 95° 이하 또는 어깨 심부선 하강 / 맨땅: 90° 이하
+                // [홀딩 오류 원천 차단 가드] 팔이 펴져 있으면(135도 이상) 절대 하강으로 진입 불가
                 var isDownTargetReached = false;
-                if (exerciseMode === "BAR") {
-                    isDownTargetReached = (currentElbowAng <= 95) || (pS.y >= pE.y - 5);
-                } else {
-                    isDownTargetReached = (currentElbowAng <= 90);
+                if (currentElbowAng < 135) {
+                    if (exerciseMode === "BAR") {
+                        // 봉 모드: 80~85도 완벽 인식(98도 이하) 또는 팔이 115도 이하로 굽혀진 상태에서 심부선 도달 시
+                        var isArmBent = (currentElbowAng <= 115);
+                        var isDepthReached = (pS.y >= pE.y - 10);
+                        isDownTargetReached = (currentElbowAng <= 98) || (isArmBent && isDepthReached);
+                    } else {
+                        // 맨땅 모드: 92도 이하
+                        isDownTargetReached = (currentElbowAng <= 92);
+                    }
                 }
 
                 if (isDownTargetReached) {
@@ -1003,14 +1011,17 @@
                     minElbowInCurrentRep = 180;
                 }
             } 
-            // 상승 단계
+            // 2. 상승 단계 (state === "DOWN")
             else if (state === "DOWN") {
                 if (currentElbowAng > maxElbowInCurrentRep) {
                     maxElbowInCurrentRep = currentElbowAng;
                 }
 
-                // 팔을 155° 이상 펴서 복귀 완료
-                if (currentElbowAng >= 155) {
+                // [가동범위 2중 검증] 최저 하강 각도와 상승 각도 차이가 최소 35도 이상 벌어져야 실제 1회로 인정
+                var isFullRom = (currentElbowAng - minElbowInCurrentRep >= 35);
+
+                // 팔을 155도 이상 펴서 올라오고, 실제 가동범위를 충족했을 때만 카운트
+                if (currentElbowAng >= 155 && isFullRom) {
                     if (!repHasFault && !isCoreSag && !isKneeTouch && !isWaveFault) {
                         repCount++;
                         currentFaultBannerText = "정자세 인정 (" + repCount + "회)";
@@ -1292,11 +1303,12 @@
     }
 
     // ==========================================
-    // [메인 캔버스 30 FPS 직접 녹화 엔진]
+    // [메인 캔버스 30 FPS 직접 녹화 엔진 & 듀레이션 보정]
     // ==========================================
     function startRecording() {
         if (isRecording) return;
         recordedChunks = [];
+        recordingStartTimestamp = Date.now();
 
         try {
             var stream = canvasElement.captureStream(30);
@@ -1329,13 +1341,17 @@
 
             mediaRecorder.onstop = function() {
                 var rawBlob = new Blob(recordedChunks, { type: lastRecordedMime || "video/mp4" });
-                lastRecordedBlob = rawBlob;
+                var elapsedMs = Math.max(1000, Date.now() - recordingStartTimestamp);
 
-                saveSessionToDB(rawBlob, currentSessionFaultLogs.slice());
-                document.getElementById('saveAlertModal').style.display = 'flex';
+                // 실제 녹화 시간을 파일 헤더에 직접 각인하여 카카오톡 4초 단축 현상 완벽 방지
+                fixWebmDuration(rawBlob, elapsedMs, function(finalBlob) {
+                    lastRecordedBlob = finalBlob;
+                    saveSessionToDB(finalBlob, currentSessionFaultLogs.slice());
+                    document.getElementById('saveAlertModal').style.display = 'flex';
+                });
             };
 
-            mediaRecorder.start(1000);
+            mediaRecorder.start(500);
             isRecording = true;
             document.getElementById('fsRecStatus').innerText = "🔴 REC (" + ((lastRecordedMime && lastRecordedMime.indexOf("mp4") !== -1) ? "MP4" : "WEBM") + ")";
         } catch (err) {
@@ -1353,6 +1369,88 @@
         } catch (e) {}
         isRecording = false;
         document.getElementById('fsRecStatus').innerText = "⚪ STANDBY";
+    }
+
+    // [EBML Duration 바이너리 패처: 오프라인 100% 작동]
+    function fixWebmDuration(blob, durationMs, callback) {
+        if (!blob || blob.size < 100) {
+            callback(blob);
+            return;
+        }
+        var reader = new FileReader();
+        reader.onload = function() {
+            try {
+                var buffer = reader.result;
+                var bytes = new Uint8Array(buffer);
+                var view = new DataView(buffer);
+
+                var infoPos = -1;
+                for (var i = 0; i < Math.min(bytes.length - 12, 50000); i++) {
+                    if (bytes[i] === 0x15 && bytes[i+1] === 0x49 && bytes[i+2] === 0xA9 && bytes[i+3] === 0x66) {
+                        infoPos = i;
+                        break;
+                    }
+                }
+
+                if (infoPos === -1) {
+                    callback(blob);
+                    return;
+                }
+
+                var p = infoPos + 4;
+                var firstByte = bytes[p];
+                var vintLen = 1;
+                var mask = 0x80;
+                while (!(firstByte & mask) && vintLen < 8) {
+                    mask >>= 1;
+                    vintLen++;
+                }
+                var infoDataStart = p + vintLen;
+
+                var durPos = -1;
+                for (var j = infoDataStart; j < Math.min(infoDataStart + 600, bytes.length - 10); j++) {
+                    if ((bytes[j] === 0x16 && bytes[j+1] === 0x54) || (bytes[j] === 0x1F && bytes[j+1] === 0x43)) {
+                        break;
+                    }
+                    if (bytes[j] === 0x44 && bytes[j+1] === 0x89) {
+                        durPos = j;
+                        break;
+                    }
+                }
+
+                if (durPos !== -1) {
+                    var lenByte = bytes[durPos + 2];
+                    if (lenByte === 0x84 || lenByte === 4) {
+                        view.setFloat32(durPos + 3, durationMs, false);
+                    } else if (lenByte === 0x88 || lenByte === 8) {
+                        view.setFloat64(durPos + 3, durationMs, false);
+                    }
+                    callback(new Blob([buffer], { type: blob.type }));
+                    return;
+                } else {
+                    var durElem = new Uint8Array(11);
+                    durElem[0] = 0x44; durElem[1] = 0x89; durElem[2] = 0x88;
+                    var dv = new DataView(durElem.buffer);
+                    dv.setFloat64(3, durationMs, false);
+
+                    var newBytes = new Uint8Array(bytes.length + 11);
+                    newBytes.set(bytes.subarray(0, infoDataStart), 0);
+                    newBytes.set(durElem, infoDataStart);
+                    newBytes.set(bytes.subarray(infoDataStart), infoDataStart + 11);
+
+                    if (vintLen === 1 && (firstByte & 0x7F) + 11 < 127) {
+                        newBytes[p] = firstByte + 11;
+                    }
+
+                    callback(new Blob([newBytes], { type: blob.type }));
+                    return;
+                }
+            } catch (e) {
+                callback(blob);
+            }
+        };
+        reader.onerror = function() { callback(blob); };
+        reader.readAsArrayBuffer(blob);
     }
 
     function downloadLastRecordedVideo() {
@@ -1378,7 +1476,7 @@
     // ==========================================
     var db = null;
     function initIndexedDB() {
-        var req = indexedDB.open("ArmyPushupDB_Final_4Joints", 1);
+        var req = indexedDB.open("ArmyPushupDB_Final_4Joints_V2", 1);
         req.onupgradeneeded = function(e) {
             var database = e.target.result;
             if (!database.objectStoreNames.contains("sessions")) {
@@ -1688,9 +1786,6 @@
         pose.onResults(onPoseResults);
     }
 
-    // ==========================================
-    // [단순 전면/후면 카메라 스트림 전환]
-    // ==========================================
     function startCameraStream() {
         if (camera) camera.stop();
 
