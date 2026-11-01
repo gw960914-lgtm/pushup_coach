@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>육군 정자세 팔굽혀펴기 AI 정밀 코칭 체계</title>
+    <title>육군 정자세 팔굽혀펴기 AI 정밀 측정체계</title>
     <!-- MediaPipe Pose CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
@@ -38,6 +38,7 @@
             border-radius: 3px;
         }
 
+        /* 카메라 컨테이너 및 전체화면 스타일 */
         .camera-container {
             position: relative;
             width: 100%;
@@ -49,7 +50,20 @@
             align-items: center;
             overflow: hidden;
             border-bottom: 2px solid #233827;
+            transition: all 0.3s ease;
         }
+        .camera-container.is-fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            max-width: none;
+            aspect-ratio: auto;
+            z-index: 99999;
+            border: none;
+        }
+
         canvas {
             width: 100%;
             height: 100%;
@@ -66,24 +80,40 @@
             display: flex;
             justify-content: space-between;
             pointer-events: none;
+            gap: 4px;
         }
         .hud-card {
             background: rgba(11, 17, 12, 0.85);
             border: 1px solid #233827;
-            padding: 5px 8px;
+            padding: 5px 6px;
             border-radius: 5px;
             text-align: center;
-            min-width: 70px;
+            flex: 1;
         }
-        .hud-val { font-size: 20px; font-weight: bold; color: #ffffff; font-family: monospace; }
+        .hud-val { font-size: 18px; font-weight: bold; color: #ffffff; font-family: monospace; }
         .hud-lbl { font-size: 9px; color: #8b9b8e; }
+
+        .btn-fullscreen-toggle {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 10;
+            background: rgba(17, 26, 19, 0.85);
+            border: 1px solid #39e75f;
+            color: #39e75f;
+            padding: 5px 8px;
+            font-size: 11px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+        }
 
         .feedback-banner {
             position: absolute;
             bottom: 8px;
             left: 8px;
             right: 8px;
-            padding: 7px 10px;
+            padding: 8px 10px;
             background: rgba(17, 26, 19, 0.9);
             border: 1px solid #39e75f;
             border-radius: 5px;
@@ -174,7 +204,7 @@
         .btn-reset { background: #7a1f1f; border-color: #e74c3c; color: #fff; }
 
         .log-table-wrap {
-            max-height: 150px;
+            max-height: 160px;
             overflow-y: auto;
             border: 1px solid #1f3323;
             border-radius: 4px;
@@ -205,21 +235,25 @@
 
 <header>
     <div class="header-title">🛡️ 육군 팔굽혀펴기 AI 정밀 측정체계</div>
-    <div class="badge">실시간 음성 코칭</div>
+    <div class="badge">6대 부정자세 감지</div>
 </header>
 
-<div class="camera-container">
+<div class="camera-container" id="cameraBox">
     <canvas id="outputCanvas"></canvas>
     <video id="inputVideo" playsinline webkit-playsinline muted autoplay></video>
 
-    <div class="hud-overlay">
+    <!-- 전체화면 토글 버튼 -->
+    <button type="button" class="btn-fullscreen-toggle" id="btnFullscreen" onclick="toggleFullscreen()">⛶ 전체화면</button>
+
+    <!-- 상단 HUD -->
+    <div class="hud-overlay" id="hudOverlay">
         <div class="hud-card">
             <div class="hud-val" id="repCount">0</div>
-            <div class="hud-lbl">정자세 카운트</div>
+            <div class="hud-lbl">정자세</div>
         </div>
         <div class="hud-card">
             <div class="hud-val" id="dispTimer" style="color:#e5a93c;">02:00</div>
-            <div class="hud-lbl">측정 잔여시간</div>
+            <div class="hud-lbl">잔여시간</div>
         </div>
         <div class="hud-card">
             <div class="hud-val" id="elbowAngle">0°</div>
@@ -227,10 +261,11 @@
         </div>
         <div class="hud-card">
             <div class="hud-val" id="coreAngle">0°</div>
-            <div class="hud-lbl">코어(145°~185°)</div>
+            <div class="hud-lbl">코어(145~185°)</div>
         </div>
     </div>
 
+    <!-- 하단 실시간 안내 배너 -->
     <div class="feedback-banner" id="feedbackText">카메라를 켜고 엎드려뻗쳐 자세를 잡으십시오</div>
 </div>
 
@@ -260,7 +295,7 @@
 
     <div class="card">
         <div class="card-title">
-            <span>⚠️ 부정자세(No-Count) 타임스탬프 이력</span>
+            <span>⚠️ 부정자세(No-Count) 타임스탬프 이력 (3초 쿨다운 적용)</span>
             <span id="failCount" style="color:#ff6b6b; font-size:11px;">0건</span>
         </div>
         <div class="log-table-wrap">
@@ -269,7 +304,7 @@
                     <tr>
                         <th style="width: 25%;">경과 시간</th>
                         <th style="width: 45%;">불합격 사유</th>
-                        <th style="width: 30%;">관측 각도</th>
+                        <th style="width: 30%;">관측 수치</th>
                     </tr>
                 </thead>
                 <tbody id="logTableBody">
@@ -286,6 +321,7 @@
     var videoElement = document.getElementById('inputVideo');
     var canvasElement = document.getElementById('outputCanvas');
     var canvasCtx = canvasElement.getContext('2d');
+    var cameraBox = document.getElementById('cameraBox');
 
     var repCount = 0;
     var state = "UP"; // UP -> DOWN -> UP
@@ -300,53 +336,53 @@
     var timerInterval = null;
     var isTimerRunning = false;
 
-    // 부정자세 추적
+    // 관절 움직임 추적
     var minElbowInCurrentRep = 180;
     var maxElbowInCurrentRep = 90;
-    var repHasCoreFault = false;
+    var repHasFault = false;
     var failCount = 0;
 
-    // TTS 음성 큐 및 잠금 관리
+    // 부정자세 유형별 독립 3초(3000ms) 쿨다운 관리 객체
+    var faultCooldowns = {
+        SAG: 0,        // 허리 숙여짐 (처짐)
+        PIKE: 0,       // 허리 세워짐 (솟음)
+        KNEE: 0,       // 무릎 닿음
+        HEAD: 0,       // 고개만 숙임
+        SHALLOW: 0,    // 덜 내려감
+        INCOMPLETE: 0  // 팔꿈치 안 펴짐
+    };
+
+    // 음성(TTS) 엔진 관리
     var isSpeaking = false;
-    var lastSpokenText = "";
-    var lastSpokenTime = 0;
 
     function speak(text) {
         if (!('speechSynthesis' in window)) return;
-        
-        // 이전 음성이 재생 중이면 절대 끊지 않고 종료될 때까지 대기
-        if (window.speechSynthesis.speaking || isSpeaking) {
-            return;
-        }
-
-        // 동일한 문장 2.2초 내 중복 출력 방지
-        var now = Date.now();
-        if (text === lastSpokenText && (now - lastSpokenTime < 2200)) {
-            return;
-        }
+        if (window.speechSynthesis.speaking || isSpeaking) return;
 
         isSpeaking = true;
-        lastSpokenText = text;
-        lastSpokenTime = now;
-
         var msg = new SpeechSynthesisUtterance(text);
         msg.lang = 'ko-KR';
         msg.rate = 1.15;
         msg.pitch = 1.0;
 
-        msg.onend = function() {
-            isSpeaking = false;
-        };
-        msg.onerror = function() {
-            isSpeaking = false;
-        };
-
-        // 모바일 사파리 등 onend 누락 방지 안전 타이머 (최대 2.5초)
-        setTimeout(function() {
-            isSpeaking = false;
-        }, 2500);
+        msg.onend = function() { isSpeaking = false; };
+        msg.onerror = function() { isSpeaking = false; };
+        setTimeout(function() { isSpeaking = false; }, 2500);
 
         window.speechSynthesis.speak(msg);
+    }
+
+    // 3초 쿨다운 적용 부정자세 기록 및 발화 통합 함수
+    function triggerFault(typeKey, reason, ttsSpeech, detail) {
+        var now = Date.now();
+        // 동일 유형의 부정자세는 3초에 1회만 카운트 및 발화
+        if (now - faultCooldowns[typeKey] >= 3000) {
+            faultCooldowns[typeKey] = now;
+            repHasFault = true;
+            setFeedback("⚠️ " + reason, true);
+            speak(ttsSpeech);
+            logInvalidRep(reason, detail);
+        }
     }
 
     function getAngle(A, B, C) {
@@ -382,6 +418,29 @@
         tbody.insertBefore(tr, tbody.firstChild);
     }
 
+    // 전체화면 토글
+    function toggleFullscreen() {
+        var btn = document.getElementById('btnFullscreen');
+        if (!cameraBox.classList.contains('is-fullscreen')) {
+            cameraBox.classList.add('is-fullscreen');
+            btn.innerText = "✖ 전체화면 해제";
+            if (cameraBox.requestFullscreen) {
+                cameraBox.requestFullscreen().catch(function(){});
+            } else if (cameraBox.webkitRequestFullscreen) {
+                cameraBox.webkitRequestFullscreen();
+            }
+        } else {
+            cameraBox.classList.remove('is-fullscreen');
+            btn.innerText = "⛶ 전체화면";
+            if (document.exitFullscreen) {
+                document.exitFullscreen().catch(function(){});
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
+        }
+    }
+
+    // 타이머 제어
     function setTimerPreset(sec, btn) {
         if (isTimerRunning) return;
         totalSeconds = sec;
@@ -472,8 +531,10 @@
         state = "UP";
         minElbowInCurrentRep = 180;
         maxElbowInCurrentRep = 90;
-        repHasCoreFault = false;
+        repHasFault = false;
         isSpeaking = false;
+        for (var k in faultCooldowns) faultCooldowns[k] = 0;
+
         document.getElementById('repCount').innerText = "0";
         document.getElementById('failCount').innerText = "0건";
         document.getElementById('logTableBody').innerHTML = '<tr id="emptyRow"><td colspan="3" style="text-align:center; color:#8b9b8e; padding:12px;">부정자세 기록이 없습니다.</td></tr>';
@@ -548,7 +609,8 @@
         var rightVis = (lm[12].visibility + lm[24].visibility + lm[28].visibility) / 3;
         var isLeft = leftVis >= rightVis;
 
-        var head = lm[0];
+        // 관절 랜드마크 추출
+        var nose = lm[0];
         var shoulder = isLeft ? lm[11] : lm[12];
         var elbow = isLeft ? lm[13] : lm[14];
         var wrist = isLeft ? lm[15] : lm[16];
@@ -557,7 +619,7 @@
         var ankle = isLeft ? lm[27] : lm[28];
         var toe = isLeft ? lm[31] : lm[32];
 
-        var pH = { x: head.x * w, y: head.y * h };
+        var pN = { x: nose.x * w, y: nose.y * h };
         var pS = { x: shoulder.x * w, y: shoulder.y * h };
         var pE = { x: elbow.x * w, y: elbow.y * h };
         var pW = { x: wrist.x * w, y: wrist.y * h };
@@ -566,19 +628,27 @@
         var pA = { x: ankle.x * w, y: ankle.y * h };
         var pT = { x: toe.x * w, y: toe.y * h };
 
+        // 1. 관절 각도 산출
         var elbowAng = getAngle(pS, pE, pW);
         var coreAng = getAngle(pS, pP, pA);
+        var kneeAng = getAngle(pP, pK, pA);
 
         document.getElementById('elbowAngle').innerText = elbowAng + "°";
         document.getElementById('coreAngle').innerText = coreAng + "°";
 
-        // 코어 부정자세 판정 (처짐 / 솟음)
-        var isCoreSag = (coreAng < 145); // 허리 처짐
-        var isCorePike = (coreAng > 185); // 엉덩이 솟음
+        // 2. 부정자세 감지 플래그
+        var isCoreSag = (coreAng < 145);      // 허리 숙여짐 (처짐)
+        var isCorePike = (coreAng > 185);     // 허리 세워짐 (솟음)
+        var isKneeTouch = (kneeAng < 140);    // 무릎 닿음
 
-        // 골격선 렌더링
-        var boneColor = (isCoreSag || isCorePike) ? "#ff3333" : (state === "DOWN" ? "#e5a93c" : "#39e75f");
-        drawBone(pH, pS, boneColor, 4);
+        // 고개만 숙임 (가슴/어깨는 덜 내려왔는데 머리만 어깨선 아래로 과도하게 숙여짐)
+        var isHeadBob = (elbowAng > 115) && ((pN.y - pS.y) > 45);
+
+        // 3. 골격선 및 관절 노드 렌더링
+        var isPostureBad = isCoreSag || isCorePike || isKneeTouch || isHeadBob;
+        var boneColor = isPostureBad ? "#ff3333" : (state === "DOWN" ? "#e5a93c" : "#39e75f");
+
+        drawBone(pN, pS, boneColor, 4);
         drawBone(pS, pE, boneColor, 5);
         drawBone(pE, pW, boneColor, 5);
         drawBone(pS, pP, boneColor, 5);
@@ -586,59 +656,58 @@
         drawBone(pK, pA, boneColor, 4);
         drawBone(pA, pT, boneColor, 4);
 
-        // 관절점 렌더링
-        drawJoint(pH, "#ffffff", "머리");
+        drawJoint(pN, "#ffffff", "머리");
         drawJoint(pS, "#39e75f", "어깨");
         drawJoint(pE, "#e5a93c", "팔꿈치 " + elbowAng + "°");
         drawJoint(pW, "#5dade2", "손목");
         drawJoint(pP, "#f4d03f", "골반 " + coreAng + "°");
-        drawJoint(pK, "#39e75f", "무릎");
+        drawJoint(pK, isKneeTouch ? "#ff3333" : "#39e75f", "무릎 " + kneeAng + "°");
         drawJoint(pA, "#5dade2", "발끝");
 
-        // 측정 진행 중 부정자세 실시간 판정
+        // 4. 측정 중 부정자세 판정 (3초 쿨다운 적용)
         if (isTimerRunning) {
-            // 1. 코어 부정자세 검사 및 단문 음성
+            // (1) 실시간 체간 및 지면 부정자세 감지
             if (isCoreSag) {
-                repHasCoreFault = true;
-                setFeedback("⚠️ 허리가 숙여졌습니다 (코어 처짐)", true);
-                speak("허리가 숙여졌습니다");
-                logInvalidRep("허리 처짐", "코어: " + coreAng + "°");
+                triggerFault("SAG", "허리 숙여짐 (처짐)", "허리가 숙여졌습니다", "코어: " + coreAng + "°");
             } else if (isCorePike) {
-                repHasCoreFault = true;
-                setFeedback("⚠️ 허리가 세워졌습니다 (엉덩이 솟음)", true);
-                speak("허리가 세워졌습니다");
-                logInvalidRep("허리 솟음", "코어: " + coreAng + "°");
+                triggerFault("PIKE", "허리 세워짐 (솟음)", "허리가 세워졌습니다", "코어: " + coreAng + "°");
             }
 
-            // 2. 하강 단계 (state === "UP")
+            if (isKneeTouch) {
+                triggerFault("KNEE", "무릎 닿음", "무릎이 닿았습니다", "무릎각: " + kneeAng + "°");
+            }
+
+            if (isHeadBob) {
+                triggerFault("HEAD", "고개만 숙임 (헤드 봅)", "고개만 숙였습니다", "팔꿈치: " + elbowAng + "°");
+            }
+
+            // (2) 하강 단계 (state === "UP")
             if (state === "UP") {
                 if (elbowAng < minElbowInCurrentRep) {
                     minElbowInCurrentRep = elbowAng;
                 }
 
-                // 90도 이하 하강 성공
-                if (elbowAng <= 90) {
+                // 90도 이하 정자세 하강 완료
+                if (elbowAng <= 90 && !isPostureBad) {
                     state = "DOWN";
                     maxElbowInCurrentRep = elbowAng;
                     setFeedback("✅ 충분 하강! 팔을 밀어 올리십시오", false);
-                } 
-                // 하강하다가 90도 미도달 상태로 다시 올라오는 경우 (가슴 미도달)
-                else if (minElbowInCurrentRep <= 130 && (elbowAng - minElbowInCurrentRep > 18) && elbowAng > 105) {
-                    setFeedback("⚠️ 덜 내려갔습니다 (90° 이하 필수)", true);
-                    speak("덜 내려갔습니다");
-                    logInvalidRep("가슴 미도달", "최저: " + minElbowInCurrentRep + "°");
-                    minElbowInCurrentRep = 180; // 재판정 방지 초기화
                 }
-            } 
-            // 3. 상승 단계 (state === "DOWN")
+                // 하강하다가 90도까지 안 내려가고 중간에 다시 올라오는 경우 (가슴 미도달)
+                else if (minElbowInCurrentRep <= 130 && (elbowAng - minElbowInCurrentRep > 18) && elbowAng > 105) {
+                    triggerFault("SHALLOW", "덜 내려감 (가슴 미도달)", "덜 내려갔습니다", "최저: " + minElbowInCurrentRep + "°");
+                    minElbowInCurrentRep = 180;
+                }
+            }
+            // (3) 상승 단계 (state === "DOWN")
             else if (state === "DOWN") {
                 if (elbowAng > maxElbowInCurrentRep) {
                     maxElbowInCurrentRep = elbowAng;
                 }
 
-                // 완전히 펴서 복귀 완료 (160도 이상)
+                // 완전히 펴서 올라옴 (160도 이상)
                 if (elbowAng >= 160) {
-                    if (!repHasCoreFault) {
+                    if (!repHasFault) {
                         repCount++;
                         document.getElementById('repCount').innerText = repCount;
                         setFeedback("정자세 인정 (" + repCount + "회)", false);
@@ -649,14 +718,12 @@
                     state = "UP";
                     minElbowInCurrentRep = 180;
                     maxElbowInCurrentRep = 90;
-                    repHasCoreFault = false;
-                } 
-                // 팔을 다 펴지 않고 다시 굽히며 내려가려는 경우 (깔짝거림)
+                    repHasFault = false;
+                }
+                // 완전히 안 펴고(예: 140도 미만) 튕기듯 다시 내려가는 경우 (팔꿈치 미신전)
                 else if (maxElbowInCurrentRep >= 115 && (maxElbowInCurrentRep - elbowAng > 15) && elbowAng < 150) {
-                    setFeedback("⚠️ 팔꿈치가 안 펴집니다 (160° 필수)", true);
-                    speak("팔꿈치가 안 펴집니다");
-                    logInvalidRep("팔 미신전", "최대: " + maxElbowInCurrentRep + "°");
-                    maxElbowInCurrentRep = 90; // 재판정 방지 초기화
+                    triggerFault("INCOMPLETE", "팔꿈치 안 펴짐 (미신전)", "팔꿈치가 안 펴집니다", "최대: " + maxElbowInCurrentRep + "°");
+                    maxElbowInCurrentRep = 90;
                 }
             }
         }
