@@ -313,7 +313,7 @@
 
 <header>
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
-    <div class="badge">실시간 녹화 복구 엔진 탑재</div>
+    <div class="badge">30 FPS 정규 녹화 · 돌려보기 지원</div>
 </header>
 
 <div class="camera-container" id="cameraBox">
@@ -455,7 +455,7 @@
     <div class="modal-card">
         <div class="modal-title">🎉 측정 종료 및 데이터 보관 안내</div>
         <div class="modal-body">
-            측정 영상과 부정자세 로그가 <b>스마트폰 내부 저장소(IndexedDB)</b>에 안전하게 보관되었습니다.<br><br>
+            측정 영상(30 FPS 풀타임)과 부정자세 로그가 <b>스마트폰 내부 저장소(IndexedDB)</b>에 안전하게 보관되었습니다.<br><br>
             <span style="color:#e5a93c;">⚠️ 브라우저 캐시 삭제 시 소실될 수 있으므로, 카카오톡 제출이나 갤러리 보관을 위해 지금 다운로드하십시오.</span>
         </div>
         <div class="btn-group">
@@ -466,7 +466,7 @@
     </div>
 </div>
 
-<!-- 모달 2: 영상 다시보기 -->
+<!-- 모달 2: 영상 다시보기 (타임라인 클릭 즉시 이동 기능 지원) -->
 <div class="modal-overlay" id="videoPlayerModal">
     <div class="modal-card">
         <div class="modal-title" id="playerModalTitle">📹 측정 영상 다시보기</div>
@@ -474,16 +474,16 @@
             <video id="historyVideoPlayer" controls playsinline></video>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:11px; color:#8b9b8e;">재생 속도 조절:</span>
+            <span style="font-size:11px; color:#8b9b8e;">재생 속도:</span>
             <div style="display:flex; gap:4px;">
-                <button type="button" class="btn-mini" onclick="setPlaySpeed(0.5)">0.5x (슬로우)</button>
-                <button type="button" class="btn-mini" onclick="setPlaySpeed(1.0)">1.0x (표준)</button>
-                <button type="button" class="btn-mini" onclick="setPlaySpeed(1.5)">1.5x (빠르게)</button>
+                <button type="button" class="btn-mini" onclick="setPlaySpeed(0.5)">0.5x</button>
+                <button type="button" class="btn-mini" onclick="setPlaySpeed(1.0)">1.0x</button>
+                <button type="button" class="btn-mini" onclick="setPlaySpeed(1.5)">1.5x</button>
             </div>
         </div>
-        <div class="log-table-wrap" style="max-height: 110px;">
+        <div class="log-table-wrap" style="max-height: 120px;">
             <table id="playerModalFaultTable">
-                <thead><tr><th>발생 시점</th><th>사유</th><th>각도</th></tr></thead>
+                <thead><tr><th>발생 시점 (클릭 시 이동)</th><th>사유</th><th>각도</th></tr></thead>
                 <tbody id="playerModalFaultBody"></tbody>
             </table>
         </div>
@@ -497,7 +497,14 @@
     var canvasCtx = canvasElement.getContext('2d');
     var cameraBox = document.getElementById('cameraBox');
 
+    // [핵심] 480p 녹화용 전용 캔버스 (DOM 활성 레이어 보장)
     var recCanvas = document.createElement('canvas');
+    recCanvas.style.position = 'fixed';
+    recCanvas.style.top = '-9999px';
+    recCanvas.style.left = '-9999px';
+    recCanvas.style.opacity = '0.001';
+    recCanvas.style.pointerEvents = 'none';
+    document.body.appendChild(recCanvas);
     var recCtx = recCanvas.getContext('2d');
 
     var repCount = 0;
@@ -513,34 +520,40 @@
     var timerInterval = null;
     var isTimerRunning = false;
     var isCountingDown = false;
+    var recordingStartTimestamp = 0;
 
-    // 전신 인식 전이 추적
+    // 비동기 30 FPS 렌더링 파이프라인
+    var renderLoopId = null;
+    var latestPoseLandmarks = null;
+    var isFullBodyDetected = false;
     var wasFullBodyDetected = true;
     var isPausedDueToNoBody = false;
 
-    // 부정자세 스마트 쿨다운 추적
+    // 부정자세 3단계 스마트 피드백
     var lastFaultKey = "";
     var lastFaultTime = 0;
-
-    // MediaRecorder 녹화
-    var mediaRecorder = null;
-    var recordedChunks = [];
-    var isRecording = false;
-    var lastRecordedBlob = null;
-    var lastRecordedMime = "";
-
-    // 세션 기록 로그
-    var currentSessionFaultLogs = [];
-
-    // 자세 판정 추적 변수
-    var minElbowInCurrentRep = 180;
-    var maxElbowInCurrentRep = 90;
     var repHasFault = false;
     var faultReasonCurrentRep = "";
     var currentFaultBannerText = "준비 자세 유지 중";
     var isCurrentFaultWarn = false;
     var failCount = 0;
     var totalFaultWarningCount = 0;
+
+    // 자세 판정 변수
+    var minElbowInCurrentRep = 180;
+    var maxElbowInCurrentRep = 90;
+    var currentElbowAng = 0;
+    var currentCoreAng = 0;
+    var currentKneeAng = 0;
+
+    // MediaRecorder
+    var mediaRecorder = null;
+    var recordedChunks = [];
+    var isRecording = false;
+    var lastRecordedBlob = null;
+    var lastRecordedMime = "";
+
+    var currentSessionFaultLogs = [];
 
     function updateCadetDisplay() {
         var cId = document.getElementById('inCadetId').value.trim() || "000";
@@ -549,11 +562,712 @@
     }
 
     // ==========================================
-    // [IndexedDB 영구 저장소 엔진]
+    // [30 FPS 전용 렌더링 루프 (AI 연산과 완전 분리)]
+    // ==========================================
+    function startRenderPipeline() {
+        if (renderLoopId) return;
+
+        function loop() {
+            renderLoopId = requestAnimationFrame(loop);
+
+            if (!cameraStarted || videoElement.readyState < 2) return;
+
+            var vw = videoElement.videoWidth || 640;
+            var vh = videoElement.videoHeight || 480;
+
+            if (canvasElement.width !== vw || canvasElement.height !== vh) {
+                canvasElement.width = vw;
+                canvasElement.height = vh;
+            }
+
+            var cw = canvasElement.width;
+            var ch = canvasElement.height;
+
+            // 1. 카메라 실시간 프레임 출력 (30 FPS)
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, cw, ch);
+            if (facingMode === "user") {
+                canvasCtx.translate(cw, 0);
+                canvasCtx.scale(-1, 1);
+            }
+            canvasCtx.drawImage(videoElement, 0, 0, cw, ch);
+            canvasCtx.restore();
+
+            // 2. 최신 스켈레톤 오버레이 렌더링
+            if (isFullBodyDetected && latestPoseLandmarks) {
+                drawSkeletonOverlay(canvasCtx, cw, ch, latestPoseLandmarks);
+            }
+
+            // 3. 녹화 진행 시 480p 캔버스에 30 FPS 실시간 스트리밍 복사
+            if (isRecording) {
+                renderRecordFrame30FPS(cw, ch, vw, vh);
+            }
+        }
+        renderLoopId = requestAnimationFrame(loop);
+    }
+
+    function drawSkeletonOverlay(ctx, cw, ch, lm) {
+        var leftVis = (lm[11].visibility + lm[23].visibility + lm[27].visibility) / 3;
+        var rightVis = (lm[12].visibility + lm[24].visibility + lm[28].visibility) / 3;
+        var isLeft = leftVis >= rightVis;
+
+        var nose = lm[0];
+        var shoulder = isLeft ? lm[11] : lm[12];
+        var elbow = isLeft ? lm[13] : lm[14];
+        var wrist = isLeft ? lm[15] : lm[16];
+        var hip = isLeft ? lm[23] : lm[24];
+        var knee = isLeft ? lm[25] : lm[26];
+        var ankle = isLeft ? lm[27] : lm[28];
+        var toe = isLeft ? lm[31] : lm[32];
+
+        function mapX(valX) {
+            return (facingMode === "user") ? (1 - valX) * cw : valX * cw;
+        }
+
+        var pN = { x: mapX(nose.x), y: nose.y * ch };
+        var pS = { x: mapX(shoulder.x), y: shoulder.y * ch };
+        var pE = { x: mapX(elbow.x), y: elbow.y * ch };
+        var pW = { x: mapX(wrist.x), y: wrist.y * ch };
+        var pP = { x: mapX(hip.x), y: hip.y * ch };
+        var pK = { x: mapX(knee.x), y: knee.y * ch };
+        var pA = { x: mapX(ankle.x), y: ankle.y * ch };
+        var pT = { x: mapX(toe.x), y: toe.y * ch };
+
+        var isPikeRest = (currentElbowAng >= 145 && currentCoreAng > 180);
+        var isBad = (currentCoreAng < 155 && !isPikeRest) || (currentKneeAng < 155) || repHasFault;
+        var boneColor = isBad ? "#ff3333" : (isPikeRest ? "#5dade2" : (state === "DOWN" ? "#e5a93c" : "#39e75f"));
+
+        drawBone(ctx, pN, pS, boneColor, 5);
+        drawBone(ctx, pS, pE, boneColor, 6);
+        drawBone(ctx, pE, pW, boneColor, 6);
+        drawBone(ctx, pS, pP, boneColor, 6);
+        drawBone(ctx, pP, pK, boneColor, 5);
+        drawBone(ctx, pK, pA, boneColor, 5);
+        drawBone(ctx, pA, pT, boneColor, 5);
+
+        drawJoint(ctx, pN, "#ffffff", "머리");
+        drawJoint(ctx, pS, "#39e75f", "어깨");
+        drawJoint(ctx, pE, "#e5a93c", "팔 " + currentElbowAng + "°");
+        drawJoint(ctx, pW, "#5dade2", "손목");
+        drawJoint(ctx, pP, isPikeRest ? "#5dade2" : "#f4d03f", "골반 " + currentCoreAng + "°");
+        drawJoint(ctx, pK, (currentKneeAng < 155) ? "#ff3333" : "#39e75f", "무릎 " + currentKneeAng + "°");
+        drawJoint(ctx, pA, "#5dade2", "발끝");
+    }
+
+    function renderRecordFrame30FPS(cw, ch, vw, vh) {
+        var scale = 480 / Math.min(vw, vh);
+        var rw = Math.round(vw * scale);
+        var rh = Math.round(vh * scale);
+        if (rw % 2 !== 0) rw++;
+        if (rh % 2 !== 0) rh++;
+
+        if (recCanvas.width !== rw || recCanvas.height !== rh) {
+            recCanvas.width = rw;
+            recCanvas.height = rh;
+        }
+
+        recCtx.clearRect(0, 0, rw, rh);
+        recCtx.drawImage(canvasElement, 0, 0, rw, rh);
+
+        var cId = document.getElementById('inCadetId').value.trim() || "000";
+        var cName = document.getElementById('inCadetName').value.trim() || "후보생";
+        var timeStr = updateTimerDisplay();
+
+        var now = new Date();
+        var dateFormatted = now.getFullYear() + "-" + (now.getMonth() + 1 < 10 ? "0" : "") + (now.getMonth() + 1) + "-" + (now.getDate() < 10 ? "0" : "") + now.getDate() + " " + (now.getHours() < 10 ? "0" : "") + now.getHours() + ":" + (now.getMinutes() < 10 ? "0" : "") + now.getMinutes() + ":" + (now.getSeconds() < 10 ? "0" : "") + now.getSeconds();
+
+        recCtx.save();
+
+        // 1. 상단 좌측 OSD
+        recCtx.fillStyle = "rgba(0, 0, 0, 0.82)";
+        recCtx.fillRect(8, 8, (rw * 0.48), 52);
+        recCtx.strokeStyle = "#233827";
+        recCtx.lineWidth = 1.5;
+        recCtx.strokeRect(8, 8, (rw * 0.48), 52);
+
+        recCtx.fillStyle = isPausedDueToNoBody ? "#ffae19" : "#ff4444";
+        recCtx.beginPath();
+        recCtx.arc(18, 22, 4, 0, Math.PI * 2);
+        recCtx.fill();
+        recCtx.font = "bold 10px monospace";
+        recCtx.fillText(isPausedDueToNoBody ? "PAUSED" : "REC 30FPS", 26, 25);
+
+        recCtx.fillStyle = "#ffffff";
+        recCtx.font = "9px monospace";
+        recCtx.fillText(dateFormatted, 18, 38);
+
+        recCtx.fillStyle = "#39e75f";
+        recCtx.font = "bold 10.5px sans-serif";
+        recCtx.fillText("교번 " + cId + " " + cName, 18, 52);
+
+        // 2. 상단 우측 OSD
+        var rightW = (rw * 0.48);
+        var rightX = rw - rightW - 8;
+        recCtx.fillStyle = "rgba(0, 0, 0, 0.82)";
+        recCtx.fillRect(rightX, 8, rightW, 52);
+        recCtx.strokeStyle = repHasFault ? "#ff4444" : "#233827";
+        recCtx.strokeRect(rightX, 8, rightW, 52);
+
+        recCtx.fillStyle = "#e5a93c";
+        recCtx.font = "bold 13px monospace";
+        recCtx.fillText("⏱ " + timeStr, rightX + 8, 26);
+
+        recCtx.fillStyle = repHasFault ? "#ff4444" : "#39e75f";
+        recCtx.font = "bold 16px monospace";
+        recCtx.textAlign = "right";
+        recCtx.fillText((repHasFault ? "❌ " : "") + repCount + " 회", rw - 14, 27);
+        recCtx.textAlign = "left";
+
+        recCtx.fillStyle = "#a3b8a6";
+        recCtx.font = "9.5px sans-serif";
+        recCtx.fillText("팔 " + currentElbowAng + "° | 코어 " + currentCoreAng + "° | 무릎 " + currentKneeAng + "°", rightX + 8, 48);
+
+        // 3. 하단 상태 배너
+        var bannerBg = isCurrentFaultWarn ? "rgba(90, 15, 15, 0.92)" : "rgba(10, 30, 15, 0.88)";
+        var bannerBorder = isCurrentFaultWarn ? "#ff4444" : "#39e75f";
+        var bannerColor = isCurrentFaultWarn ? "#ff6b6b" : "#39e75f";
+
+        recCtx.fillStyle = bannerBg;
+        recCtx.fillRect(8, rh - 42, rw - 16, 34);
+        recCtx.strokeStyle = bannerBorder;
+        recCtx.lineWidth = 1.5;
+        recCtx.strokeRect(8, rh - 42, rw - 16, 34);
+
+        recCtx.fillStyle = bannerColor;
+        recCtx.font = "bold 12px sans-serif";
+        recCtx.textAlign = "center";
+        recCtx.fillText(currentFaultBannerText, rw / 2, rh - 20);
+
+        recCtx.restore();
+    }
+
+    // ==========================================
+    // [MediaPipe AI 자세 분석 루프 (독립 비동기)]
+    // ==========================================
+    function onPoseResults(results) {
+        if (!results.poseLandmarks) {
+            latestPoseLandmarks = null;
+            handleFullBodyLoss();
+            return;
+        }
+
+        var lm = results.poseLandmarks;
+        var leftVis = (lm[11].visibility + lm[23].visibility + lm[27].visibility) / 3;
+        var rightVis = (lm[12].visibility + lm[24].visibility + lm[28].visibility) / 3;
+        var isLeft = leftVis >= rightVis;
+
+        var nose = lm[0];
+        var shoulder = isLeft ? lm[11] : lm[12];
+        var elbow = isLeft ? lm[13] : lm[14];
+        var wrist = isLeft ? lm[15] : lm[16];
+        var hip = isLeft ? lm[23] : lm[24];
+        var knee = isLeft ? lm[25] : lm[26];
+        var ankle = isLeft ? lm[27] : lm[28];
+        var toe = isLeft ? lm[31] : lm[32];
+
+        function isPointInScreen(pt, minVis) {
+            if (!pt) return false;
+            if (pt.visibility < (minVis || 0.45)) return false;
+            return (pt.x >= 0.01 && pt.x <= 0.99 && pt.y >= 0.01 && pt.y <= 0.99);
+        }
+
+        var isBodyComplete = isPointInScreen(nose, 0.4) &&
+                             isPointInScreen(shoulder, 0.5) &&
+                             isPointInScreen(elbow, 0.5) &&
+                             isPointInScreen(wrist, 0.5) &&
+                             isPointInScreen(hip, 0.5) &&
+                             isPointInScreen(knee, 0.5) &&
+                             (isPointInScreen(ankle, 0.45) || isPointInScreen(toe, 0.45));
+
+        if (!isBodyComplete) {
+            latestPoseLandmarks = null;
+            handleFullBodyLoss();
+            return;
+        }
+
+        latestPoseLandmarks = lm;
+        handleFullBodyRecovered();
+
+        var cw = canvasElement.width || 640;
+        var ch = canvasElement.height || 480;
+
+        function mapX(valX) {
+            return (facingMode === "user") ? (1 - valX) * cw : valX * cw;
+        }
+
+        var pN = { x: mapX(nose.x), y: nose.y * ch };
+        var pS = { x: mapX(shoulder.x), y: shoulder.y * ch };
+        var pE = { x: mapX(elbow.x), y: elbow.y * ch };
+        var pW = { x: mapX(wrist.x), y: wrist.y * ch };
+        var pP = { x: mapX(hip.x), y: hip.y * ch };
+        var pK = { x: mapX(knee.x), y: knee.y * ch };
+        var pA = { x: mapX(ankle.x), y: ankle.y * ch };
+
+        currentElbowAng = getAngle(pS, pE, pW);
+        currentCoreAng = getAngle(pS, pP, pA);
+        currentKneeAng = getAngle(pP, pK, pA);
+
+        updateHUDData(currentElbowAng, currentCoreAng, currentKneeAng);
+
+        var isPikeRest = (currentElbowAng >= 145 && currentCoreAng > 180);
+        var isCoreSag = !isPikeRest && (currentCoreAng < 155);
+        var isKneeTouch = (currentKneeAng < 155);
+        var isHeadBob = !isPikeRest && (currentElbowAng > 110) && ((pN.y - pS.y) > (ch * 0.05));
+
+        var isWaveFault = false;
+        if (state === "DOWN" && currentElbowAng > 100 && currentElbowAng < 155) {
+            if (currentCoreAng < 155) {
+                isWaveFault = true;
+            }
+        }
+
+        var isCurrentMotionBad = isCoreSag || isKneeTouch || isHeadBob || isWaveFault;
+
+        if (isTimerRunning && !isPausedDueToNoBody) {
+            if (isPikeRest) {
+                currentFaultBannerText = "🧘 엉덩이 솟음 휴식 중 (정상 휴식)";
+                isCurrentFaultWarn = false;
+            } else if (isWaveFault) {
+                triggerMovementFault("WAVE", "상체 선행 상승 (배치기)", "상체만 먼저 일어납니다", "상승 코어: " + currentCoreAng + "°");
+            } else if (isCoreSag) {
+                triggerMovementFault("SAG", "허리 숙여짐 (처짐)", "허리가 숙여졌습니다", "코어: " + currentCoreAng + "°");
+            } else if (isKneeTouch) {
+                triggerMovementFault("KNEE", "무릎 닿음 (다리 굽힘)", "무릎이 닿았습니다", "무릎각: " + currentKneeAng + "°");
+            } else if (isHeadBob) {
+                triggerMovementFault("HEAD", "고개만 숙임 (헤드 봅)", "고개만 숙였습니다", "팔꿈치: " + currentElbowAng + "°");
+            }
+
+            if (state === "UP") {
+                if (currentElbowAng < minElbowInCurrentRep) {
+                    minElbowInCurrentRep = currentElbowAng;
+                }
+
+                if (currentElbowAng <= 90 && !isCurrentMotionBad) {
+                    state = "DOWN";
+                    maxElbowInCurrentRep = currentElbowAng;
+                    currentFaultBannerText = "✅ 충분 하강! 팔을 밀어 올리십시오";
+                    isCurrentFaultWarn = false;
+                } else if (minElbowInCurrentRep <= 130 && (currentElbowAng - minElbowInCurrentRep > 15) && currentElbowAng > 105) {
+                    triggerMovementFault("SHALLOW", "덜 내려감 (가슴 미도달)", "덜 내려갔습니다", "최저: " + minElbowInCurrentRep + "°");
+                    minElbowInCurrentRep = 180;
+                }
+            } else if (state === "DOWN") {
+                if (currentElbowAng > maxElbowInCurrentRep) {
+                    maxElbowInCurrentRep = currentElbowAng;
+                }
+
+                if (currentElbowAng >= 160) {
+                    if (!repHasFault && !isCurrentMotionBad) {
+                        repCount++;
+                        currentFaultBannerText = "정자세 인정 (" + repCount + "회)";
+                        isCurrentFaultWarn = false;
+                        speak(repCount + "");
+                    } else {
+                        currentFaultBannerText = "❌ 노카운트 (" + (faultReasonCurrentRep || "자세 불량") + ")";
+                        isCurrentFaultWarn = true;
+                    }
+
+                    state = "UP";
+                    minElbowInCurrentRep = 180;
+                    maxElbowInCurrentRep = 90;
+                    repHasFault = false;
+                    faultReasonCurrentRep = "";
+                } else if (maxElbowInCurrentRep >= 115 && (maxElbowInCurrentRep - currentElbowAng > 15) && currentElbowAng < 150) {
+                    triggerMovementFault("INCOMPLETE", "팔꿈치 안 펴짐 (미신전)", "팔꿈치가 안 펴집니다", "최대: " + maxElbowInCurrentRep + "°");
+                    maxElbowInCurrentRep = 90;
+                }
+            }
+        }
+    }
+
+    function handleFullBodyLoss() {
+        isFullBodyDetected = false;
+        document.getElementById('fullbodyWarnOverlay').style.display = 'flex';
+        isPausedDueToNoBody = true;
+
+        state = "UP";
+        minElbowInCurrentRep = 180;
+        maxElbowInCurrentRep = 90;
+
+        document.getElementById('txtTimerState').innerText = "⚠️ 전신 미인식 (측정 정지)";
+        document.getElementById('txtTimerState').style.color = "#ff4d4d";
+
+        if (wasFullBodyDetected) {
+            wasFullBodyDetected = false;
+            speak("전신이 인식되지 않았습니다");
+        }
+    }
+
+    function handleFullBodyRecovered() {
+        isFullBodyDetected = true;
+        if (!wasFullBodyDetected) {
+            wasFullBodyDetected = true;
+            document.getElementById('fullbodyWarnOverlay').style.display = 'none';
+            isPausedDueToNoBody = false;
+
+            if (isTimerRunning) {
+                document.getElementById('txtTimerState').innerText = "측정 및 녹화 진행 중";
+                document.getElementById('txtTimerState').style.color = "#39e75f";
+            }
+        }
+    }
+
+    function triggerMovementFault(typeKey, reason, ttsSpeech, detail) {
+        var now = Date.now();
+        var isNewFault = (typeKey !== lastFaultKey);
+        var isCooldownPassed = (now - lastFaultTime >= 3000);
+
+        if (isNewFault || isCooldownPassed) {
+            lastFaultKey = typeKey;
+            lastFaultTime = now;
+
+            totalFaultWarningCount++;
+            faultReasonCurrentRep = reason;
+
+            var warnText = "";
+            var ttsSuffix = "";
+
+            if (totalFaultWarningCount === 1) {
+                warnText = "1차 경고";
+                ttsSuffix = "부정자세 1차경고입니다.";
+            } else if (totalFaultWarningCount === 2) {
+                warnText = "2차 경고";
+                ttsSuffix = "부정자세 2차경고입니다.";
+            } else {
+                warnText = "노카운트";
+                ttsSuffix = "부정자세 노카운트입니다.";
+                repHasFault = true;
+            }
+
+            var fullTTS = ttsSpeech + ". " + ttsSuffix;
+            currentFaultBannerText = "⚠️ " + reason + " [" + warnText + "]";
+            isCurrentFaultWarn = true;
+            speak(fullTTS);
+            logInvalidRep(reason + " (" + warnText + ")", detail);
+        } else {
+            if (totalFaultWarningCount >= 3) {
+                repHasFault = true;
+                faultReasonCurrentRep = reason;
+            }
+        }
+    }
+
+    function speak(text) {
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        var msg = new SpeechSynthesisUtterance(text);
+        msg.lang = 'ko-KR';
+        msg.rate = 1.15;
+        msg.pitch = 1.0;
+        window.speechSynthesis.speak(msg);
+    }
+
+    function getAngle(A, B, C) {
+        var rad = Math.atan2(C.y - B.y, C.x - B.x) - Math.atan2(A.y - B.y, A.x - B.x);
+        var deg = Math.abs(rad * 180.0 / Math.PI);
+        if (deg > 180.0) deg = 360.0 - deg;
+        return Math.round(deg);
+    }
+
+    function logInvalidRep(reason, detail) {
+        failCount++;
+        document.getElementById('failCount').innerText = failCount + "건";
+
+        var emptyRow = document.getElementById('emptyRow');
+        if (emptyRow) emptyRow.remove();
+
+        var elapsedSec = totalSeconds - remainingSeconds;
+        var m = Math.floor(elapsedSec / 60);
+        var s = elapsedSec % 60;
+        var timeStr = (m < 10 ? "0" + m : m) + "분 " + (s < 10 ? "0" + s : s) + "초";
+
+        currentSessionFaultLogs.push({
+            time: timeStr,
+            reason: reason,
+            detail: detail,
+            sec: elapsedSec
+        });
+
+        var tbody = document.getElementById('logTableBody');
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td class="td-time">' + timeStr + '</td>' +
+                       '<td class="td-reason">' + reason + '</td>' +
+                       '<td class="td-detail">' + detail + '</td>';
+        tbody.insertBefore(tr, tbody.firstChild);
+    }
+
+    function toggleFullscreen() {
+        var btn = document.getElementById('btnFullscreen');
+        if (!cameraBox.classList.contains('is-fullscreen')) {
+            cameraBox.classList.add('is-fullscreen');
+            btn.innerText = "✖ 창모드";
+            if (cameraBox.requestFullscreen) {
+                cameraBox.requestFullscreen().catch(function(){});
+            } else if (cameraBox.webkitRequestFullscreen) {
+                cameraBox.webkitRequestFullscreen();
+            }
+        } else {
+            cameraBox.classList.remove('is-fullscreen');
+            btn.innerText = "⛶ 전체화면";
+            if (document.exitFullscreen) {
+                document.exitFullscreen().catch(function(){});
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
+        }
+    }
+
+    function setTimerPreset(sec) {
+        if (isTimerRunning || isCountingDown) return;
+        totalSeconds = sec;
+        remainingSeconds = sec;
+        updateTimerDisplay();
+        document.getElementById('btnPreset2m').classList.add('active');
+        document.getElementById('boxCustomTimer').classList.remove('active');
+        document.getElementById('inCustomSec').value = "";
+    }
+
+    function applyCustomTimer() {
+        if (isTimerRunning || isCountingDown) return;
+        var val = parseInt(document.getElementById('inCustomSec').value, 10);
+        if (!isNaN(val) && val >= 10 && val <= 600) {
+            totalSeconds = val;
+            remainingSeconds = val;
+            updateTimerDisplay();
+            document.getElementById('btnPreset2m').classList.remove('active');
+            document.getElementById('boxCustomTimer').classList.add('active');
+        }
+    }
+
+    function updateTimerDisplay() {
+        var m = Math.floor(remainingSeconds / 60);
+        var s = remainingSeconds % 60;
+        var str = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+        document.getElementById('dispTimerWin').innerText = str;
+        document.getElementById('fsTimer').innerText = "⏱ " + str;
+        return str;
+    }
+
+    function handleStartOrToggle() {
+        if (!cameraStarted) {
+            initPoseModel();
+            startCameraStream();
+            startRenderPipeline();
+            cameraStarted = true;
+            runPreCountdown();
+        } else {
+            if (isTimerRunning) {
+                stopTimer();
+                stopRecording();
+                updateActionButtons("▶️ 측정 재개", "btn-start");
+                document.getElementById('txtTimerState').innerText = "일시 정지";
+                document.getElementById('txtTimerState').style.color = "#e67e22";
+            } else {
+                if (remainingSeconds === totalSeconds) {
+                    runPreCountdown();
+                } else {
+                    startTimer();
+                    startRecording();
+                }
+            }
+        }
+    }
+
+    function updateActionButtons(text, cls) {
+        var btn1 = document.getElementById('btnMainAction');
+        var btn2 = document.getElementById('btnFsAction');
+        btn1.innerText = text; btn1.className = "action-btn " + cls;
+        btn2.innerText = text; btn2.className = "action-btn " + cls;
+    }
+
+    function runPreCountdown() {
+        isCountingDown = true;
+        var count = 5;
+        var overlay = document.getElementById('countdownOverlay');
+        var countText = document.getElementById('countdownText');
+        overlay.style.display = 'flex';
+        countText.innerText = count;
+        speak(count + "");
+
+        var cdInterval = setInterval(function() {
+            count--;
+            if (count > 0) {
+                countText.innerText = count;
+                speak(count + "");
+            } else {
+                clearInterval(cdInterval);
+                overlay.style.display = 'none';
+                isCountingDown = false;
+                speak("시작");
+                startTimer();
+                startRecording();
+            }
+        }, 1000);
+    }
+
+    function startTimer() {
+        if (isTimerRunning) return;
+        isTimerRunning = true;
+        updateActionButtons("⏸️ 일시 정지", "btn-pause");
+        document.getElementById('txtTimerState').innerText = "측정 및 녹화 진행 중";
+        document.getElementById('txtTimerState').style.color = "#39e75f";
+
+        timerInterval = setInterval(function() {
+            if (isPausedDueToNoBody) return;
+
+            remainingSeconds--;
+            updateTimerDisplay();
+
+            if (remainingSeconds === 30) speak("30초 남았습니다");
+            if (remainingSeconds === 10) speak("10초 전");
+
+            if (remainingSeconds <= 0) {
+                stopTimer();
+                stopRecording();
+                speak("측정 종료! 최종 " + repCount + "회입니다");
+                document.getElementById('txtTimerState').innerText = "측정 완료";
+                document.getElementById('txtTimerState').style.color = "#e5a93c";
+                updateActionButtons("📹 측정 시작", "btn-start");
+            }
+        }, 1000);
+    }
+
+    function stopTimer() {
+        isTimerRunning = false;
+        clearInterval(timerInterval);
+    }
+
+    // ==========================================
+    // [30 FPS 정규 녹화 엔진 (카카오톡 50초 보장)]
+    // ==========================================
+    function startRecording() {
+        if (isRecording) return;
+        recordedChunks = [];
+        recordingStartTimestamp = Date.now();
+
+        try {
+            // [핵심] 초당 정확히 30프레임으로 캡처하여 타임라인 왜곡 원천 차단
+            var stream = recCanvas.captureStream(30);
+
+            var candidateTypes = [
+                "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+                "video/mp4;codecs=avc1",
+                "video/mp4",
+                "video/webm;codecs=vp8",
+                "video/webm"
+            ];
+
+            var selectedMime = "";
+            for (var i = 0; i < candidateTypes.length; i++) {
+                if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(candidateTypes[i])) {
+                    selectedMime = candidateTypes[i];
+                    break;
+                }
+            }
+            lastRecordedMime = selectedMime;
+
+            var options = selectedMime ? { mimeType: selectedMime, videoBitsPerSecond: 1800000 } : { videoBitsPerSecond: 1800000 };
+            mediaRecorder = new MediaRecorder(stream, options);
+
+            mediaRecorder.ondataavailable = function(e) {
+                if (e.data && e.data.size > 0) {
+                    recordedChunks.push(e.data);
+                }
+            };
+
+            mediaRecorder.onstop = function() {
+                var rawBlob = new Blob(recordedChunks, { type: lastRecordedMime || "video/mp4" });
+                var elapsedMs = Math.max(1000, Date.now() - recordingStartTimestamp);
+
+                // WebM 포맷인 경우 EBML 헤더 Duration 타임스탬프 인라인 주입
+                if (lastRecordedMime && lastRecordedMime.indexOf("webm") !== -1) {
+                    fixWebmDurationInline(rawBlob, elapsedMs, function(finalBlob) {
+                        lastRecordedBlob = finalBlob;
+                        saveSessionToDB(finalBlob, currentSessionFaultLogs.slice());
+                        document.getElementById('saveAlertModal').style.display = 'flex';
+                    });
+                } else {
+                    lastRecordedBlob = rawBlob;
+                    saveSessionToDB(rawBlob, currentSessionFaultLogs.slice());
+                    document.getElementById('saveAlertModal').style.display = 'flex';
+                }
+            };
+
+            // 1초 단위 버퍼 수집
+            mediaRecorder.start(1000);
+            isRecording = true;
+            document.getElementById('fsRecStatus').innerText = "🔴 REC (" + ((lastRecordedMime && lastRecordedMime.indexOf("mp4") !== -1) ? "MP4" : "WEBM") + ")";
+        } catch (err) {
+            console.warn("녹화 시작 실패: " + err.message);
+        }
+    }
+
+    function stopRecording() {
+        if (!isRecording || !mediaRecorder) return;
+        try {
+            if (mediaRecorder.state !== "inactive") {
+                mediaRecorder.requestData();
+                mediaRecorder.stop();
+            }
+        } catch (e) {}
+        isRecording = false;
+        document.getElementById('fsRecStatus').innerText = "⚪ STANDBY";
+    }
+
+    // [순수 오프라인 EBML Duration 패처]
+    function fixWebmDurationInline(blob, durationMs, callback) {
+        var reader = new FileReader();
+        reader.onload = function() {
+            var buffer = reader.result;
+            var bytes = new Uint8Array(buffer);
+            var durPos = -1;
+            for (var i = 0; i < Math.min(bytes.length - 10, 1000); i++) {
+                if (bytes[i] === 0x44 && bytes[i+1] === 0x89) {
+                    durPos = i;
+                    break;
+                }
+            }
+            if (durPos !== -1) {
+                var lenByte = bytes[durPos + 2];
+                var dv = new DataView(buffer);
+                if (lenByte === 0x84 || lenByte === 4) {
+                    dv.setFloat32(durPos + 3, durationMs, false);
+                } else if (lenByte === 0x88 || lenByte === 8) {
+                    dv.setFloat64(durPos + 3, durationMs, false);
+                }
+                callback(new Blob([buffer], { type: blob.type }));
+                return;
+            }
+            callback(blob);
+        };
+        reader.onerror = function() { callback(blob); };
+        reader.readAsArrayBuffer(blob);
+    }
+
+    function downloadLastRecordedVideo() {
+        if (!lastRecordedBlob || lastRecordedBlob.size < 1000) {
+            alert("유효한 영상 데이터가 없습니다.");
+            return;
+        }
+        var ext = (lastRecordedMime && lastRecordedMime.indexOf("mp4") !== -1) ? "mp4" : "webm";
+        var cId = document.getElementById('inCadetId').value.trim() || "000";
+        var cName = document.getElementById('inCadetName').value.trim() || "후보생";
+        var now = new Date();
+        var datePrefix = now.getFullYear() + "" + (now.getMonth() + 1 < 10 ? "0" : "") + (now.getMonth() + 1) + "" + (now.getDate() < 10 ? "0" : "") + now.getDate() + "_" + (now.getHours() < 10 ? "0" : "") + now.getHours() + (now.getMinutes() < 10 ? "0" : "") + now.getMinutes();
+        var fileName = datePrefix + "_" + cId + "_" + cName + "_측정영상." + ext;
+        downloadBlobFile(lastRecordedBlob, fileName);
+    }
+
+    function closeSaveModal() {
+        document.getElementById('saveAlertModal').style.display = 'none';
+    }
+
+    // ==========================================
+    // [IndexedDB & 다시보기 플레이어 (탐색/돌려보기 지원)]
     // ==========================================
     var db = null;
     function initIndexedDB() {
-        var req = indexedDB.open("ArmyPushupDB_KB_Fixed", 1);
+        var req = indexedDB.open("ArmyPushupDB_30FPS_Seekable", 1);
         req.onupgradeneeded = function(e) {
             var database = e.target.result;
             if (!database.objectStoreNames.contains("sessions")) {
@@ -650,7 +1364,7 @@
             player.playbackRate = 1.0;
             player.play();
 
-            document.getElementById('playerModalTitle').innerText = "📹 " + item.dateStr + " - " + item.cadetName + " 후보생 측정 영상";
+            document.getElementById('playerModalTitle').innerText = "📹 " + item.dateStr + " - " + item.cadetName + " 후보생 측정 영상 (30 FPS)";
 
             var tbody = document.getElementById('playerModalFaultBody');
             var fLogs = item.faultLogs || [];
@@ -659,13 +1373,26 @@
             } else {
                 var trs = "";
                 for (var j = 0; j < fLogs.length; j++) {
-                    trs += '<tr><td class="td-time">' + fLogs[j].time + '</td><td class="td-reason">' + fLogs[j].reason + '</td><td class="td-detail">' + fLogs[j].detail + '</td></tr>';
+                    var s = fLogs[j].sec || 0;
+                    trs += '<tr onclick="seekModalVideo(' + s + ')" style="cursor:pointer;" title="클릭 시 해당 시점으로 이동">';
+                    trs += '  <td class="td-time">' + fLogs[j].time + ' ▶</td>';
+                    trs += '  <td class="td-reason">' + fLogs[j].reason + '</td>';
+                    trs += '  <td class="td-detail">' + fLogs[j].detail + '</td>';
+                    trs += '</tr>';
                 }
                 tbody.innerHTML = trs;
             }
 
             document.getElementById('videoPlayerModal').style.display = 'flex';
         };
+    }
+
+    function seekModalVideo(sec) {
+        var player = document.getElementById('historyVideoPlayer');
+        if (player) {
+            player.currentTime = Math.max(0, sec - 1); // 1초 전부터 재생하여 자세 파악 용이
+            player.play();
+        }
     }
 
     function setPlaySpeed(speed) {
@@ -729,332 +1456,7 @@
     }
 
     // ==========================================
-    // [음성 TTS 및 부정자세 3단계 스마트 판정]
-    // ==========================================
-    function speak(text) {
-        if (!('speechSynthesis' in window)) return;
-        window.speechSynthesis.cancel();
-        var msg = new SpeechSynthesisUtterance(text);
-        msg.lang = 'ko-KR';
-        msg.rate = 1.15;
-        msg.pitch = 1.0;
-        window.speechSynthesis.speak(msg);
-    }
-
-    function triggerMovementFault(typeKey, reason, ttsSpeech, detail) {
-        var now = Date.now();
-        var isNewFault = (typeKey !== lastFaultKey);
-        var isCooldownPassed = (now - lastFaultTime >= 3000);
-
-        if (isNewFault || isCooldownPassed) {
-            lastFaultKey = typeKey;
-            lastFaultTime = now;
-
-            totalFaultWarningCount++;
-            faultReasonCurrentRep = reason;
-
-            var warnText = "";
-            var ttsSuffix = "";
-
-            if (totalFaultWarningCount === 1) {
-                warnText = "1차 경고";
-                ttsSuffix = "부정자세 1차경고입니다.";
-            } else if (totalFaultWarningCount === 2) {
-                warnText = "2차 경고";
-                ttsSuffix = "부정자세 2차경고입니다.";
-            } else {
-                warnText = "노카운트";
-                ttsSuffix = "부정자세 노카운트입니다.";
-                repHasFault = true;
-            }
-
-            var fullTTS = ttsSpeech + ". " + ttsSuffix;
-            currentFaultBannerText = "⚠️ " + reason + " [" + warnText + "]";
-            isCurrentFaultWarn = true;
-            speak(fullTTS);
-            logInvalidRep(reason + " (" + warnText + ")", detail);
-        } else {
-            if (totalFaultWarningCount >= 3) {
-                repHasFault = true;
-                faultReasonCurrentRep = reason;
-            }
-        }
-    }
-
-    function getAngle(A, B, C) {
-        var rad = Math.atan2(C.y - B.y, C.x - B.x) - Math.atan2(A.y - B.y, A.x - B.x);
-        var deg = Math.abs(rad * 180.0 / Math.PI);
-        if (deg > 180.0) deg = 360.0 - deg;
-        return Math.round(deg);
-    }
-
-    function logInvalidRep(reason, detail) {
-        failCount++;
-        document.getElementById('failCount').innerText = failCount + "건";
-
-        var emptyRow = document.getElementById('emptyRow');
-        if (emptyRow) emptyRow.remove();
-
-        var elapsedSec = totalSeconds - remainingSeconds;
-        var m = Math.floor(elapsedSec / 60);
-        var s = elapsedSec % 60;
-        var timeStr = (m < 10 ? "0" + m : m) + "분 " + (s < 10 ? "0" + s : s) + "초";
-
-        currentSessionFaultLogs.push({
-            time: timeStr,
-            reason: reason,
-            detail: detail
-        });
-
-        var tbody = document.getElementById('logTableBody');
-        var tr = document.createElement('tr');
-        tr.innerHTML = '<td class="td-time">' + timeStr + '</td>' +
-                       '<td class="td-reason">' + reason + '</td>' +
-                       '<td class="td-detail">' + detail + '</td>';
-        tbody.insertBefore(tr, tbody.firstChild);
-    }
-
-    function toggleFullscreen() {
-        var btn = document.getElementById('btnFullscreen');
-        if (!cameraBox.classList.contains('is-fullscreen')) {
-            cameraBox.classList.add('is-fullscreen');
-            btn.innerText = "✖ 창모드";
-            if (cameraBox.requestFullscreen) {
-                cameraBox.requestFullscreen().catch(function(){});
-            } else if (cameraBox.webkitRequestFullscreen) {
-                cameraBox.webkitRequestFullscreen();
-            }
-        } else {
-            cameraBox.classList.remove('is-fullscreen');
-            btn.innerText = "⛶ 전체화면";
-            if (document.exitFullscreen) {
-                document.exitFullscreen().catch(function(){});
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            }
-        }
-    }
-
-    function setTimerPreset(sec) {
-        if (isTimerRunning || isCountingDown) return;
-        totalSeconds = sec;
-        remainingSeconds = sec;
-        updateTimerDisplay();
-        document.getElementById('btnPreset2m').classList.add('active');
-        document.getElementById('boxCustomTimer').classList.remove('active');
-        document.getElementById('inCustomSec').value = "";
-    }
-
-    function applyCustomTimer() {
-        if (isTimerRunning || isCountingDown) return;
-        var val = parseInt(document.getElementById('inCustomSec').value, 10);
-        if (!isNaN(val) && val >= 10 && val <= 600) {
-            totalSeconds = val;
-            remainingSeconds = val;
-            updateTimerDisplay();
-            document.getElementById('btnPreset2m').classList.remove('active');
-            document.getElementById('boxCustomTimer').classList.add('active');
-        }
-    }
-
-    function updateTimerDisplay() {
-        var m = Math.floor(remainingSeconds / 60);
-        var s = remainingSeconds % 60;
-        var str = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
-        document.getElementById('dispTimerWin').innerText = str;
-        document.getElementById('fsTimer').innerText = "⏱ " + str;
-        return str;
-    }
-
-    function handleStartOrToggle() {
-        if (!cameraStarted) {
-            initPoseModel();
-            startCameraStream();
-            cameraStarted = true;
-            runPreCountdown();
-        } else {
-            if (isTimerRunning) {
-                stopTimer();
-                stopRecording();
-                updateActionButtons("▶️ 측정 재개", "btn-start");
-                document.getElementById('txtTimerState').innerText = "일시 정지";
-                document.getElementById('txtTimerState').style.color = "#e67e22";
-            } else {
-                if (remainingSeconds === totalSeconds) {
-                    runPreCountdown();
-                } else {
-                    startTimer();
-                    startRecording();
-                }
-            }
-        }
-    }
-
-    function updateActionButtons(text, cls) {
-        var btn1 = document.getElementById('btnMainAction');
-        var btn2 = document.getElementById('btnFsAction');
-        btn1.innerText = text; btn1.className = "action-btn " + cls;
-        btn2.innerText = text; btn2.className = "action-btn " + cls;
-    }
-
-    function runPreCountdown() {
-        isCountingDown = true;
-        var count = 5;
-        var overlay = document.getElementById('countdownOverlay');
-        var countText = document.getElementById('countdownText');
-        overlay.style.display = 'flex';
-        countText.innerText = count;
-        speak(count + "");
-
-        var cdInterval = setInterval(function() {
-            count--;
-            if (count > 0) {
-                countText.innerText = count;
-                speak(count + "");
-            } else {
-                clearInterval(cdInterval);
-                overlay.style.display = 'none';
-                isCountingDown = false;
-                speak("시작");
-                startTimer();
-                startRecording();
-            }
-        }, 1000);
-    }
-
-    function startTimer() {
-        if (isTimerRunning) return;
-        isTimerRunning = true;
-        updateActionButtons("⏸️ 일시 정지", "btn-pause");
-        document.getElementById('txtTimerState').innerText = "측정 및 녹화 진행 중";
-        document.getElementById('txtTimerState').style.color = "#39e75f";
-
-        timerInterval = setInterval(function() {
-            if (isPausedDueToNoBody) {
-                return;
-            }
-
-            remainingSeconds--;
-            updateTimerDisplay();
-
-            if (remainingSeconds === 30) speak("30초 남았습니다");
-            if (remainingSeconds === 10) speak("10초 전");
-
-            if (remainingSeconds <= 0) {
-                stopTimer();
-                stopRecording();
-                speak("측정 종료! 최종 " + repCount + "회입니다");
-                document.getElementById('txtTimerState').innerText = "측정 완료";
-                document.getElementById('txtTimerState').style.color = "#e5a93c";
-                updateActionButtons("📹 측정 시작", "btn-start");
-            }
-        }, 1000);
-    }
-
-    function stopTimer() {
-        isTimerRunning = false;
-        clearInterval(timerInterval);
-    }
-
-    // ==========================================
-    // [프레임 누락 원천 해결: 15 FPS 고정 480p 녹화 엔진]
-    // ==========================================
-    function startRecording() {
-        if (isRecording) return;
-        recordedChunks = [];
-
-        try {
-            var vw = canvasElement.width || 640;
-            var vh = canvasElement.height || 480;
-            var scale = 480 / Math.min(vw, vh);
-            var rw = Math.round(vw * scale);
-            var rh = Math.round(vh * scale);
-            if (rw % 2 !== 0) rw++;
-            if (rh % 2 !== 0) rh++;
-
-            recCanvas.width = rw;
-            recCanvas.height = rh;
-
-            // [핵심 수정 1] 0 대신 모바일 브라우저 안정 규격인 15 FPS 고정 스트림 생성
-            var stream = recCanvas.captureStream ? recCanvas.captureStream(15) : recCanvas.mozCaptureStream(15);
-
-            // [핵심 수정 2] 스마트폰별 실제 지원 코덱 정밀 분기
-            var candidateTypes = [
-                "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
-                "video/mp4;codecs=avc1",
-                "video/mp4",
-                "video/webm;codecs=vp8",
-                "video/webm"
-            ];
-
-            var selectedMime = "";
-            for (var i = 0; i < candidateTypes.length; i++) {
-                if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(candidateTypes[i])) {
-                    selectedMime = candidateTypes[i];
-                    break;
-                }
-            }
-            lastRecordedMime = selectedMime;
-
-            var options = selectedMime ? { mimeType: selectedMime, videoBitsPerSecond: 1600000 } : { videoBitsPerSecond: 1600000 };
-            mediaRecorder = new MediaRecorder(stream, options);
-
-            mediaRecorder.ondataavailable = function(e) {
-                if (e.data && e.data.size > 0) {
-                    recordedChunks.push(e.data);
-                }
-            };
-
-            mediaRecorder.onstop = function() {
-                var blob = new Blob(recordedChunks, { type: lastRecordedMime || "video/mp4" });
-                lastRecordedBlob = blob;
-
-                saveSessionToDB(blob, currentSessionFaultLogs.slice());
-                document.getElementById('saveAlertModal').style.display = 'flex';
-            };
-
-            // 1초 단위 버퍼링 수집
-            mediaRecorder.start(1000);
-            isRecording = true;
-            document.getElementById('fsRecStatus').innerText = "🔴 REC (" + ((lastRecordedMime && lastRecordedMime.indexOf("mp4") !== -1) ? "MP4" : "WEBM") + ")";
-        } catch (err) {
-            console.warn("녹화 시작 실패: " + err.message);
-        }
-    }
-
-    function stopRecording() {
-        if (!isRecording || !mediaRecorder) return;
-        try {
-            // [핵심 수정 3] 잔여 메모리 버퍼의 데이터를 즉시 강제 수집 후 정지
-            if (mediaRecorder.state !== "inactive") {
-                mediaRecorder.requestData();
-                mediaRecorder.stop();
-            }
-        } catch (e) {}
-        isRecording = false;
-        document.getElementById('fsRecStatus').innerText = "⚪ STANDBY";
-    }
-
-    function downloadLastRecordedVideo() {
-        if (!lastRecordedBlob || lastRecordedBlob.size < 1000) {
-            alert("유효한 영상 데이터가 없습니다. 다시 측정해 주십시오.");
-            return;
-        }
-        var ext = (lastRecordedMime && lastRecordedMime.indexOf("mp4") !== -1) ? "mp4" : "webm";
-        var cId = document.getElementById('inCadetId').value.trim() || "000";
-        var cName = document.getElementById('inCadetName').value.trim() || "후보생";
-        var now = new Date();
-        var datePrefix = now.getFullYear() + "" + (now.getMonth() + 1 < 10 ? "0" : "") + (now.getMonth() + 1) + "" + (now.getDate() < 10 ? "0" : "") + now.getDate() + "_" + (now.getHours() < 10 ? "0" : "") + now.getHours() + (now.getMinutes() < 10 ? "0" : "") + now.getMinutes();
-        var fileName = datePrefix + "_" + cId + "_" + cName + "_측정영상." + ext;
-        downloadBlobFile(lastRecordedBlob, fileName);
-    }
-
-    function closeSaveModal() {
-        document.getElementById('saveAlertModal').style.display = 'none';
-    }
-
-    // ==========================================
-    // [엑셀 CSV 생성 엔진]
+    // [CSV 엑셀 내보내기 (한글 완벽 호환 BOM 탑재)]
     // ==========================================
     function exportCurrentSessionCSV() {
         var cId = document.getElementById('inCadetId').value.trim() || "000";
@@ -1163,8 +1565,8 @@
                     await pose.send({ image: videoElement });
                 }
             },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
             facingMode: facingMode
         });
         camera.start();
@@ -1173,216 +1575,6 @@
     function switchCamera() {
         facingMode = (facingMode === "user") ? "environment" : "user";
         startCameraStream();
-    }
-
-    // ==========================================
-    // [메인 판정 및 캔버스 렌더링 루프]
-    // ==========================================
-    function onPoseResults(results) {
-        var vw = videoElement.videoWidth || 640;
-        var vh = videoElement.videoHeight || 480;
-
-        if (canvasElement.width !== vw || canvasElement.height !== vh) {
-            canvasElement.width = vw;
-            canvasElement.height = vh;
-        }
-
-        var cw = canvasElement.width;
-        var ch = canvasElement.height;
-
-        canvasCtx.save();
-        canvasCtx.clearRect(0, 0, cw, ch);
-
-        if (facingMode === "user") {
-            canvasCtx.translate(cw, 0);
-            canvasCtx.scale(-1, 1);
-        }
-        canvasCtx.drawImage(results.image, 0, 0, cw, ch);
-        canvasCtx.restore();
-
-        var now = new Date();
-        var dateFormatted = now.getFullYear() + "-" + (now.getMonth() + 1 < 10 ? "0" : "") + (now.getMonth() + 1) + "-" + (now.getDate() < 10 ? "0" : "") + now.getDate() + " " + (now.getHours() < 10 ? "0" : "") + now.getHours() + ":" + (now.getMinutes() < 10 ? "0" : "") + now.getMinutes() + ":" + (now.getSeconds() < 10 ? "0" : "") + now.getSeconds();
-        document.getElementById('fsClockTime').innerText = dateFormatted;
-
-        if (!results.poseLandmarks) {
-            handleFullBodyLoss();
-            renderRecordFrame(0, 0, 0, "⚠️ 전신 미감지 (측정 일시정지)", true, dateFormatted);
-            return;
-        }
-
-        var lm = results.poseLandmarks;
-        var leftVis = (lm[11].visibility + lm[23].visibility + lm[27].visibility) / 3;
-        var rightVis = (lm[12].visibility + lm[24].visibility + lm[28].visibility) / 3;
-        var isLeft = leftVis >= rightVis;
-
-        var nose = lm[0];
-        var shoulder = isLeft ? lm[11] : lm[12];
-        var elbow = isLeft ? lm[13] : lm[14];
-        var wrist = isLeft ? lm[15] : lm[16];
-        var hip = isLeft ? lm[23] : lm[24];
-        var knee = isLeft ? lm[25] : lm[26];
-        var ankle = isLeft ? lm[27] : lm[28];
-        var toe = isLeft ? lm[31] : lm[32];
-
-        function isPointInScreen(pt, minVis) {
-            if (!pt) return false;
-            if (pt.visibility < (minVis || 0.45)) return false;
-            return (pt.x >= 0.01 && pt.x <= 0.99 && pt.y >= 0.01 && pt.y <= 0.99);
-        }
-
-        var isBodyComplete = isPointInScreen(nose, 0.4) &&
-                             isPointInScreen(shoulder, 0.5) &&
-                             isPointInScreen(elbow, 0.5) &&
-                             isPointInScreen(wrist, 0.5) &&
-                             isPointInScreen(hip, 0.5) &&
-                             isPointInScreen(knee, 0.5) &&
-                             (isPointInScreen(ankle, 0.45) || isPointInScreen(toe, 0.45));
-
-        if (!isBodyComplete) {
-            handleFullBodyLoss();
-            renderRecordFrame(0, 0, 0, "⚠️ 전신 미인식 (측정 및 타이머 정지)", true, dateFormatted);
-            return;
-        }
-
-        handleFullBodyRecovered();
-
-        function mapX(valX) {
-            return (facingMode === "user") ? (1 - valX) * cw : valX * cw;
-        }
-
-        var pN = { x: mapX(nose.x), y: nose.y * ch };
-        var pS = { x: mapX(shoulder.x), y: shoulder.y * ch };
-        var pE = { x: mapX(elbow.x), y: elbow.y * ch };
-        var pW = { x: mapX(wrist.x), y: wrist.y * ch };
-        var pP = { x: mapX(hip.x), y: hip.y * ch };
-        var pK = { x: mapX(knee.x), y: knee.y * ch };
-        var pA = { x: mapX(ankle.x), y: ankle.y * ch };
-        var pT = { x: mapX(toe.x), y: toe.y * ch };
-
-        var elbowAng = getAngle(pS, pE, pW);
-        var coreAng = getAngle(pS, pP, pA);
-        var kneeAng = getAngle(pP, pK, pA);
-
-        updateHUDData(elbowAng, coreAng, kneeAng);
-
-        var isPikeRest = (elbowAng >= 145 && coreAng > 180);
-        var isCoreSag = !isPikeRest && (coreAng < 155);
-        var isKneeTouch = (kneeAng < 155);
-        var isHeadBob = !isPikeRest && (elbowAng > 110) && ((pN.y - pS.y) > (ch * 0.05));
-
-        var isWaveFault = false;
-        if (state === "DOWN" && elbowAng > 100 && elbowAng < 155) {
-            if (coreAng < 155) {
-                isWaveFault = true;
-            }
-        }
-
-        var isCurrentMotionBad = isCoreSag || isKneeTouch || isHeadBob || isWaveFault;
-        var boneColor = isCurrentMotionBad ? "#ff3333" : (isPikeRest ? "#5dade2" : (state === "DOWN" ? "#e5a93c" : "#39e75f"));
-
-        drawBone(pN, pS, boneColor, 5);
-        drawBone(pS, pE, boneColor, 6);
-        drawBone(pE, pW, boneColor, 6);
-        drawBone(pS, pP, boneColor, 6);
-        drawBone(pP, pK, boneColor, 5);
-        drawBone(pK, pA, boneColor, 5);
-        drawBone(pA, pT, boneColor, 5);
-
-        drawJoint(pN, "#ffffff", "머리");
-        drawJoint(pS, "#39e75f", "어깨");
-        drawJoint(pE, "#e5a93c", "팔 " + elbowAng + "°");
-        drawJoint(pW, "#5dade2", "손목");
-        drawJoint(pP, isPikeRest ? "#5dade2" : "#f4d03f", "골반 " + coreAng + "°");
-        drawJoint(pK, isKneeTouch ? "#ff3333" : "#39e75f", "무릎 " + kneeAng + "°");
-        drawJoint(pA, "#5dade2", "발끝");
-
-        if (isTimerRunning && !isPausedDueToNoBody) {
-            if (isPikeRest) {
-                currentFaultBannerText = "🧘 엉덩이 솟음 휴식 중 (정상 휴식)";
-                isCurrentFaultWarn = false;
-            } else if (isWaveFault) {
-                triggerMovementFault("WAVE", "상체 선행 상승 (배치기)", "상체만 먼저 일어납니다", "상승 코어: " + coreAng + "°");
-            } else if (isCoreSag) {
-                triggerMovementFault("SAG", "허리 숙여짐 (처짐)", "허리가 숙여졌습니다", "코어: " + coreAng + "°");
-            } else if (isKneeTouch) {
-                triggerMovementFault("KNEE", "무릎 닿음 (다리 굽힘)", "무릎이 닿았습니다", "무릎각: " + kneeAng + "°");
-            } else if (isHeadBob) {
-                triggerMovementFault("HEAD", "고개만 숙임 (헤드 봅)", "고개만 숙였습니다", "팔꿈치: " + elbowAng + "°");
-            }
-
-            if (state === "UP") {
-                if (elbowAng < minElbowInCurrentRep) {
-                    minElbowInCurrentRep = elbowAng;
-                }
-
-                if (elbowAng <= 90 && !isCurrentMotionBad) {
-                    state = "DOWN";
-                    maxElbowInCurrentRep = elbowAng;
-                    currentFaultBannerText = "✅ 충분 하강! 팔을 밀어 올리십시오";
-                    isCurrentFaultWarn = false;
-                } else if (minElbowInCurrentRep <= 130 && (elbowAng - minElbowInCurrentRep > 15) && elbowAng > 105) {
-                    triggerMovementFault("SHALLOW", "덜 내려감 (가슴 미도달)", "덜 내려갔습니다", "최저: " + minElbowInCurrentRep + "°");
-                    minElbowInCurrentRep = 180;
-                }
-            } else if (state === "DOWN") {
-                if (elbowAng > maxElbowInCurrentRep) {
-                    maxElbowInCurrentRep = elbowAng;
-                }
-
-                if (elbowAng >= 160) {
-                    if (!repHasFault && !isCurrentMotionBad) {
-                        repCount++;
-                        currentFaultBannerText = "정자세 인정 (" + repCount + "회)";
-                        isCurrentFaultWarn = false;
-                        speak(repCount + "");
-                    } else {
-                        currentFaultBannerText = "❌ 노카운트 (" + (faultReasonCurrentRep || "자세 불량") + ")";
-                        isCurrentFaultWarn = true;
-                    }
-
-                    state = "UP";
-                    minElbowInCurrentRep = 180;
-                    maxElbowInCurrentRep = 90;
-                    repHasFault = false;
-                    faultReasonCurrentRep = "";
-                } else if (maxElbowInCurrentRep >= 115 && (maxElbowInCurrentRep - elbowAng > 15) && elbowAng < 150) {
-                    triggerMovementFault("INCOMPLETE", "팔꿈치 안 펴짐 (미신전)", "팔꿈치가 안 펴집니다", "최대: " + maxElbowInCurrentRep + "°");
-                    maxElbowInCurrentRep = 90;
-                }
-            }
-        }
-
-        renderRecordFrame(elbowAng, coreAng, kneeAng, currentFaultBannerText, isCurrentFaultWarn, dateFormatted);
-    }
-
-    function handleFullBodyLoss() {
-        document.getElementById('fullbodyWarnOverlay').style.display = 'flex';
-        isPausedDueToNoBody = true;
-
-        state = "UP";
-        minElbowInCurrentRep = 180;
-        maxElbowInCurrentRep = 90;
-
-        document.getElementById('txtTimerState').innerText = "⚠️ 전신 미인식 (측정 정지)";
-        document.getElementById('txtTimerState').style.color = "#ff4d4d";
-
-        if (wasFullBodyDetected) {
-            wasFullBodyDetected = false;
-            speak("전신이 인식되지 않았습니다");
-        }
-    }
-
-    function handleFullBodyRecovered() {
-        if (!wasFullBodyDetected) {
-            wasFullBodyDetected = true;
-            document.getElementById('fullbodyWarnOverlay').style.display = 'none';
-            isPausedDueToNoBody = false;
-
-            if (isTimerRunning) {
-                document.getElementById('txtTimerState').innerText = "측정 및 녹화 진행 중";
-                document.getElementById('txtTimerState').style.color = "#39e75f";
-            }
-        }
     }
 
     function updateHUDData(elbow, core, knee) {
@@ -1409,104 +1601,29 @@
         document.getElementById('fsAngleSummary').innerText = "팔 " + elbow + "° | 코어 " + core + "° | 무릎 " + knee + "°";
     }
 
-    // 480p 녹화 캔버스 렌더링
-    function renderRecordFrame(elbow, core, knee, bannerText, isWarn, dateStr) {
-        if (!isRecording) return;
-        var rw = recCanvas.width;
-        var rh = recCanvas.height;
-
-        recCtx.clearRect(0, 0, rw, rh);
-        recCtx.drawImage(canvasElement, 0, 0, rw, rh);
-
-        var cId = document.getElementById('inCadetId').value.trim() || "000";
-        var cName = document.getElementById('inCadetName').value.trim() || "후보생";
-        var timeStr = updateTimerDisplay();
-
-        recCtx.save();
-
-        recCtx.fillStyle = "rgba(0, 0, 0, 0.82)";
-        recCtx.fillRect(8, 8, (rw * 0.48), 52);
-        recCtx.strokeStyle = "#233827";
-        recCtx.lineWidth = 1.5;
-        recCtx.strokeRect(8, 8, (rw * 0.48), 52);
-
-        recCtx.fillStyle = isPausedDueToNoBody ? "#ffae19" : "#ff4444";
-        recCtx.beginPath();
-        recCtx.arc(18, 22, 4, 0, Math.PI * 2);
-        recCtx.fill();
-        recCtx.font = "bold 10px monospace";
-        recCtx.fillText(isPausedDueToNoBody ? "PAUSED" : "REC 480p", 26, 25);
-
-        recCtx.fillStyle = "#ffffff";
-        recCtx.font = "9px monospace";
-        recCtx.fillText(dateStr, 18, 38);
-
-        recCtx.fillStyle = "#39e75f";
-        recCtx.font = "bold 10.5px sans-serif";
-        recCtx.fillText("교번 " + cId + " " + cName, 18, 52);
-
-        var rightW = (rw * 0.48);
-        var rightX = rw - rightW - 8;
-        recCtx.fillStyle = "rgba(0, 0, 0, 0.82)";
-        recCtx.fillRect(rightX, 8, rightW, 52);
-        recCtx.strokeStyle = repHasFault ? "#ff4444" : "#233827";
-        recCtx.strokeRect(rightX, 8, rightW, 52);
-
-        recCtx.fillStyle = "#e5a93c";
-        recCtx.font = "bold 13px monospace";
-        recCtx.fillText("⏱ " + timeStr, rightX + 8, 26);
-
-        recCtx.fillStyle = repHasFault ? "#ff4444" : "#39e75f";
-        recCtx.font = "bold 16px monospace";
-        recCtx.textAlign = "right";
-        recCtx.fillText((repHasFault ? "❌ " : "") + repCount + " 회", rw - 14, 27);
-        recCtx.textAlign = "left";
-
-        recCtx.fillStyle = "#a3b8a6";
-        recCtx.font = "9.5px sans-serif";
-        recCtx.fillText("팔 " + elbow + "° | 코어 " + core + "° | 무릎 " + knee + "°", rightX + 8, 48);
-
-        var bannerBg = isWarn ? "rgba(90, 15, 15, 0.92)" : "rgba(10, 30, 15, 0.88)";
-        var bannerBorder = isWarn ? "#ff4444" : "#39e75f";
-        var bannerColor = isWarn ? "#ff6b6b" : "#39e75f";
-
-        recCtx.fillStyle = bannerBg;
-        recCtx.fillRect(8, rh - 42, rw - 16, 34);
-        recCtx.strokeStyle = bannerBorder;
-        recCtx.lineWidth = 1.5;
-        recCtx.strokeRect(8, rh - 42, rw - 16, 34);
-
-        recCtx.fillStyle = bannerColor;
-        recCtx.font = "bold 12px sans-serif";
-        recCtx.textAlign = "center";
-        recCtx.fillText(bannerText, rw / 2, rh - 20);
-
-        recCtx.restore();
+    function drawBone(ctx, p1, p2, color, width) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
     }
 
-    function drawBone(p1, p2, color, width) {
-        canvasCtx.strokeStyle = color;
-        canvasCtx.lineWidth = width;
-        canvasCtx.lineCap = "round";
-        canvasCtx.beginPath();
-        canvasCtx.moveTo(p1.x, p1.y);
-        canvasCtx.lineTo(p2.x, p2.y);
-        canvasCtx.stroke();
-    }
-
-    function drawJoint(p, color, label) {
-        canvasCtx.fillStyle = color;
-        canvasCtx.strokeStyle = "#ffffff";
-        canvasCtx.lineWidth = 2;
-        canvasCtx.beginPath();
-        canvasCtx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-        canvasCtx.fill();
-        canvasCtx.stroke();
+    function drawJoint(ctx, p, color, label) {
+        ctx.fillStyle = color;
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
 
         if (label) {
-            canvasCtx.font = "bold 11px sans-serif";
-            canvasCtx.fillStyle = "#ffffff";
-            canvasCtx.fillText(label, p.x + 8, p.y - 4);
+            ctx.font = "bold 11px sans-serif";
+            ctx.fillStyle = "#ffffff";
+            ctx.fillText(label, p.x + 8, p.y - 4);
         }
     }
 
