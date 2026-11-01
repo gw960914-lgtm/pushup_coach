@@ -300,7 +300,6 @@
         }
         .btn-mini:hover { border-color: #39e75f; color: #39e75f; }
 
-        /* 부정자세 안내 카드 스타일 */
         .guide-box {
             background: #0d140e;
             border: 1px solid #1a261c;
@@ -318,7 +317,6 @@
         .guide-tag-bad { color: #ff6b6b; font-weight: bold; font-size: 11px; }
         .guide-desc { font-size: 10.5px; color: #a3b8a6; line-height: 1.45; }
 
-        /* 모달 레이어 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.85); display: none;
@@ -352,7 +350,7 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">검증 완료 v4.5</div>
+        <div class="badge">실시간 녹화 보정 v4.6</div>
     </div>
 </header>
 
@@ -491,7 +489,7 @@
         </div>
     </div>
 
-    <!-- [복원] 정자세 및 부정자세 완벽 가이드 -->
+    <!-- 정자세 및 부정자세 완벽 가이드 -->
     <div class="card">
         <div class="card-title">
             <span>📖 육군 표준 팔굽혀펴기 정자세 및 부정자세 판정 가이드</span>
@@ -503,8 +501,8 @@
             </div>
             <div class="guide-desc">
                 1. <b>준비 정렬</b>: 머리부터 어깨, 골반, 발끝까지 일직선 플랭크 자세를 유지합니다.<br>
-                2. <b>하강 깊이</b>: 팔꿈치를 90° 이하(봉 모드: 95° 이하)로 굽혀 상체가 지면/봉 기준선까지 완전히 내려가야 합니다.<br>
-                3. <b>완전 신전</b>: 밀고 올라왔을 때 팔꿈치를 155°~160° 이상 끝까지 펴야 횟수가 카운트됩니다.<br>
+                2. <b>하강 깊이</b>: 팔꿈치를 90° 이하(봉 모드: 92° 이하)로 충분히 굽혀 내려갑니다.<br>
+                3. <b>완전 신전</b>: 밀고 올라왔을 때 팔꿈치를 155° 이상 끝까지 펴야 횟수가 카운트됩니다.<br>
                 4. <b>유일한 휴식(Pike Rest)</b>: 팔을 완전히 펴고 엉덩이를 천장으로 올리는 자세만 감점 없이 휴식으로 인정됩니다.
             </div>
         </div>
@@ -517,7 +515,7 @@
                 • <b>허리 숙여짐 (처짐)</b>: 코어가 바닥으로 푹 꺼지는 자세 (코어각 &lt; 155°)<br>
                 • <b>무릎 닿음</b>: 하강 또는 상승 시 무릎이 지면에 닿거나 굽혀지는 행위<br>
                 • <b>상체 선행 상승 (웨이브)</b>: 골반을 바닥에 남겨두고 가슴만 젖혀 일어나는 배치기<br>
-                • <b>덜 내려감 (심도 미도달)</b>: 팔꿈치를 90°까지 굽히지 않고 반동으로 올라오는 행위<br>
+                • <b>덜 내려감 (심도 미도달)</b>: 팔꿈치를 90°(봉 92°)까지 굽히지 않고 반동으로 올라오는 행위<br>
                 • <b>팔꿈치 안 펴짐 (미신전)</b>: 올라왔을 때 팔을 끝까지 펴지 않고 다시 내려가는 행위<br>
                 • <b>고개만 숙임 (헤드 봅)</b>: 팔은 안 굽히고 머리만 까딱여 센서를 속이는 편법
             </div>
@@ -535,7 +533,7 @@
     </div>
 </div>
 
-<!-- 모달 1: 처음 접속 시 사용방법 안내 팝업 (이벤트 모달) -->
+<!-- 모달 1: 처음 접속 시 사용방법 안내 팝업 -->
 <div class="modal-overlay" id="helpModal" style="display: flex;">
     <div class="modal-card">
         <div class="modal-title">
@@ -567,14 +565,14 @@
             <div class="help-step">
                 <div class="help-step-title">4. 정자세 요령 및 스마트 코칭</div>
                 <div class="help-step-desc">
-                    팔꿈치를 90° 이하로 충분히 굽히고 올라올 때는 완전히 펴십시오. 부정자세 발생 시 1차·2차 경고 후 3차부터 노카운트 음성 안내가 나옵니다.
+                    팔꿈치를 90° 이하(봉 92° 이하)로 충분히 굽히고 올라올 때는 완전히 펴십시오. 부정자세 발생 시 1차·2차 경고 후 3차부터 노카운트 음성 안내가 나옵니다.
                 </div>
             </div>
 
             <div class="help-step">
-                <div class="help-step-title">5. 풀타임 영상 및 엑셀 다운로드</div>
+                <div class="help-step-title">5. 풀타임 480p 영상 다운로드</div>
                 <div class="help-step-desc">
-                    측정 종료 즉시 영상이 생성되며, 카카오톡이나 갤러리에서 실제 측정 시간(예: 50초) 그대로 전송·재생됩니다.
+                    카메라 하드웨어 스트림을 직접 저장하므로, 카카오톡 전송 시 앞부분이 잘리지 않고 실제 측정한 시간(예: 50초) 그대로 전송·재생됩니다.
                 </div>
             </div>
         </div>
@@ -654,10 +652,9 @@
     var wasCoreBodyDetected = true;
     var isPausedDueToNoBody = false;
 
-    // 자세 판정 추적 변수 (수직 변위 2중 검증)
+    // 자세 판정 추적 변수
     var minElbowInCurrentRep = 180;
     var maxElbowInCurrentRep = 90;
-    var baselineShoulderY = 0; // 플랭크 준비 시 어깨 기준 높이
     var currentElbowAng = 0;
     var currentCoreAng = 0;
     var currentKneeAng = 0;
@@ -672,7 +669,7 @@
     var failCount = 0;
     var totalFaultWarningCount = 0;
 
-    // MediaRecorder 직접 활성 캔버스 캡처
+    // MediaRecorder 하드웨어 스트림 직접 녹화
     var mediaRecorder = null;
     var recordedChunks = [];
     var isRecording = false;
@@ -701,8 +698,8 @@
         } else {
             document.getElementById('btnModeBar').classList.add('active');
             document.getElementById('btnModeFloor').classList.remove('active');
-            document.getElementById('txtModeDesc').innerText = "30cm 봉 (팔꿈치 95° & 어깨 하강)";
-            document.getElementById('lblElbowThreshold').innerText = "팔꿈치(≤95°/봉)";
+            document.getElementById('txtModeDesc').innerText = "30cm 봉 (팔꿈치 92° 이하)";
+            document.getElementById('lblElbowThreshold').innerText = "팔꿈치(≤92°/봉)";
             document.getElementById('fsModeTag').innerText = "30cm 봉";
         }
     }
@@ -748,11 +745,6 @@
             // 2. 관절 스켈레톤 렌더링
             if (isCoreBodyDetected && latestPoseLandmarks) {
                 drawSkeletonOverlay(canvasCtx, cw, ch, latestPoseLandmarks);
-            }
-
-            // 3. 녹화 진행 시 실시간 OSD 직각인 (동영상 파일에 직접 각인)
-            if (isRecording) {
-                drawDirectOSD(canvasCtx, cw, ch);
             }
         }
         renderLoopId = requestAnimationFrame(loop);
@@ -809,81 +801,8 @@
         if (ankle && ankle.visibility > 0.2) drawJoint(ctx, pA, "#5dade2", "발");
     }
 
-    function drawDirectOSD(ctx, cw, ch) {
-        var cId = document.getElementById('inCadetId').value.trim() || "000";
-        var cName = document.getElementById('inCadetName').value.trim() || "후보생";
-        var timeStr = updateTimerDisplay();
-
-        var now = new Date();
-        var dateFormatted = now.getFullYear() + "-" + (now.getMonth() + 1 < 10 ? "0" : "") + (now.getMonth() + 1) + "-" + (now.getDate() < 10 ? "0" : "") + now.getDate() + " " + (now.getHours() < 10 ? "0" : "") + now.getHours() + ":" + (now.getMinutes() < 10 ? "0" : "") + now.getMinutes() + ":" + (now.getSeconds() < 10 ? "0" : "") + now.getSeconds();
-
-        ctx.save();
-
-        // 상단 좌측 OSD
-        ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
-        ctx.fillRect(8, 8, Math.min(260, cw * 0.48), 54);
-        ctx.strokeStyle = "#233827";
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(8, 8, Math.min(260, cw * 0.48), 54);
-
-        ctx.fillStyle = isPausedDueToNoBody ? "#ffae19" : "#ff4444";
-        ctx.beginPath();
-        ctx.arc(20, 24, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.font = "bold 10.5px monospace";
-        ctx.fillText(isPausedDueToNoBody ? "PAUSED" : "REC (" + (exerciseMode === "BAR" ? "봉" : "맨땅") + ")", 28, 27);
-
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "9.5px monospace";
-        ctx.fillText(dateFormatted, 18, 41);
-
-        ctx.fillStyle = "#39e75f";
-        ctx.font = "bold 11px sans-serif";
-        ctx.fillText("교번 " + cId + " " + cName, 18, 55);
-
-        // 상단 우측 OSD
-        var rightW = Math.min(260, cw * 0.48);
-        var rightX = cw - rightW - 8;
-        ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
-        ctx.fillRect(rightX, 8, rightW, 54);
-        ctx.strokeStyle = repHasFault ? "#ff4444" : "#233827";
-        ctx.strokeRect(rightX, 8, rightW, 54);
-
-        ctx.fillStyle = "#e5a93c";
-        ctx.font = "bold 14px monospace";
-        ctx.fillText("⏱ " + timeStr, rightX + 8, 28);
-
-        ctx.fillStyle = repHasFault ? "#ff4444" : "#39e75f";
-        ctx.font = "bold 18px monospace";
-        ctx.textAlign = "right";
-        ctx.fillText((repHasFault ? "❌ " : "") + repCount + " 회", cw - 16, 29);
-        ctx.textAlign = "left";
-
-        ctx.fillStyle = "#a3b8a6";
-        ctx.font = "10px sans-serif";
-        ctx.fillText("팔 " + currentElbowAng + "° | 코어 " + currentCoreAng + "° | 무릎 " + currentKneeAng + "°", rightX + 8, 51);
-
-        // 하단 상태 배너
-        var bannerBg = isCurrentFaultWarn ? "rgba(90, 15, 15, 0.92)" : "rgba(10, 30, 15, 0.88)";
-        var bannerBorder = isCurrentFaultWarn ? "#ff4444" : "#39e75f";
-        var bannerColor = isCurrentFaultWarn ? "#ff6b6b" : "#39e75f";
-
-        ctx.fillStyle = bannerBg;
-        ctx.fillRect(8, ch - 44, cw - 16, 36);
-        ctx.strokeStyle = bannerBorder;
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(8, ch - 44, cw - 16, 36);
-
-        ctx.fillStyle = bannerColor;
-        ctx.font = "bold 12.5px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(currentFaultBannerText, cw / 2, ch - 21);
-
-        ctx.restore();
-    }
-
     // ==========================================
-    // [MediaPipe AI 자세 판정 (머리·발끝 50% 미만 허용 & 수직 변위 2중 검증)]
+    // [MediaPipe AI 자세 판정 (봉/맨땅 정밀화)]
     // ==========================================
     function onPoseResults(results) {
         if (!results.poseLandmarks) {
@@ -910,7 +829,7 @@
             return (pt.visibility >= minVis && pt.x >= -0.05 && pt.x <= 1.05 && pt.y >= -0.05 && pt.y <= 1.05);
         }
 
-        // [핵심] 5대 핵심 관절만 검사: 어깨, 팔꿈치, 손목, 골반, 무릎 (머리/발끝은 잘려도 허용)
+        // 5대 핵심 관절만 검사: 어깨, 팔꿈치, 손목, 골반, 무릎 (머리/발끝 잘림 허용)
         var isCoreComplete = isPointValid(shoulder, 0.35) &&
                              isPointValid(elbow, 0.35) &&
                              isPointValid(wrist, 0.35) &&
@@ -945,7 +864,7 @@
         if (ankle && ankle.visibility >= 0.4) {
             currentCoreAng = getAngle(pS, pP, { x: mapX(ankle.x), y: ankle.y * ch });
         } else {
-            currentCoreAng = getAngle(pS, pP, pK); // 발끝 안 보이면 무릎 기준 보정
+            currentCoreAng = getAngle(pS, pP, pK);
         }
 
         updateHUDData(currentElbowAng, currentCoreAng, currentKneeAng);
@@ -967,7 +886,7 @@
 
         var isCurrentMotionBad = isCoreSag || isKneeTouch || isHeadBob || isWaveFault;
 
-        // [핵심] 홀딩 카운트 오류 박멸: 수직 어깨 변위(Displacement) 2중 검증
+        // [핵심] 정밀 팔굽혀펴기 상태 머신 (ROM 기반)
         if (isTimerRunning && !isPausedDueToNoBody) {
             if (isPikeRest) {
                 currentFaultBannerText = "🧘 엉덩이 솟음 휴식 중 (정상 휴식)";
@@ -982,23 +901,17 @@
                 triggerMovementFault("HEAD", "고개만 숙임 (헤드 봅)", "고개만 숙였습니다", "팔꿈치: " + currentElbowAng + "°");
             }
 
-            // 하강 단계
+            // 1. 하강 단계
             if (state === "UP") {
-                // 팔을 펴고 서 있는 상태에서는 어깨 기준선 갱신 (홀딩 시 하강 오판 방지)
-                if (currentElbowAng >= 150) {
-                    baselineShoulderY = pS.y;
-                }
-
                 if (currentElbowAng < minElbowInCurrentRep) {
                     minElbowInCurrentRep = currentElbowAng;
                 }
 
-                // 하강 기준: 팔꿈치가 굽혀지고 + 어깨가 실제로 바닥 방향으로 18px 이상 내려갔는가?
-                var downAngleTarget = (exerciseMode === "BAR") ? 95 : 90;
-                var hasShoulderMovedDown = (pS.y - baselineShoulderY > 18);
-                var isDownTargetReached = (currentElbowAng <= downAngleTarget) && hasShoulderMovedDown;
+                // 모드별 하강 임계치 (맨땅: 90도 이하, 봉: 92도 이하)
+                var downAngleTarget = (exerciseMode === "BAR") ? 92 : 90;
 
-                if (isDownTargetReached && !isCurrentMotionBad) {
+                // 85도까지 내려가면 92도 이하이므로 확실하게 DOWN 진입!
+                if (currentElbowAng <= downAngleTarget) {
                     state = "DOWN";
                     maxElbowInCurrentRep = currentElbowAng;
                     currentFaultBannerText = "✅ 충분 하강! 팔을 밀어 올리십시오";
@@ -1008,16 +921,14 @@
                     minElbowInCurrentRep = 180;
                 }
             } 
-            // 상승 단계
+            // 2. 상승 단계
             else if (state === "DOWN") {
                 if (currentElbowAng > maxElbowInCurrentRep) {
                     maxElbowInCurrentRep = currentElbowAng;
                 }
 
-                // 상승 기준: 팔꿈치 155° 이상 신전 + 어깨가 원래 높이 근처로 복귀
-                var hasShoulderReturned = (pS.y - baselineShoulderY < 20);
-
-                if (currentElbowAng >= 155 && hasShoulderReturned) {
+                // 155도 이상 팔을 완전히 폈을 때 카운트 인정
+                if (currentElbowAng >= 155) {
                     if (!repHasFault && !isCurrentMotionBad) {
                         repCount++;
                         currentFaultBannerText = "정자세 인정 (" + repCount + "회)";
@@ -1299,7 +1210,7 @@
     }
 
     // ==========================================
-    // [메인 캔버스 30 FPS 직접 녹화 & 인라인 듀레이션 패처]
+    // [하드웨어 카메라 스트림 직접 녹화 (50초 풀타임 보장)]
     // ==========================================
     function startRecording() {
         if (isRecording) return;
@@ -1307,8 +1218,12 @@
         recordingStartTimestamp = Date.now();
 
         try {
-            // [핵심] 실제 화면에 출력 중인 캔버스에서 30 FPS 스트림을 다이렉트로 채취하여 프레임 누락 원천 방지
-            var stream = canvasElement.captureStream(30);
+            // [핵심] 캔버스 조작을 거치지 않고 실제 카메라 스트림을 다이렉트로 전달하여 프레임 누락 원천 방지
+            var cameraStream = videoElement.srcObject;
+            if (!cameraStream) {
+                console.warn("카메라 스트림을 찾을 수 없습니다.");
+                return;
+            }
 
             var candidateTypes = [
                 "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
@@ -1327,8 +1242,8 @@
             }
             lastRecordedMime = selectedMime;
 
-            var options = selectedMime ? { mimeType: selectedMime, videoBitsPerSecond: 1600000 } : { videoBitsPerSecond: 1600000 };
-            mediaRecorder = new MediaRecorder(stream, options);
+            var options = selectedMime ? { mimeType: selectedMime, videoBitsPerSecond: 2000000 } : { videoBitsPerSecond: 2000000 };
+            mediaRecorder = new MediaRecorder(cameraStream, options);
 
             mediaRecorder.ondataavailable = function(e) {
                 if (e.data && e.data.size > 0) {
@@ -1338,18 +1253,14 @@
 
             mediaRecorder.onstop = function() {
                 var rawBlob = new Blob(recordedChunks, { type: lastRecordedMime || "video/mp4" });
-                var elapsedMs = Math.max(1000, Date.now() - recordingStartTimestamp);
+                lastRecordedBlob = rawBlob;
 
-                // [핵심] 실제 측정 시간을 파일 헤더에 직접 각인하여 카카오톡 4초 단축 현상 완벽 방지
-                fixWebmDuration(rawBlob, elapsedMs, function(finalBlob) {
-                    lastRecordedBlob = finalBlob;
-                    saveSessionToDB(finalBlob, currentSessionFaultLogs.slice());
-                    document.getElementById('saveAlertModal').style.display = 'flex';
-                });
+                saveSessionToDB(rawBlob, currentSessionFaultLogs.slice());
+                document.getElementById('saveAlertModal').style.display = 'flex';
             };
 
-            // 500ms 단위로 청크를 계속 밀어넣어 버퍼 단절 방지
-            mediaRecorder.start(500);
+            // 1초 단위 버퍼 수집
+            mediaRecorder.start(1000);
             isRecording = true;
             document.getElementById('fsRecStatus').innerText = "🔴 REC (" + ((lastRecordedMime && lastRecordedMime.indexOf("mp4") !== -1) ? "MP4" : "WEBM") + ")";
         } catch (err) {
@@ -1367,88 +1278,6 @@
         } catch (e) {}
         isRecording = false;
         document.getElementById('fsRecStatus').innerText = "⚪ STANDBY";
-    }
-
-    // [EBML Duration 바이너리 패처: 오프라인 100% 작동]
-    function fixWebmDuration(blob, durationMs, callback) {
-        if (!blob || blob.size < 100) {
-            callback(blob);
-            return;
-        }
-        var reader = new FileReader();
-        reader.onload = function() {
-            try {
-                var buffer = reader.result;
-                var bytes = new Uint8Array(buffer);
-                var view = new DataView(buffer);
-
-                var infoPos = -1;
-                for (var i = 0; i < Math.min(bytes.length - 12, 50000); i++) {
-                    if (bytes[i] === 0x15 && bytes[i+1] === 0x49 && bytes[i+2] === 0xA9 && bytes[i+3] === 0x66) {
-                        infoPos = i;
-                        break;
-                    }
-                }
-
-                if (infoPos === -1) {
-                    callback(blob);
-                    return;
-                }
-
-                var p = infoPos + 4;
-                var firstByte = bytes[p];
-                var vintLen = 1;
-                var mask = 0x80;
-                while (!(firstByte & mask) && vintLen < 8) {
-                    mask >>= 1;
-                    vintLen++;
-                }
-                var infoDataStart = p + vintLen;
-
-                var durPos = -1;
-                for (var j = infoDataStart; j < Math.min(infoDataStart + 600, bytes.length - 10); j++) {
-                    if ((bytes[j] === 0x16 && bytes[j+1] === 0x54) || (bytes[j] === 0x1F && bytes[j+1] === 0x43)) {
-                        break;
-                    }
-                    if (bytes[j] === 0x44 && bytes[j+1] === 0x89) {
-                        durPos = j;
-                        break;
-                    }
-                }
-
-                if (durPos !== -1) {
-                    var lenByte = bytes[durPos + 2];
-                    if (lenByte === 0x84 || lenByte === 4) {
-                        view.setFloat32(durPos + 3, durationMs, false);
-                    } else if (lenByte === 0x88 || lenByte === 8) {
-                        view.setFloat64(durPos + 3, durationMs, false);
-                    }
-                    callback(new Blob([buffer], { type: blob.type }));
-                    return;
-                } else {
-                    var durElem = new Uint8Array(11);
-                    durElem[0] = 0x44; durElem[1] = 0x89; durElem[2] = 0x88;
-                    var dv = new DataView(durElem.buffer);
-                    dv.setFloat64(3, durationMs, false);
-
-                    var newBytes = new Uint8Array(bytes.length + 11);
-                    newBytes.set(bytes.subarray(0, infoDataStart), 0);
-                    newBytes.set(durElem, infoDataStart);
-                    newBytes.set(bytes.subarray(infoDataStart), infoDataStart + 11);
-
-                    if (vintLen === 1 && (firstByte & 0x7F) + 11 < 127) {
-                        newBytes[p] = firstByte + 11;
-                    }
-
-                    callback(new Blob([newBytes], { type: blob.type }));
-                    return;
-                }
-            } catch (e) {
-                callback(blob);
-            }
-        };
-        reader.onerror = function() { callback(blob); };
-        reader.readAsArrayBuffer(blob);
     }
 
     function downloadLastRecordedVideo() {
@@ -1474,7 +1303,7 @@
     // ==========================================
     var db = null;
     function initIndexedDB() {
-        var req = indexedDB.open("ArmyPushupDB_Perfect_V5", 1);
+        var req = indexedDB.open("ArmyPushupDB_Hardware_V6", 1);
         req.onupgradeneeded = function(e) {
             var database = e.target.result;
             if (!database.objectStoreNames.contains("sessions")) {
@@ -1728,7 +1557,6 @@
         state = "UP";
         minElbowInCurrentRep = 180;
         maxElbowInCurrentRep = 90;
-        baselineShoulderY = 0;
         repHasFault = false;
         faultReasonCurrentRep = "";
         currentFaultBannerText = "준비 자세 유지 중";
