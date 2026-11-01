@@ -38,7 +38,7 @@
             border-radius: 3px;
         }
 
-        /* 스마트폰 고유 카메라 비율 자동 적응 컨테이너 */
+        /* 스마트폰 고유 카메라 비율 자동 적응 뷰어 */
         .camera-container {
             position: relative;
             width: 100%;
@@ -73,7 +73,7 @@
         }
         video { display: none; }
 
-        /* [창모드용 HUD 레이아웃] */
+        /* 1. 창모드 전용 HUD 레이아웃 */
         .window-hud {
             position: absolute;
             top: 8px; left: 8px; right: 8px;
@@ -96,7 +96,7 @@
         .hud-val { font-size: 17px; font-weight: bold; color: #ffffff; font-family: monospace; }
         .hud-lbl { font-size: 9px; color: #8b9b8e; }
 
-        /* [전체화면 전용 50:50 분할 HUD 레이아웃] */
+        /* 2. 전체화면 전용 50:50 상단 분할 HUD */
         .fs-hud-container {
             display: none;
             position: absolute;
@@ -106,10 +106,10 @@
             gap: 8px;
         }
         .camera-container.is-fullscreen .window-hud {
-            display: none; /* 창모드 HUD 숨김 */
+            display: none;
         }
         .camera-container.is-fullscreen .fs-hud-container {
-            display: flex; /* 50:50 전체화면 HUD 활성화 */
+            display: flex;
         }
 
         .fs-hud-half {
@@ -282,13 +282,22 @@
         .modal-body { font-size: 11.5px; color: #e2eae3; line-height: 1.5; }
         .modal-video-wrap { width: 100%; max-height: 55vh; background: #000; border-radius: 4px; overflow: hidden; margin: 0 auto; }
         .modal-video-wrap video { width: 100%; height: 100%; display: block; object-fit: contain; }
+
+        .guide-item {
+            background: #0d140e; border: 1px solid #1a261c;
+            border-radius: 4px; padding: 7px 9px; margin-bottom: 5px;
+        }
+        .guide-head { display: flex; justify-content: space-between; margin-bottom: 3px; }
+        .guide-title { color: #e5a93c; font-weight: bold; font-size: 11px; }
+        .guide-tts { color: #39e75f; font-size: 10px; font-family: monospace; }
+        .guide-desc { color: #a3b8a6; font-size: 10px; line-height: 1.45; }
     </style>
 </head>
 <body>
 
 <header>
-    <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
-    <div class="badge">네이티브 화각 · 480p 다운스케일 저장</div>
+    <div class="header-title">🛡️ 육군 팔굽혀펴기 AI 정밀 측정체계</div>
+    <div class="badge">MP4 최우선 녹화 · 카카오톡 호환</div>
 </header>
 
 <!-- 카메라 뷰어 컨테이너 -->
@@ -324,7 +333,7 @@
     <div class="fs-hud-container" id="fsHud">
         <!-- 좌측 50%: 실시간 시각 + 교번/성명 -->
         <div class="fs-hud-half" id="fsHudLeft">
-            <div class="fs-line-sub" id="fsRecStatus">🔴 REC 480p</div>
+            <div class="fs-line-sub" id="fsRecStatus">🔴 REC (MP4)</div>
             <div class="fs-line-sub" id="fsClockTime">2026-11-02 00:00:00</div>
             <div class="fs-line-main">후보생: <b id="fsCadetInfo">118번 홍길동</b></div>
         </div>
@@ -424,6 +433,61 @@
             <div style="text-align:center; color:#8b9b8e; font-size:11px; padding:15px;">저장된 측정 이력이 없습니다.</div>
         </div>
     </div>
+
+    <!-- 부정자세 원인 해설 사전 -->
+    <div class="card">
+        <div class="card-title">
+            <span>📖 육군 표준 팔굽혀펴기 부정자세 원인 및 3단계 판정 기준</span>
+        </div>
+
+        <div class="guide-item">
+            <div class="guide-head">
+                <span class="guide-title">1. 상체 선행 상승 (웨이브/배치기)</span>
+                <span class="guide-tts">🔊 "상체만 먼저 일어납니다"</span>
+            </div>
+            <div class="guide-desc">내려갈 땐 일자지만 올라올 때 골반을 바닥에 남겨두고 가슴만 젖혀 올라오는 행위. 밀어 올리는 구간에서 코어가 155° 미만으로 꺾이면 감지됩니다.</div>
+        </div>
+
+        <div class="guide-item">
+            <div class="guide-head">
+                <span class="guide-title">2. 허리 숙여짐 (처짐/요추 과신전)</span>
+                <span class="guide-tts">🔊 "허리가 숙여졌습니다"</span>
+            </div>
+            <div class="guide-desc">복근 긴장이 풀려 골반이 바닥으로 처지는 자세(코어각 &lt; 155° 엄격 적용). 머리부터 발목까지 일직선 판자를 유지해야 합니다.</div>
+        </div>
+
+        <div class="guide-item">
+            <div class="guide-head">
+                <span class="guide-title">3. 무릎 닿음 (무릎 굴곡 치팅)</span>
+                <span class="guide-tts">🔊 "무릎이 닿았습니다"</span>
+            </div>
+            <div class="guide-desc">무릎이 바닥에 닿거나 체중 분산을 위해 다리를 구부리는 행위(무릎각 &lt; 155°). 다리를 완전히 펴야 합니다.</div>
+        </div>
+
+        <div class="guide-item">
+            <div class="guide-head">
+                <span class="guide-title">4. 허리 세워짐 (엉덩이 솟음)</span>
+                <span class="guide-tts">🔊 "허리가 세워졌습니다"</span>
+            </div>
+            <div class="guide-desc">하중을 덜기 위해 엉덩이를 천장으로 치켜세워 'ㅅ'자 피라미드가 되는 자세(코어각 &gt; 180°).</div>
+        </div>
+
+        <div class="guide-item">
+            <div class="guide-head">
+                <span class="guide-title">5. 덜 내려감 (가슴 미도달)</span>
+                <span class="guide-tts">🔊 "덜 내려갔습니다"</span>
+            </div>
+            <div class="guide-desc">팔꿈치를 90° 이하로 충분히 굽히지 않고 중간 깊이에서 성급하게 올라오는 동작(깔짝거림). 턱/가슴이 기준 깊이까지 하강해야 합니다.</div>
+        </div>
+
+        <div class="guide-item">
+            <div class="guide-head">
+                <span class="guide-title">6. 팔꿈치 안 펴짐 (불완전 신전)</span>
+                <span class="guide-tts">🔊 "팔꿈치가 안 펴집니다"</span>
+            </div>
+            <div class="guide-desc">상승 시 팔꿈치를 160° 이상 끝까지 펴지 않고 반동으로 다시 내려가는 행위. 팔을 완전히 펴야만 카운트가 올라갑니다.</div>
+        </div>
+    </div>
 </div>
 
 <!-- 모달 1: 측정 완료 후 다운로드 안내 팝업 -->
@@ -431,12 +495,12 @@
     <div class="modal-card">
         <div class="modal-title">🎉 측정 종료 및 데이터 보관 안내</div>
         <div class="modal-body">
-            측정 영상(480p 다운스케일)과 부정자세 로그가 <b>스마트폰 내부 저장소(IndexedDB)</b>에 안전하게 보관되었습니다.<br><br>
-            <span style="color:#e5a93c;">⚠️ 브라우저 캐시 삭제 시 소실될 수 있으므로, 갤러리나 파일 앱에 보관하려면 지금 다운로드하십시오.</span>
+            측정 영상(MP4 우선 인코딩)과 부정자세 로그가 <b>스마트폰 내부 저장소(IndexedDB)</b>에 안전하게 보관되었습니다.<br><br>
+            <span style="color:#e5a93c;">⚠️ 브라우저 캐시 삭제 시 소실될 수 있으므로, 카카오톡 제출이나 갤러리 보관을 위해 지금 다운로드하십시오.</span>
         </div>
         <div class="btn-group">
-            <button type="button" class="action-btn btn-start" onclick="downloadLastRecordedVideo()">📥 480p 영상 파일 다운로드</button>
-            <button type="button" class="action-btn btn-excel" onclick="exportCurrentSessionCSV()">📊 엑셀 로그 다운로드</button>
+            <button type="button" class="action-btn btn-start" onclick="downloadLastRecordedVideo()">📥 영상 파일 다운로드 (.mp4)</button>
+            <button type="button" class="action-btn btn-excel" onclick="exportCurrentSessionCSV()">📊 엑셀 로그 다운로드 (.csv)</button>
         </div>
         <button type="button" class="action-btn btn-sub" onclick="closeSaveModal()">확인 및 닫기</button>
     </div>
@@ -473,7 +537,7 @@
     var canvasCtx = canvasElement.getContext('2d');
     var cameraBox = document.getElementById('cameraBox');
 
-    // [핵심] 480p 다운스케일 저장 전용 오프스크린 캔버스
+    // 480p 다운스케일 저장 전용 오프스크린 캔버스
     var recCanvas = document.createElement('canvas');
     var recCtx = recCanvas.getContext('2d');
 
@@ -491,7 +555,7 @@
     var isTimerRunning = false;
     var isCountingDown = false;
 
-    // MediaRecorder 480p 다운스케일 녹화 객체
+    // MediaRecorder 녹화 객체 (MP4 최우선)
     var mediaRecorder = null;
     var recordedChunks = [];
     var isRecording = false;
@@ -528,7 +592,7 @@
     // ==========================================
     var db = null;
     function initIndexedDB() {
-        var req = indexedDB.open("ArmyPushupDB_Native480p", 1);
+        var req = indexedDB.open("ArmyPushupDB_MP4v1", 1);
         req.onupgradeneeded = function(e) {
             var database = e.target.result;
             if (!database.objectStoreNames.contains("sessions")) {
@@ -628,7 +692,7 @@
             player.playbackRate = 1.0;
             player.play();
 
-            document.getElementById('playerModalTitle').innerText = "📹 " + item.dateStr + " - " + item.cadetName + " 후보생 측정 영상 (480p)";
+            document.getElementById('playerModalTitle').innerText = "📹 " + item.dateStr + " - " + item.cadetName + " 후보생 측정 영상";
 
             var tbody = document.getElementById('playerModalFaultBody');
             var fLogs = item.faultLogs || [];
@@ -668,7 +732,7 @@
         req.onsuccess = function() {
             var item = req.result;
             if (!item || !item.videoBlob) return;
-            var ext = (item.videoBlob.type && item.videoBlob.type.indexOf("mp4") !== -1) ? "mp4" : "webm";
+            var ext = (item.videoBlob.type && item.videoBlob.type.indexOf("webm") !== -1) ? "webm" : "mp4";
             var fileName = item.dateStr.replace(/[^0-9]/g, "_") + "_" + item.cadetId + "_" + item.cadetName + "_측정영상." + ext;
             downloadBlobFile(item.videoBlob, fileName);
         };
@@ -906,7 +970,7 @@
         if (isTimerRunning) return;
         isTimerRunning = true;
         updateActionButtons("⏸️ 일시 정지", "btn-pause");
-        document.getElementById('txtTimerState').innerText = "측정 및 480p 녹화 중";
+        document.getElementById('txtTimerState').innerText = "측정 및 녹화 진행 중";
         document.getElementById('txtTimerState').style.color = "#39e75f";
 
         timerInterval = setInterval(function() {
@@ -933,14 +997,14 @@
     }
 
     // ==========================================
-    // [480p 다운스케일 MediaRecorder 녹화 엔진]
+    // [MP4 최우선 탐색 MediaRecorder 녹화 엔진]
     // ==========================================
     function startRecording() {
         if (isRecording) return;
         recordedChunks = [];
 
         try {
-            // 카메라 원본 비율을 유지하면서 짧은 쪽 축을 480px로 다운스케일
+            // 카메라 원본 화면비율을 유지하며 짧은 축을 480px로 다운스케일
             var vw = canvasElement.width || 640;
             var vh = canvasElement.height || 480;
             var scale = 480 / Math.min(vw, vh);
@@ -954,17 +1018,26 @@
 
             var stream = recCanvas.captureStream(30);
 
-            var mimeType = "video/webm;codecs=vp8";
-            if (!MediaRecorder.isTypeSupported(mimeType)) {
-                if (MediaRecorder.isTypeSupported("video/mp4")) {
-                    mimeType = "video/mp4";
-                } else {
-                    mimeType = "";
+            // [핵심] 카카오톡 전송을 위해 MP4(H.264/AVC)를 최우선으로 탐색
+            var candidateTypes = [
+                "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+                "video/mp4;codecs=avc1",
+                "video/mp4;codecs=h264",
+                "video/mp4",
+                "video/webm;codecs=vp8",
+                "video/webm"
+            ];
+
+            var selectedMime = "";
+            for (var i = 0; i < candidateTypes.length; i++) {
+                if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(candidateTypes[i])) {
+                    selectedMime = candidateTypes[i];
+                    break;
                 }
             }
-            lastRecordedMime = mimeType;
+            lastRecordedMime = selectedMime;
 
-            var options = mimeType ? { mimeType: mimeType, videoBitsPerSecond: 1500000 } : { videoBitsPerSecond: 1500000 };
+            var options = selectedMime ? { mimeType: selectedMime, videoBitsPerSecond: 1600000 } : { videoBitsPerSecond: 1600000 };
             mediaRecorder = new MediaRecorder(stream, options);
 
             mediaRecorder.ondataavailable = function(e) {
@@ -974,7 +1047,7 @@
             };
 
             mediaRecorder.onstop = function() {
-                var blob = new Blob(recordedChunks, { type: lastRecordedMime || "video/webm" });
+                var blob = new Blob(recordedChunks, { type: lastRecordedMime || "video/mp4" });
                 lastRecordedBlob = blob;
 
                 // 스마트폰 내부 IndexedDB 자동 보관
@@ -986,7 +1059,7 @@
 
             mediaRecorder.start(1000);
             isRecording = true;
-            document.getElementById('fsRecStatus').innerText = "🔴 REC 480p";
+            document.getElementById('fsRecStatus').innerText = "🔴 REC (" + ((lastRecordedMime && lastRecordedMime.indexOf("webm") !== -1) ? "WEBM" : "MP4") + ")";
         } catch (err) {
             console.warn("녹화 실패: " + err.message);
         }
@@ -1004,12 +1077,12 @@
             alert("다운로드할 영상 데이터가 없습니다.");
             return;
         }
-        var ext = (lastRecordedMime && lastRecordedMime.indexOf("mp4") !== -1) ? "mp4" : "webm";
+        var ext = (lastRecordedMime && lastRecordedMime.indexOf("webm") !== -1) ? "webm" : "mp4";
         var cId = document.getElementById('inCadetId').value.trim() || "000";
         var cName = document.getElementById('inCadetName').value.trim() || "후보생";
         var now = new Date();
         var datePrefix = now.getFullYear() + "" + (now.getMonth() + 1 < 10 ? "0" : "") + (now.getMonth() + 1) + "" + (now.getDate() < 10 ? "0" : "") + now.getDate() + "_" + (now.getHours() < 10 ? "0" : "") + now.getHours() + (now.getMinutes() < 10 ? "0" : "") + now.getMinutes();
-        var fileName = datePrefix + "_" + cId + "_" + cName + "_측정영상(480p)." + ext;
+        var fileName = datePrefix + "_" + cId + "_" + cName + "_측정영상." + ext;
         downloadBlobFile(lastRecordedBlob, fileName);
     }
 
@@ -1018,7 +1091,7 @@
     }
 
     // ==========================================
-    // [엑셀 CSV 생성 엔진]
+    // [엑셀 CSV 생성 엔진 - UTF-8 BOM 탑재]
     // ==========================================
     function exportCurrentSessionCSV() {
         var cId = document.getElementById('inCadetId').value.trim() || "000";
@@ -1028,7 +1101,7 @@
     }
 
     function generateAndDownloadCSV(cId, cName, dateStr, rCount, fCount, tSec, elSec, logs) {
-        var csv = "\uFEFF";
+        var csv = "\uFEFF"; // 한셀/엑셀 한글 깨짐 방지 BOM
         csv += "=== 육군 팔굽혀펴기 정밀측정 종합결과표 ===\r\n";
         csv += "측정일시," + dateStr + "\r\n";
         csv += "교번," + cId + ",성명," + cName + "\r\n";
@@ -1143,7 +1216,7 @@
         var vw = videoElement.videoWidth || 640;
         var vh = videoElement.videoHeight || 480;
 
-        // 카메라 본래 해상도 1:1 매칭 (비율 왜곡 및 뭉개짐 원천 제거)
+        // 카메라 본래 해상도 동적 매칭 (왜곡 및 뭉개짐 방지)
         if (canvasElement.width !== vw || canvasElement.height !== vh) {
             canvasElement.width = vw;
             canvasElement.height = vh;
@@ -1220,7 +1293,7 @@
         var isCurrentlyBad = isCoreSag || isCorePike || isKneeTouch || isHeadBob || isWaveFault;
         var boneColor = (isCurrentlyBad || repHasFault) ? "#ff3333" : (state === "DOWN" ? "#e5a93c" : "#39e75f");
 
-        // 1. 관절 스켈레톤 선명한 렌더링
+        // 1. 관절 스켈레톤 렌더링
         drawBone(pN, pS, boneColor, 5);
         drawBone(pS, pE, boneColor, 6);
         drawBone(pE, pW, boneColor, 6);
@@ -1237,7 +1310,7 @@
         drawJoint(pK, isKneeTouch ? "#ff3333" : "#39e75f", "무릎 " + kneeAng + "°");
         drawJoint(pA, "#5dade2", "발끝");
 
-        // 2. 측정 중 판정 루프
+        // 2. 판정 루프
         if (isTimerRunning) {
             if (isWaveFault) {
                 triggerFault("WAVE", "상체 선행 상승 (배치기)", "상체만 먼저 일어납니다", "상승 코어: " + coreAng + "°");
@@ -1297,7 +1370,7 @@
             }
         }
 
-        // 3. [저장 전용] 480p 다운스케일 캔버스에 OSD 직각인 복사
+        // 3. [녹화 전용] 480p 다운스케일 캔버스에 OSD 직각인
         if (isRecording) {
             renderTo480pRecordCanvas(elbowAng, coreAng, kneeAng, currentFaultBannerText, isCurrentFaultWarn, dateFormatted);
         }
@@ -1334,7 +1407,6 @@
         var rh = recCanvas.height;
 
         recCtx.clearRect(0, 0, rw, rh);
-        // 메인 캔버스 영상을 480p 크기로 정밀 리사이징 드로우
         recCtx.drawImage(canvasElement, 0, 0, rw, rh);
 
         var cId = document.getElementById('inCadetId').value.trim() || "000";
