@@ -81,7 +81,17 @@
             max-height: 100vh;
             object-fit: contain;
         }
-        video { display: none; }
+        
+        /* 모바일 브라우저 프레임 디코딩 차단 방지 (display: none 대신 화면 밖 배치) */
+        video#inputVideo {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            opacity: 0;
+            pointer-events: none;
+            width: 1px;
+            height: 1px;
+        }
 
         /* 창모드 HUD */
         .window-hud {
@@ -718,7 +728,7 @@
     }
 
     // ==========================================
-    // [메인 캔버스 30 FPS 직접 렌더링 파이프라인]
+    // [메인 캔버스 30 FPS 직접 렌더링 파이프라인 (검은 화면 완벽 해결)]
     // ==========================================
     function startRenderPipeline() {
         if (renderLoopId) return;
@@ -726,8 +736,9 @@
         function loop() {
             renderLoopId = requestAnimationFrame(loop);
 
-            if (!cameraStarted || videoElement.readyState < 2) return;
+            if (!cameraStarted) return;
 
+            // 비디오 프레임 크기가 아직 0이어도 기본 캔버스 해상도(1280x720) 유지
             var vw = videoElement.videoWidth || 1280;
             var vh = videoElement.videoHeight || 720;
 
@@ -746,7 +757,10 @@
                 canvasCtx.translate(cw, 0);
                 canvasCtx.scale(-1, 1);
             }
-            canvasCtx.drawImage(videoElement, 0, 0, cw, ch);
+            // 모바일 브라우저 비디오 프레임 준비 상태 확인 후 렌더링
+            if (videoElement.readyState >= 2) {
+                canvasCtx.drawImage(videoElement, 0, 0, cw, ch);
+            }
             canvasCtx.restore();
 
             // 2. 관절 스켈레톤 렌더링 (4대 핵심 관절 중심)
@@ -1004,12 +1018,11 @@
                     minElbowInCurrentRep = currentElbowAng;
                 }
 
-                // [요청 반영: 하강 각도 완화]
-                // 홀딩 오류 원천 차단 가드 (팔이 140도 이상 펴져 있으면 절대 하강 진입 불가)
+                // [하강 각도 완화 및 홀딩 방지 가드] (팔이 140도 이상 펴져 있으면 절대 하강 진입 불가)
                 var isDownTargetReached = false;
                 if (currentElbowAng < 140) {
                     if (exerciseMode === "BAR") {
-                        // 봉 모드: 105도 이하로 대폭 완화 또는 120도 이하 굽힘 상태에서 심부선 도달 시
+                        // 봉 모드: 105도 이하로 완화 또는 120도 이하 굽힘 상태에서 심부선 도달 시
                         var isArmBent = (currentElbowAng <= 120);
                         var isDepthReached = (pS.y >= pE.y - 10);
                         isDownTargetReached = (currentElbowAng <= 105) || (isArmBent && isDepthReached);
@@ -1712,29 +1725,20 @@
     }
 
     function generateAndDownloadCSV(cId, cName, dateStr, rCount, fCount, tSec, elSec, logs) {
-        var csv = "﻿";
-        csv += "=== 육군 팔굽혀펴기 정밀측정 종합결과표 ===
-";
-        csv += "측정일시," + dateStr + "
-";
-        csv += "교번," + cId + ",성명," + cName + ",환경," + (exerciseMode === "BAR" ? "30cm봉" : "맨땅") + "
-";
-        csv += "설정시간," + tSec + "초,실제측정시간," + elSec + "초
-";
-        csv += "정자세 인정횟수," + rCount + "회,부정자세 누적건수," + fCount + "건
+        var csv = "\uFEFF";
+        csv += "=== 육군 팔굽혀펴기 정밀측정 종합결과표 ===\r\n";
+        csv += "측정일시," + dateStr + "\r\n";
+        csv += "교번," + cId + ",성명," + cName + ",환경," + (exerciseMode === "BAR" ? "30cm봉" : "맨땅") + "\r\n";
+        csv += "설정시간," + tSec + "초,실제측정시간," + elSec + "초\r\n";
+        csv += "정자세 인정횟수," + rCount + "회,부정자세 누적건수," + fCount + "건\r\n\r\n";
 
-";
-
-        csv += "순번,발생시간,불합격 사유 및 판정단계,관측 각도 및 수치
-";
+        csv += "순번,발생시간,불합격 사유 및 판정단계,관측 각도 및 수치\r\n";
         if (!logs || logs.length === 0) {
-            csv += "1,-,부정자세 없음 (완전 정자세),-
-";
+            csv += "1,-,부정자세 없음 (완전 정자세),-\r\n";
         } else {
             for (var i = 0; i < logs.length; i++) {
                 var itm = logs[i];
-                csv += (i + 1) + ',"' + itm.time + '","' + itm.reason + '","' + itm.detail + '"
-';
+                csv += (i + 1) + ',"' + itm.time + '","' + itm.reason + '","' + itm.detail + '"\r\n';
             }
         }
 
