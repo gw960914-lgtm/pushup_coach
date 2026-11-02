@@ -652,6 +652,7 @@
     var isCoreBodyDetected = false;
     var wasCoreBodyDetected = true;
     var isPausedDueToNoBody = false;
+    var hasSpokenCoreLossThisSession = false; // 측정 세션당 최초 1회 음성 송출 플래그
 
     // 자세 판정 추적 변수
     var minElbowInCurrentRep = 180;
@@ -1076,7 +1077,11 @@
 
         if (wasCoreBodyDetected) {
             wasCoreBodyDetected = false;
-            speak("핵심 관절이 인식되지 않았습니다");
+            // 측정 세션 진행 중 최초 1회만 음성 멘트 송출, 이후 세션 종료 전까지 추가 음성 없이 화면 경고만 유지
+            if (!hasSpokenCoreLossThisSession) {
+                hasSpokenCoreLossThisSession = true;
+                speak("핵심 관절이 인식되지 않았습니다");
+            }
         }
     }
 
@@ -1264,6 +1269,7 @@
 
     function runPreCountdown() {
         isCountingDown = true;
+        hasSpokenCoreLossThisSession = false; // 새로운 측정 시작 시 1회 송출 플래그 초기화
         var count = 5;
         var overlay = document.getElementById('countdownOverlay');
         var countText = document.getElementById('countdownText');
@@ -1671,7 +1677,7 @@
         req.onsuccess = function() {
             var item = req.result;
             if (!item) return;
-            generateAndDownloadCSV(item.cadetId, item.cadetName, item.dateStr, item.repCount, item.failCount, totalSeconds, totalSeconds - remainingSeconds, currentSessionFaultLogs);
+            generateAndDownloadCSV(item.cadetId, item.cadetName, item.dateStr, item.repCount, item.failCount, item.totalSeconds, item.elapsedSeconds, item.faultLogs);
         };
     }
 
@@ -1706,20 +1712,29 @@
     }
 
     function generateAndDownloadCSV(cId, cName, dateStr, rCount, fCount, tSec, elSec, logs) {
-        var csv = "\uFEFF";
-        csv += "=== 육군 팔굽혀펴기 정밀측정 종합결과표 ===\r\n";
-        csv += "측정일시," + dateStr + "\r\n";
-        csv += "교번," + cId + ",성명," + cName + ",환경," + (exerciseMode === "BAR" ? "30cm봉" : "맨땅") + "\r\n";
-        csv += "설정시간," + tSec + "초,실제측정시간," + elSec + "초\r\n";
-        csv += "정자세 인정횟수," + rCount + "회,부정자세 누적건수," + fCount + "건\r\n\r\n";
+        var csv = "﻿";
+        csv += "=== 육군 팔굽혀펴기 정밀측정 종합결과표 ===
+";
+        csv += "측정일시," + dateStr + "
+";
+        csv += "교번," + cId + ",성명," + cName + ",환경," + (exerciseMode === "BAR" ? "30cm봉" : "맨땅") + "
+";
+        csv += "설정시간," + tSec + "초,실제측정시간," + elSec + "초
+";
+        csv += "정자세 인정횟수," + rCount + "회,부정자세 누적건수," + fCount + "건
 
-        csv += "순번,발생시간,불합격 사유 및 판정단계,관측 각도 및 수치\r\n";
+";
+
+        csv += "순번,발생시간,불합격 사유 및 판정단계,관측 각도 및 수치
+";
         if (!logs || logs.length === 0) {
-            csv += "1,-,부정자세 없음 (완전 정자세),-\r\n";
+            csv += "1,-,부정자세 없음 (완전 정자세),-
+";
         } else {
             for (var i = 0; i < logs.length; i++) {
                 var itm = logs[i];
-                csv += (i + 1) + ',"' + itm.time + '","' + itm.reason + '","' + itm.detail + '"\r\n';
+                csv += (i + 1) + ',"' + itm.time + '","' + itm.reason + '","' + itm.detail + '"
+';
             }
         }
 
@@ -1750,6 +1765,7 @@
         document.getElementById('fullbodyWarnOverlay').style.display = 'none';
         isPausedDueToNoBody = false;
         wasCoreBodyDetected = true;
+        hasSpokenCoreLossThisSession = false; // 0회 초기화 시 플래그 리셋
         lastFaultKey = "";
         lastFaultTime = 0;
 
