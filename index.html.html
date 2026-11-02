@@ -1,168 +1,3 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>육군 정자세 팔굽혀펴기 AI 정밀 측정체계</title>
-    <!-- MediaPipe Pose CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body {
-            background-color: #0b110c;
-            color: #e2eae3;
-            font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", Dotum, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            padding-bottom: 50px;
-        }
-        header {
-            width: 100%;
-            background: #111a13;
-            border-bottom: 2px solid #233827;
-            padding: 10px 14px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .header-title { font-size: 14px; font-weight: bold; color: #39e75f; display: flex; align-items: center; gap: 6px; }
-        .header-right { display: flex; align-items: center; gap: 6px; }
-        .badge {
-            background: #17381d;
-            border: 1px solid #39e75f;
-            color: #39e75f;
-            font-size: 10px;
-            padding: 2px 7px;
-            border-radius: 3px;
-        }
-        .btn-help-top {
-            background: #1f3323;
-            border: 1px solid #39e75f;
-            color: #39e75f;
-            font-size: 11px;
-            font-weight: bold;
-            padding: 3px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .camera-container {
-            position: relative;
-            width: 100%;
-            max-width: 540px;
-            background: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            border-bottom: 2px solid #233827;
-            margin: 0 auto;
-        }
-        .camera-container.is-fullscreen {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            max-width: none; z-index: 99999;
-            border: none; background: #000;
-        }
-
-        canvas#outputCanvas {
-            width: 100%;
-            height: auto;
-            max-height: 75vh;
-            object-fit: contain;
-            display: block;
-        }
-        .camera-container.is-fullscreen canvas#outputCanvas {
-            width: 100%;
-            height: 100%;
-            max-height: 100vh;
-            object-fit: contain;
-        }
-        video { display: none; }
-
-        /* 창모드 HUD */
-        .window-hud {
-            position: absolute;
-            top: 8px; left: 8px; right: 8px;
-            display: flex; justify-content: space-between;
-            pointer-events: none; gap: 4px; z-index: 10;
-        }
-        .hud-card {
-            background: rgba(11, 17, 12, 0.88);
-            border: 1px solid #233827;
-            padding: 5px 4px;
-            border-radius: 5px;
-            text-align: center;
-            flex: 1;
-            transition: all 0.15s;
-        }
-        .hud-card.fault-active {
-            border-color: #e74c3c;
-            background: rgba(60, 15, 15, 0.9);
-        }
-        .hud-val { font-size: 16px; font-weight: bold; color: #ffffff; font-family: monospace; }
-        .hud-lbl { font-size: 8.5px; color: #8b9b8e; }
-
-        /* 전체화면 상단 50:50 분할 HUD */
-        .fs-hud-container {
-            display: none;
-            position: absolute;
-            top: 10px; left: 10px; right: 10px;
-            z-index: 40;
-            pointer-events: none;
-            gap: 8px;
-        }
-        .camera-container.is-fullscreen .window-hud { display: none; }
-        .camera-container.is-fullscreen .fs-hud-container { display: flex; }
-
-        .fs-hud-half {
-            flex: 1;
-            background: rgba(10, 16, 11, 0.88);
-            border: 1.5px solid #233827;
-            border-radius: 7px;
-            padding: 8px 12px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-            transition: border-color 0.15s;
-        }
-        .fs-hud-half.fault-active {
-            border-color: #e74c3c;
-            background: rgba(50, 12, 12, 0.92);
-        }
-        .fs-line-sub { font-size: 10.5px; color: #8b9b8e; font-family: monospace; }
-        .fs-line-main { font-size: 14px; font-weight: bold; color: #ffffff; margin-top: 2px; }
-        .fs-line-main b { color: #39e75f; }
-
-        .fs-hud-right { text-align: right; }
-        .fs-count-highlight {
-            font-size: 26px; font-weight: 900; font-family: monospace; color: #39e75f; line-height: 1;
-        }
-        .fs-count-highlight.warn { color: #ff5252; }
-
-        /* 4대 핵심 관절 미인식 경고 오버레이 */
-        .fullbody-warn-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(40, 5, 5, 0.85);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 45;
-            pointer-events: none;
-            text-align: center;
-            padding: 20px;
-        }
-        .warn-icon { font-size: 50px; margin-bottom: 8px; animation: blink 0.8s infinite; }
-        .warn-title { font-size: 19px; font-weight: 900; color: #ff4d4d; margin-bottom: 6px; }
-        .warn-desc { font-size: 11.5px; color: #ffffff; font-weight: bold; line-height: 1.5; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-
         /* 5초 카운트다운 레이어 */
         .countdown-overlay {
             position: absolute;
@@ -352,7 +187,7 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">검증 완료 최종본</div>
+        <div class="badge">하강각도 완화 v5.3</div>
     </div>
 </header>
 
@@ -382,7 +217,7 @@
         </div>
         <div class="hud-card">
             <div class="hud-val" id="elbowAngleWin">0°</div>
-            <div class="hud-lbl" id="lblElbowThreshold">팔꿈치(≤90°)</div>
+            <div class="hud-lbl" id="lblElbowThreshold">팔꿈치(≤100°)</div>
         </div>
         <div class="hud-card">
             <div class="hud-val" id="coreAngleWin">0°</div>
@@ -430,7 +265,7 @@
     <div class="card">
         <div class="card-title">
             <span>⚙️ 측정 환경 모드 선택</span>
-            <span id="txtModeDesc" style="font-size:10.5px; color:#a3b8a6;">맨땅 평지 (팔꿈치 90° 이하)</span>
+            <span id="txtModeDesc" style="font-size:10.5px; color:#a3b8a6;">맨땅 평지 (팔꿈치 100° 이하 완화)</span>
         </div>
         <div class="mode-toggle-group">
             <button type="button" class="btn-mode active" id="btnModeFloor" onclick="setExerciseMode('FLOOR')">🏃 맨땅 평지 측정</button>
@@ -503,8 +338,8 @@
             </div>
             <div class="guide-desc">
                 1. <b>4대 필수 정렬</b>: 어깨-팔꿈치-골반-무릎 4대 관절을 바르게 정렬합니다.<br>
-                2. <b>하강 깊이(심부선)</b>: 맨땅은 90° 이하, 봉 모드는 98° 이하(또는 115° 이하 굽힘 상태에서 어깨 심부선 도달)로 충분히 내려갑니다.<br>
-                3. <b>완전 신전 및 가동범위</b>: 팔꿈치를 155° 이상 펴고, 최저점 대비 최소 35° 이상 가동범위가 확보되어야 카운트됩니다.<br>
+                2. <b>하강 깊이(심부선 완화)</b>: 맨땅은 100° 이하, 봉 모드는 105° 이하(또는 심부선 도달)로 내려가면 충분 하강으로 인정됩니다.<br>
+                3. <b>완전 신전 및 가동범위</b>: 팔꿈치를 150° 이상 펴고, 최저점 대비 최소 30° 이상 가동범위가 확보되면 카운트됩니다.<br>
                 4. <b>유일한 휴식(Pike Rest)</b>: 팔을 펴고 엉덩이를 천장으로 치켜올리는 자세만 감점 없이 휴식으로 인정됩니다.
             </div>
         </div>
@@ -535,12 +370,12 @@
     </div>
 </div>
 
-<!-- 모달 1: 처음 접속 시 사용방법 안내 팝업 -->
-<div class="modal-overlay" id="helpModal" style="display: flex;">
+<!-- 모달 1: 처음 접속 시 사용방법 안내 팝업 (네이티브 3중 닫기 적용) -->
+<div class="modal-overlay" id="helpModal" style="display: flex;" onclick="if(event.target===this) this.style.display='none';">
     <div class="modal-card">
         <div class="modal-title">
             <span>🎖️ 팔굽혀펴기 AI 정밀 측정체계 사용 가이드</span>
-            <button type="button" class="btn-mini" onclick="closeHelpModal()">✖</button>
+            <button type="button" class="btn-mini" style="font-size: 15px; padding: 4px 12px; cursor: pointer;" onclick="this.closest('.modal-overlay').style.display='none';">✖</button>
         </div>
         <div class="modal-body">
             <div class="help-step">
@@ -551,16 +386,16 @@
             </div>
 
             <div class="help-step">
-                <div class="help-step-title">2. 측정 환경 모드 선택</div>
+                <div class="help-step-title">2. 측정 환경 모드 선택 및 각도 완화</div>
                 <div class="help-step-desc">
-                    평지 바닥에서 실시할 때는 <b>[🏃 맨땅 평지]</b>, 30cm 봉을 잡고 실시할 때는 <b>[🛑 30cm 봉]</b> 버튼을 선택하십시오.
+                    평지 바닥에서 실시할 때는 <b>[🏃 맨땅 평지]</b>(100° 이하), 30cm 봉을 잡고 실시할 때는 <b>[🛑 30cm 봉]</b>(105° 이하 또는 심부선) 버튼을 선택하십시오. 하강 각도가 여유 있게 완화되어 자연스럽게 인식됩니다.
                 </div>
             </div>
 
             <div class="help-step">
                 <div class="help-step-title">3. 30cm 봉 정자세 요령 (홀딩 오류 차단)</div>
                 <div class="help-step-desc">
-                    봉 모드에서는 팔이 실제로 굽혀지며 어깨가 내려가야 하강으로 인정되며, 팔을 완전히 펴야 카운트됩니다. 봉을 잡고 가만히 버티는 상태에서는 카운트가 절대 올라가지 않습니다.
+                    봉 모드에서는 팔이 실제로 굽혀지며 어깨가 내려가야 하강으로 인정되며, 팔을 펴면 카운트됩니다. 봉을 잡고 가만히 버티는 상태에서는 카운트가 절대 올라가지 않습니다.
                 </div>
             </div>
 
@@ -571,12 +406,12 @@
                 </div>
             </div>
         </div>
-        <button type="button" class="action-btn btn-start" onclick="closeHelpModal()">✅ 확인 및 측정 시작하기</button>
+        <button type="button" class="action-btn btn-start" style="width: 100%; margin-top: 6px; cursor: pointer;" onclick="this.closest('.modal-overlay').style.display='none';">✅ 확인 및 닫기</button>
     </div>
 </div>
 
 <!-- 모달 2: 다운로드 안내 -->
-<div class="modal-overlay" id="saveAlertModal">
+<div class="modal-overlay" id="saveAlertModal" onclick="if(event.target===this) this.style.display='none';">
     <div class="modal-card">
         <div class="modal-title">🎉 측정 종료 및 데이터 보관 안내</div>
         <div class="modal-body">
@@ -587,7 +422,7 @@
             <button type="button" class="action-btn btn-start" onclick="downloadLastRecordedVideo()">📥 영상 파일 다운로드</button>
             <button type="button" class="action-btn btn-excel" onclick="exportCurrentSessionCSV()">📊 엑셀 로그 다운로드 (.csv)</button>
         </div>
-        <button type="button" class="action-btn btn-sub" onclick="closeSaveModal()">확인 및 닫기</button>
+        <button type="button" class="action-btn btn-sub" onclick="this.closest('.modal-overlay').style.display='none';">확인 및 닫기</button>
     </div>
 </div>
 
@@ -680,13 +515,17 @@
 
     var currentSessionFaultLogs = [];
 
+    // 가이드 모달 제어 함수 (전역 안전 바인딩)
     function openHelpModal() {
-        document.getElementById('helpModal').style.display = 'flex';
+        var modal = document.getElementById('helpModal');
+        if (modal) modal.style.display = 'flex';
     }
-
     function closeHelpModal() {
-        document.getElementById('helpModal').style.display = 'none';
+        var modal = document.getElementById('helpModal');
+        if (modal) modal.style.display = 'none';
     }
+    window.openHelpModal = openHelpModal;
+    window.closeHelpModal = closeHelpModal;
 
     function setExerciseMode(mode) {
         if (isTimerRunning || isCountingDown) return;
@@ -694,14 +533,14 @@
         if (mode === "FLOOR") {
             document.getElementById('btnModeFloor').classList.add('active');
             document.getElementById('btnModeBar').classList.remove('active');
-            document.getElementById('txtModeDesc').innerText = "맨땅 평지 (팔꿈치 90° 이하)";
-            document.getElementById('lblElbowThreshold').innerText = "팔꿈치(≤90°)";
+            document.getElementById('txtModeDesc').innerText = "맨땅 평지 (팔꿈치 100° 이하 완화)";
+            document.getElementById('lblElbowThreshold').innerText = "팔꿈치(≤100°)";
             document.getElementById('fsModeTag').innerText = "맨땅";
         } else {
             document.getElementById('btnModeBar').classList.add('active');
             document.getElementById('btnModeFloor').classList.remove('active');
-            document.getElementById('txtModeDesc').innerText = "30cm 봉 (팔꿈치 98° 이하 또는 심부선)";
-            document.getElementById('lblElbowThreshold').innerText = "팔꿈치(≤98°/봉)";
+            document.getElementById('txtModeDesc').innerText = "30cm 봉 (팔꿈치 105° 이하 완화 또는 심부선)";
+            document.getElementById('lblElbowThreshold').innerText = "팔꿈치(≤105°/봉)";
             document.getElementById('fsModeTag').innerText = "30cm 봉";
         }
     }
@@ -782,30 +621,26 @@
         var boneColor = isBad ? "#ff3333" : (isPikeRest ? "#5dade2" : (state === "DOWN" ? "#e5a93c" : "#39e75f"));
 
         // 4대 필수 관절선 연결
-        drawBone(ctx, pS, pE, boneColor, 6); // 어깨 - 팔꿈치
-        drawBone(ctx, pS, pP, boneColor, 6); // 어깨 - 골반
-        drawBone(ctx, pP, pK, boneColor, 5); // 골반 - 무릎
+        drawBone(ctx, pS, pE, boneColor, 6);
+        drawBone(ctx, pS, pP, boneColor, 6);
+        drawBone(ctx, pP, pK, boneColor, 5);
 
-        // 손목이 감지되면 연결
         if (wrist && wrist.visibility > 0.2) {
             var pW = { x: mapX(wrist.x), y: wrist.y * ch };
             drawBone(ctx, pE, pW, boneColor, 5);
         }
 
-        // 발목이 감지되면 연결
         if (ankle && ankle.visibility > 0.2) {
             var pA = { x: mapX(ankle.x), y: ankle.y * ch };
             drawBone(ctx, pK, pA, boneColor, 5);
         }
 
-        // 머리가 감지되면 연결
         if (nose && nose.visibility > 0.2) {
             var pN = { x: mapX(nose.x), y: nose.y * ch };
             drawBone(ctx, pN, pS, boneColor, 4);
             drawJoint(ctx, pN, "#ffffff", "머리");
         }
 
-        // 4대 필수 관절 노드 표시
         drawJoint(ctx, pS, "#39e75f", "어깨");
         drawJoint(ctx, pE, "#e5a93c", "팔 " + currentElbowAng + "°");
         drawJoint(ctx, pP, isPikeRest ? "#5dade2" : "#f4d03f", "골반 " + currentCoreAng + "°");
@@ -886,7 +721,7 @@
     }
 
     // ==========================================
-    // [MediaPipe AI 자세 판정 (봉/맨땅 및 가동범위 검증)]
+    // [MediaPipe AI 자세 판정 (각도 대폭 완화 & 홀딩 가드)]
     // ==========================================
     function onPoseResults(results) {
         if (!results.poseLandmarks) {
@@ -940,11 +775,10 @@
         var pP = { x: mapX(hip.x), y: hip.y * ch };
         var pK = { x: mapX(knee.x), y: knee.y * ch };
 
-        // 손목 위치 추정 (손목이 잘려도 팔꿈치 방향으로 보정하여 오류 방지)
         var pW = (wrist && wrist.visibility > 0.25) ? { x: mapX(wrist.x), y: wrist.y * ch } : { x: pE.x, y: pE.y + 40 };
 
         currentElbowAng = getAngle(pS, pE, pW);
-        currentCoreAng = getAngle(pS, pP, pK); // 4대 관절 중심: 어깨-골반-무릎 정렬
+        currentCoreAng = getAngle(pS, pP, pK);
         currentKneeAng = (ankle && ankle.visibility > 0.25) ? getAngle(pP, pK, { x: mapX(ankle.x), y: ankle.y * ch }) : 175;
 
         updateHUDData(currentElbowAng, currentCoreAng, currentKneeAng);
@@ -964,8 +798,10 @@
             if (currentCoreAng < (exerciseMode === "BAR" ? 148 : 155)) isWaveFault = true;
         }
 
+        var isCurrentMotionBad = isCoreSag || isKneeTouch || isHeadBob || isWaveFault;
+
         // ==========================================
-        // [정밀 생체역학 판정 및 홀딩 오작동 원천 차단]
+        // [정밀 생체역학 판정 및 각도 완화 적용]
         // ==========================================
         if (isTimerRunning && !isPausedDueToNoBody) {
             if (isPikeRest) {
@@ -983,21 +819,37 @@
 
             // 1. 하강 단계 (state === "UP")
             if (state === "UP") {
+                // 준비자세 복귀 시 직전 회차의 모든 부정 플래그, 노카운트 상태, 레드라인 즉각 완전 초기화 (150도 기준)
+                if (currentElbowAng >= 150) {
+                    minElbowInCurrentRep = 180;
+                    maxElbowInCurrentRep = 90;
+                    repHasFault = false;
+                    faultReasonCurrentRep = "";
+
+                    if (!isCurrentMotionBad) {
+                        isCurrentFaultWarn = false;
+                        if (!isPikeRest && currentFaultBannerText.indexOf("정자세 인정") === -1) {
+                            currentFaultBannerText = "준비 자세 유지 중";
+                        }
+                    }
+                }
+
                 if (currentElbowAng < minElbowInCurrentRep) {
                     minElbowInCurrentRep = currentElbowAng;
                 }
 
-                // [홀딩 오류 원천 차단 가드] 팔이 펴져 있으면(135도 이상) 절대 하강으로 진입 불가
+                // [요청 반영: 하강 각도 완화]
+                // 홀딩 오류 원천 차단 가드 (팔이 140도 이상 펴져 있으면 절대 하강 진입 불가)
                 var isDownTargetReached = false;
-                if (currentElbowAng < 135) {
+                if (currentElbowAng < 140) {
                     if (exerciseMode === "BAR") {
-                        // 봉 모드: 80~85도 완벽 인식(98도 이하) 또는 팔이 115도 이하로 굽혀진 상태에서 심부선 도달 시
-                        var isArmBent = (currentElbowAng <= 115);
+                        // 봉 모드: 105도 이하로 대폭 완화 또는 120도 이하 굽힘 상태에서 심부선 도달 시
+                        var isArmBent = (currentElbowAng <= 120);
                         var isDepthReached = (pS.y >= pE.y - 10);
-                        isDownTargetReached = (currentElbowAng <= 98) || (isArmBent && isDepthReached);
+                        isDownTargetReached = (currentElbowAng <= 105) || (isArmBent && isDepthReached);
                     } else {
-                        // 맨땅 모드: 92도 이하
-                        isDownTargetReached = (currentElbowAng <= 92);
+                        // 맨땅 모드: 100도 이하로 완화 (조금 덜 내려가도 확실히 하강 인정)
+                        isDownTargetReached = (currentElbowAng <= 100);
                     }
                 }
 
@@ -1006,7 +858,7 @@
                     maxElbowInCurrentRep = currentElbowAng;
                     currentFaultBannerText = "✅ 충분 하강! 팔을 밀어 올리십시오";
                     isCurrentFaultWarn = false;
-                } else if (minElbowInCurrentRep <= 130 && (currentElbowAng - minElbowInCurrentRep > 15) && currentElbowAng > 105) {
+                } else if (minElbowInCurrentRep <= 135 && (currentElbowAng - minElbowInCurrentRep > 15) && currentElbowAng > 110) {
                     triggerMovementFault("SHALLOW", "덜 내려감 (심도 미도달)", "덜 내려갔습니다", "최저: " + minElbowInCurrentRep + "°");
                     minElbowInCurrentRep = 180;
                 }
@@ -1017,17 +869,17 @@
                     maxElbowInCurrentRep = currentElbowAng;
                 }
 
-                // [가동범위 2중 검증] 최저 하강 각도와 상승 각도 차이가 최소 35도 이상 벌어져야 실제 1회로 인정
-                var isFullRom = (currentElbowAng - minElbowInCurrentRep >= 35);
+                // 팔을 150도 이상 펴서 올라온 경우 (상승 완료 기준도 150도로 완화)
+                if (currentElbowAng >= 150) {
+                    // 가동범위 검증: 최저 하강 각도와 상승 각도 차이가 30도 이상 벌어지면 인정
+                    var isFullRom = (currentElbowAng - minElbowInCurrentRep >= 30);
 
-                // 팔을 155도 이상 펴서 올라오고, 실제 가동범위를 충족했을 때만 카운트
-                if (currentElbowAng >= 155 && isFullRom) {
-                    if (!repHasFault && !isCoreSag && !isKneeTouch && !isWaveFault) {
+                    if (isFullRom && !repHasFault && !isCoreSag && !isKneeTouch && !isWaveFault) {
                         repCount++;
                         currentFaultBannerText = "정자세 인정 (" + repCount + "회)";
                         isCurrentFaultWarn = false;
                         speak(repCount + "");
-                    } else {
+                    } else if (isFullRom) {
                         currentFaultBannerText = "❌ 노카운트 (" + (faultReasonCurrentRep || "자세 불량") + ")";
                         isCurrentFaultWarn = true;
                     }
@@ -1037,7 +889,7 @@
                     maxElbowInCurrentRep = 90;
                     repHasFault = false;
                     faultReasonCurrentRep = "";
-                } else if (maxElbowInCurrentRep >= 115 && (maxElbowInCurrentRep - currentElbowAng > 15) && currentElbowAng < 150) {
+                } else if (maxElbowInCurrentRep >= 120 && (maxElbowInCurrentRep - currentElbowAng > 15) && currentElbowAng < 145) {
                     triggerMovementFault("INCOMPLETE", "팔꿈치 안 펴짐 (미신전)", "팔꿈치가 안 펴집니다", "최대: " + maxElbowInCurrentRep + "°");
                     maxElbowInCurrentRep = 90;
                 }
@@ -1343,7 +1195,6 @@
                 var rawBlob = new Blob(recordedChunks, { type: lastRecordedMime || "video/mp4" });
                 var elapsedMs = Math.max(1000, Date.now() - recordingStartTimestamp);
 
-                // 실제 녹화 시간을 파일 헤더에 직접 각인하여 카카오톡 4초 단축 현상 완벽 방지
                 fixWebmDuration(rawBlob, elapsedMs, function(finalBlob) {
                     lastRecordedBlob = finalBlob;
                     saveSessionToDB(finalBlob, currentSessionFaultLogs.slice());
@@ -1371,7 +1222,6 @@
         document.getElementById('fsRecStatus').innerText = "⚪ STANDBY";
     }
 
-    // [EBML Duration 바이너리 패처: 오프라인 100% 작동]
     function fixWebmDuration(blob, durationMs, callback) {
         if (!blob || blob.size < 100) {
             callback(blob);
@@ -1465,10 +1315,6 @@
         var datePrefix = now.getFullYear() + "" + (now.getMonth() + 1 < 10 ? "0" : "") + (now.getMonth() + 1) + "" + (now.getDate() < 10 ? "0" : "") + now.getDate() + "_" + (now.getHours() < 10 ? "0" : "") + now.getHours() + (now.getMinutes() < 10 ? "0" : "") + now.getMinutes();
         var fileName = datePrefix + "_" + cId + "_" + cName + "_측정영상." + ext;
         downloadBlobFile(lastRecordedBlob, fileName);
-    }
-
-    function closeSaveModal() {
-        document.getElementById('saveAlertModal').style.display = 'none';
     }
 
     // ==========================================
@@ -1695,20 +1541,29 @@
     }
 
     function generateAndDownloadCSV(cId, cName, dateStr, rCount, fCount, tSec, elSec, logs) {
-        var csv = "\uFEFF";
-        csv += "=== 육군 팔굽혀펴기 정밀측정 종합결과표 ===\r\n";
-        csv += "측정일시," + dateStr + "\r\n";
-        csv += "교번," + cId + ",성명," + cName + ",환경," + (exerciseMode === "BAR" ? "30cm봉" : "맨땅") + "\r\n";
-        csv += "설정시간," + tSec + "초,실제측정시간," + elSec + "초\r\n";
-        csv += "정자세 인정횟수," + rCount + "회,부정자세 누적건수," + fCount + "건\r\n\r\n";
+        var csv = "﻿";
+        csv += "=== 육군 팔굽혀펴기 정밀측정 종합결과표 ===
+";
+        csv += "측정일시," + dateStr + "
+";
+        csv += "교번," + cId + ",성명," + cName + ",환경," + (exerciseMode === "BAR" ? "30cm봉" : "맨땅") + "
+";
+        csv += "설정시간," + tSec + "초,실제측정시간," + elSec + "초
+";
+        csv += "정자세 인정횟수," + rCount + "회,부정자세 누적건수," + fCount + "건
 
-        csv += "순번,발생시간,불합격 사유 및 판정단계,관측 각도 및 수치\r\n";
+";
+
+        csv += "순번,발생시간,불합격 사유 및 판정단계,관측 각도 및 수치
+";
         if (!logs || logs.length === 0) {
-            csv += "1,-,부정자세 없음 (완전 정자세),-\r\n";
+            csv += "1,-,부정자세 없음 (완전 정자세),-
+";
         } else {
             for (var i = 0; i < logs.length; i++) {
                 var itm = logs[i];
-                csv += (i + 1) + ',"' + itm.time + '","' + itm.reason + '","' + itm.detail + '"\r\n';
+                csv += (i + 1) + ',"' + itm.time + '","' + itm.reason + '","' + itm.detail + '"
+';
             }
         }
 
@@ -1786,6 +1641,9 @@
         pose.onResults(onPoseResults);
     }
 
+    // ==========================================
+    // [단순 전면/후면 카메라 스트림 전환]
+    // ==========================================
     function startCameraStream() {
         if (camera) camera.stop();
 
