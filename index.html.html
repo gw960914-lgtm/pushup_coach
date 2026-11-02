@@ -82,7 +82,7 @@
             object-fit: contain;
         }
         
-        /* 모바일 브라우저 프레임 디코딩 차단 방지 (display: none 대신 화면 밖 배치) */
+        /* 모바일 브라우저 프레임 디코딩 차단 방지 */
         video#inputVideo {
             position: absolute;
             top: -9999px;
@@ -153,25 +153,6 @@
             font-size: 26px; font-weight: 900; font-family: monospace; color: #39e75f; line-height: 1;
         }
         .fs-count-highlight.warn { color: #ff5252; }
-
-        /* 4대 핵심 관절 미인식 경고 오버레이 */
-        .fullbody-warn-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(40, 5, 5, 0.85);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 45;
-            pointer-events: none;
-            text-align: center;
-            padding: 20px;
-        }
-        .warn-icon { font-size: 50px; margin-bottom: 8px; animation: blink 0.8s infinite; }
-        .warn-title { font-size: 19px; font-weight: 900; color: #ff4d4d; margin-bottom: 6px; }
-        .warn-desc { font-size: 11.5px; color: #ffffff; font-weight: bold; line-height: 1.5; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 
         /* 5초 카운트다운 레이어 */
         .countdown-overlay {
@@ -310,7 +291,6 @@
         }
         .btn-mini:hover { border-color: #39e75f; color: #39e75f; }
 
-        /* 가이드 안내 카드 */
         .guide-box {
             background: #0d140e;
             border: 1px solid #1a261c;
@@ -328,7 +308,6 @@
         .guide-tag-bad { color: #ff6b6b; font-weight: bold; font-size: 11px; }
         .guide-desc { font-size: 10.5px; color: #a3b8a6; line-height: 1.45; }
 
-        /* 모달 스타일 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.85); display: none;
@@ -362,23 +341,13 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">검증 완료 최종본</div>
+        <div class="badge">두꺼운 옷 정밀인식 v5.4</div>
     </div>
 </header>
 
 <div class="camera-container" id="cameraBox">
     <canvas id="outputCanvas"></canvas>
     <video id="inputVideo" playsinline webkit-playsinline muted autoplay></video>
-
-    <!-- 4대 핵심 관절 미인식 경고 오버레이 -->
-    <div class="fullbody-warn-overlay" id="fullbodyWarnOverlay">
-        <div class="warn-icon">⚠️</div>
-        <div class="warn-title">핵심 관절 미인식 (측정 일시정지)</div>
-        <div class="warn-desc">
-            <b>어깨, 팔꿈치, 골반, 무릎</b> 4대 관절이 화면에 보여야 합니다.<br>
-            (머리, 손목, 발끝은 잘려도 정상 허용됩니다)
-        </div>
-    </div>
 
     <!-- 창모드 HUD -->
     <div class="window-hud" id="windowHud">
@@ -561,16 +530,16 @@
             </div>
 
             <div class="help-step">
-                <div class="help-step-title">2. 측정 환경 모드 선택 및 각도 완화</div>
+                <div class="help-step-title">2. 두꺼운 전투복·방한복 착용 지원</div>
                 <div class="help-step-desc">
-                    평지 바닥에서 실시할 때는 <b>[🏃 맨땅 평지]</b>(100° 이하), 30cm 봉을 잡고 실시할 때는 <b>[🛑 30cm 봉]</b>(105° 이하 또는 심부선) 버튼을 선택하십시오. 하강 각도가 여유 있게 완화되어 자연스럽게 인식됩니다.
+                    두꺼운 상의로 골반이나 팔꿈치가 일시적으로 가려져도 해부학적 관절 추정 및 관성 보간 알고리즘이 동작하여 끊김 없이 매끄럽게 인식합니다.
                 </div>
             </div>
 
             <div class="help-step">
-                <div class="help-step-title">3. 30cm 봉 정자세 요령 (홀딩 오류 차단)</div>
+                <div class="help-step-title">3. 측정 환경 모드 및 각도 완화</div>
                 <div class="help-step-desc">
-                    봉 모드에서는 팔이 실제로 굽혀지며 어깨가 내려가야 하강으로 인정되며, 팔을 펴면 카운트됩니다. 봉을 잡고 가만히 버티는 상태에서는 카운트가 절대 올라가지 않습니다.
+                    평지 바닥에서는 <b>[🏃 맨땅 평지]</b>(100° 이하), 30cm 봉을 잡고 할 때는 <b>[🛑 30cm 봉]</b>(105° 이하 또는 심부선)을 선택하십시오. 팔을 펴고 버틸 때 카운트가 올라가지 않도록 오작동 방지 가드가 적용되어 있습니다.
                 </div>
             </div>
 
@@ -662,7 +631,13 @@
     var isCoreBodyDetected = false;
     var wasCoreBodyDetected = true;
     var isPausedDueToNoBody = false;
-    var hasSpokenCoreLossThisSession = false; // 측정 세션당 최초 1회 음성 송출 플래그
+    var hasSpokenCoreLossThisSession = false; // 세션당 최초 1회 음성 송출 플래그
+
+    // 두꺼운 옷 인식 보정 및 스무딩 버퍼
+    var jointLostStreak = 0;
+    var MAX_LOST_FRAMES = 8; // 단기 의복 가림 관성 보간 (약 0.25초)
+    var lastValidPoints = { s: null, e: null, p: null, k: null, w: null };
+    var smoothedCoords = { s: null, e: null, p: null, k: null, w: null, n: null, a: null };
 
     // 자세 판정 추적 변수
     var minElbowInCurrentRep = 180;
@@ -691,7 +666,7 @@
 
     var currentSessionFaultLogs = [];
 
-    // 가이드 모달 제어 함수 (전역 안전 바인딩)
+    // 가이드 모달 제어 함수
     function openHelpModal() {
         var modal = document.getElementById('helpModal');
         if (modal) modal.style.display = 'flex';
@@ -728,7 +703,7 @@
     }
 
     // ==========================================
-    // [메인 캔버스 30 FPS 직접 렌더링 파이프라인 (검은 화면 완벽 해결)]
+    // [메인 캔버스 30 FPS 직접 렌더링 파이프라인]
     // ==========================================
     function startRenderPipeline() {
         if (renderLoopId) return;
@@ -738,7 +713,6 @@
 
             if (!cameraStarted) return;
 
-            // 비디오 프레임 크기가 아직 0이어도 기본 캔버스 해상도(1280x720) 유지
             var vw = videoElement.videoWidth || 1280;
             var vh = videoElement.videoHeight || 720;
 
@@ -757,44 +731,30 @@
                 canvasCtx.translate(cw, 0);
                 canvasCtx.scale(-1, 1);
             }
-            // 모바일 브라우저 비디오 프레임 준비 상태 확인 후 렌더링
             if (videoElement.readyState >= 2) {
                 canvasCtx.drawImage(videoElement, 0, 0, cw, ch);
             }
             canvasCtx.restore();
 
             // 2. 관절 스켈레톤 렌더링 (4대 핵심 관절 중심)
-            if (isCoreBodyDetected && latestPoseLandmarks) {
-                drawSkeletonOverlay(canvasCtx, cw, ch, latestPoseLandmarks);
+            if (isCoreBodyDetected && latestPoseLandmarks && smoothedCoords.s && smoothedCoords.e && smoothedCoords.p && smoothedCoords.k) {
+                drawSkeletonOverlay(canvasCtx, cw, ch);
             }
 
-            // 3. 실시간 OSD 직각인 (녹화 영상에 시간/카운트/경고가 그대로 박힘)
+            // 3. 실시간 OSD 직각인
             drawDirectOSD(canvasCtx, cw, ch);
         }
         renderLoopId = requestAnimationFrame(loop);
     }
 
-    function drawSkeletonOverlay(ctx, cw, ch, lm) {
-        var leftVis = (lm[11].visibility + lm[23].visibility + lm[25].visibility) / 3;
-        var rightVis = (lm[12].visibility + lm[24].visibility + lm[26].visibility) / 3;
-        var isLeft = leftVis >= rightVis;
-
-        var shoulder = isLeft ? lm[11] : lm[12];
-        var elbow = isLeft ? lm[13] : lm[14];
-        var wrist = isLeft ? lm[15] : lm[16];
-        var hip = isLeft ? lm[23] : lm[24];
-        var knee = isLeft ? lm[25] : lm[26];
-        var ankle = isLeft ? lm[27] : lm[28];
-        var nose = lm[0];
-
-        function mapX(valX) {
-            return (facingMode === "user") ? (1 - valX) * cw : valX * cw;
-        }
-
-        var pS = { x: mapX(shoulder.x), y: shoulder.y * ch };
-        var pE = { x: mapX(elbow.x), y: elbow.y * ch };
-        var pP = { x: mapX(hip.x), y: hip.y * ch };
-        var pK = { x: mapX(knee.x), y: knee.y * ch };
+    function drawSkeletonOverlay(ctx, cw, ch) {
+        var pS = smoothedCoords.s;
+        var pE = smoothedCoords.e;
+        var pP = smoothedCoords.p;
+        var pK = smoothedCoords.k;
+        var pW = smoothedCoords.w;
+        var pN = smoothedCoords.n;
+        var pA = smoothedCoords.a;
 
         var isPikeRest = (currentElbowAng >= 145 && currentCoreAng > 180);
         var isBad = (currentCoreAng < (exerciseMode === "BAR" ? 148 : 155) && !isPikeRest) || (currentKneeAng < 150) || repHasFault;
@@ -805,18 +765,9 @@
         drawBone(ctx, pS, pP, boneColor, 6);
         drawBone(ctx, pP, pK, boneColor, 5);
 
-        if (wrist && wrist.visibility > 0.2) {
-            var pW = { x: mapX(wrist.x), y: wrist.y * ch };
-            drawBone(ctx, pE, pW, boneColor, 5);
-        }
-
-        if (ankle && ankle.visibility > 0.2) {
-            var pA = { x: mapX(ankle.x), y: ankle.y * ch };
-            drawBone(ctx, pK, pA, boneColor, 5);
-        }
-
-        if (nose && nose.visibility > 0.2) {
-            var pN = { x: mapX(nose.x), y: nose.y * ch };
+        if (pW) drawBone(ctx, pE, pW, boneColor, 5);
+        if (pA) drawBone(ctx, pK, pA, boneColor, 5);
+        if (pN) {
             drawBone(ctx, pN, pS, boneColor, 4);
             drawJoint(ctx, pN, "#ffffff", "머리");
         }
@@ -882,9 +833,10 @@
         ctx.fillText("팔 " + currentElbowAng + "° | 코어 " + currentCoreAng + "° | 무릎 " + currentKneeAng + "°", rightX + 8, 51);
 
         // 하단 상태 배너
-        var bannerBg = isCurrentFaultWarn ? "rgba(90, 15, 15, 0.92)" : "rgba(10, 30, 15, 0.88)";
-        var bannerBorder = isCurrentFaultWarn ? "#ff4444" : "#39e75f";
-        var bannerColor = isCurrentFaultWarn ? "#ff6b6b" : "#39e75f";
+        var bannerBg = isCurrentFaultWarn ? "rgba(90, 15, 15, 0.92)" : (isPausedDueToNoBody ? "rgba(50, 35, 10, 0.92)" : "rgba(10, 30, 15, 0.88)");
+        var bannerBorder = isCurrentFaultWarn ? "#ff4444" : (isPausedDueToNoBody ? "#e5a93c" : "#39e75f");
+        var bannerColor = isCurrentFaultWarn ? "#ff6b6b" : (isPausedDueToNoBody ? "#e5a93c" : "#39e75f");
+        var bannerText = isPausedDueToNoBody ? "⚠️ 핵심 관절 탐색 중 (자세를 화면에 맞춰주십시오)" : currentFaultBannerText;
 
         ctx.fillStyle = bannerBg;
         ctx.fillRect(8, ch - 44, cw - 16, 36);
@@ -895,49 +847,89 @@
         ctx.fillStyle = bannerColor;
         ctx.font = "bold 12.5px sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(currentFaultBannerText, cw / 2, ch - 21);
+        ctx.fillText(bannerText, cw / 2, ch - 21);
 
         ctx.restore();
     }
 
     // ==========================================
-    // [MediaPipe AI 자세 판정 (각도 대폭 완화 & 홀딩 가드)]
+    // [MediaPipe AI 자세 판정 (두꺼운 옷 정밀 대응 & 양측 융합 엔진)]
     // ==========================================
     function onPoseResults(results) {
         if (!results.poseLandmarks) {
-            latestPoseLandmarks = null;
-            handleCoreBodyLoss();
+            handleLostBuffer();
             return;
         }
 
         var lm = results.poseLandmarks;
-        var leftVis = (lm[11].visibility + lm[23].visibility + lm[25].visibility) / 3;
-        var rightVis = (lm[12].visibility + lm[24].visibility + lm[26].visibility) / 3;
-        var isLeft = leftVis >= rightVis;
 
-        var shoulder = isLeft ? lm[11] : lm[12];
-        var elbow = isLeft ? lm[13] : lm[14];
-        var wrist = isLeft ? lm[15] : lm[16];
-        var hip = isLeft ? lm[23] : lm[24];
-        var knee = isLeft ? lm[25] : lm[26];
-        var ankle = isLeft ? lm[27] : lm[28];
+        // 양측 가시성 점수 합산 (주 방향성 판단)
+        var leftScore = (lm[11].visibility || 0) + (lm[13].visibility || 0) + (lm[23].visibility || 0) + (lm[25].visibility || 0);
+        var rightScore = (lm[12].visibility || 0) + (lm[14].visibility || 0) + (lm[24].visibility || 0) + (lm[26].visibility || 0);
+        var preferLeft = leftScore >= rightScore;
+
+        // 양측 관절 동적 융합 (Bilateral Fusion): 두꺼운 옷 주름으로 한쪽이 가려져도 반대편 관절 독립 추출
+        function pickJoint(idxL, idxR) {
+            var pL = lm[idxL];
+            var pR = lm[idxR];
+            var vL = (pL && pL.visibility != null) ? pL.visibility : 0;
+            var vR = (pR && pR.visibility != null) ? pR.visibility : 0;
+            if (preferLeft && vL >= 0.18) return pL;
+            if (!preferLeft && vR >= 0.18) return pR;
+            return (vL >= vR) ? pL : pR;
+        }
+
+        var shoulder = pickJoint(11, 12);
+        var elbow = pickJoint(13, 14);
+        var wrist = pickJoint(15, 16);
+        var hip = pickJoint(23, 24);
+        var knee = pickJoint(25, 26);
+        var ankle = pickJoint(27, 28);
         var nose = lm[0];
 
         function isPointValid(pt, minVis) {
             if (!pt) return false;
-            return (pt.visibility >= minVis && pt.x >= -0.05 && pt.x <= 1.05 && pt.y >= -0.05 && pt.y <= 1.05);
+            return (pt.visibility >= minVis && pt.x >= -0.20 && pt.x <= 1.20 && pt.y >= -0.20 && pt.y <= 1.20);
         }
 
-        // 4대 핵심 관절 감지: 어깨, 팔꿈치, 골반, 무릎 (머리, 손목, 발끝 잘림 100% 허용)
-        var isCoreComplete = isPointValid(shoulder, 0.30) &&
-                             isPointValid(elbow, 0.30) &&
-                             isPointValid(hip, 0.30) &&
-                             isPointValid(knee, 0.30);
+        // [두꺼운 상의/야상 의복 가림 보정: 골반 해부학적 추정 복원]
+        var hipValid = isPointValid(hip, 0.18);
+        if (!hipValid && isPointValid(shoulder, 0.18) && isPointValid(knee, 0.18)) {
+            hip = {
+                x: shoulder.x * 0.48 + knee.x * 0.52,
+                y: shoulder.y * 0.48 + knee.y * 0.52,
+                visibility: 0.65,
+                isEstimated: true
+            };
+            hipValid = true;
+        }
 
+        // 4대 핵심 관절 유효성 검사 (역치 0.18로 완화)
+        var isCoreComplete = isPointValid(shoulder, 0.18) &&
+                             isPointValid(elbow, 0.18) &&
+                             hipValid &&
+                             isPointValid(knee, 0.18);
+
+        // [단기 의복 가림 관성 보간: 최대 8프레임(약 0.25초)간 직전 좌표 유지]
         if (!isCoreComplete) {
-            latestPoseLandmarks = null;
-            handleCoreBodyLoss();
-            return;
+            if (jointLostStreak < MAX_LOST_FRAMES && lastValidPoints.s && lastValidPoints.e && lastValidPoints.p && lastValidPoints.k) {
+                jointLostStreak++;
+                shoulder = lastValidPoints.s;
+                elbow = lastValidPoints.e;
+                hip = lastValidPoints.p;
+                knee = lastValidPoints.k;
+                wrist = wrist || lastValidPoints.w;
+            } else {
+                handleLostBuffer();
+                return;
+            }
+        } else {
+            jointLostStreak = 0;
+            lastValidPoints.s = shoulder;
+            lastValidPoints.e = elbow;
+            lastValidPoints.p = hip;
+            lastValidPoints.k = knee;
+            lastValidPoints.w = wrist;
         }
 
         latestPoseLandmarks = lm;
@@ -950,16 +942,51 @@
             return (facingMode === "user") ? (1 - valX) * cw : valX * cw;
         }
 
-        var pS = { x: mapX(shoulder.x), y: shoulder.y * ch };
-        var pE = { x: mapX(elbow.x), y: elbow.y * ch };
-        var pP = { x: mapX(hip.x), y: hip.y * ch };
-        var pK = { x: mapX(knee.x), y: knee.y * ch };
+        var rawPS = { x: mapX(shoulder.x), y: shoulder.y * ch };
+        var rawPE = { x: mapX(elbow.x), y: elbow.y * ch };
+        var rawPP = { x: mapX(hip.x), y: hip.y * ch };
+        var rawPK = { x: mapX(knee.x), y: knee.y * ch };
+        var rawPW = (wrist && wrist.visibility > 0.18) ? { x: mapX(wrist.x), y: wrist.y * ch } : { x: rawPE.x, y: rawPE.y + 40 };
+        var rawPN = (nose && nose.visibility > 0.2) ? { x: mapX(nose.x), y: nose.y * ch } : null;
+        var rawPA = (ankle && ankle.visibility > 0.18) ? { x: mapX(ankle.x), y: ankle.y * ch } : null;
 
-        var pW = (wrist && wrist.visibility > 0.25) ? { x: mapX(wrist.x), y: wrist.y * ch } : { x: pE.x, y: pE.y + 40 };
+        // [지수 이동 평균(EMA) 스무딩: 옷주름 펄럭임에 의한 각도 요동 완벽 억제]
+        function smoothVal(prev, curr, alpha) {
+            if (prev == null) return curr;
+            return prev * (1 - alpha) + curr * alpha;
+        }
+
+        var a = 0.70; // 70% 현재 + 30% 이전
+        if (!smoothedCoords.s) {
+            smoothedCoords.s = { x: rawPS.x, y: rawPS.y };
+            smoothedCoords.e = { x: rawPE.x, y: rawPE.y };
+            smoothedCoords.p = { x: rawPP.x, y: rawPP.y };
+            smoothedCoords.k = { x: rawPK.x, y: rawPK.y };
+            smoothedCoords.w = { x: rawPW.x, y: rawPW.y };
+        } else {
+            smoothedCoords.s.x = smoothVal(smoothedCoords.s.x, rawPS.x, a);
+            smoothedCoords.s.y = smoothVal(smoothedCoords.s.y, rawPS.y, a);
+            smoothedCoords.e.x = smoothVal(smoothedCoords.e.x, rawPE.x, a);
+            smoothedCoords.e.y = smoothVal(smoothedCoords.e.y, rawPE.y, a);
+            smoothedCoords.p.x = smoothVal(smoothedCoords.p.x, rawPP.x, a);
+            smoothedCoords.p.y = smoothVal(smoothedCoords.p.y, rawPP.y, a);
+            smoothedCoords.k.x = smoothVal(smoothedCoords.k.x, rawPK.x, a);
+            smoothedCoords.k.y = smoothVal(smoothedCoords.k.y, rawPK.y, a);
+            smoothedCoords.w.x = smoothVal(smoothedCoords.w.x, rawPW.x, a);
+            smoothedCoords.w.y = smoothVal(smoothedCoords.w.y, rawPW.y, a);
+        }
+        smoothedCoords.n = rawPN;
+        smoothedCoords.a = rawPA;
+
+        var pS = smoothedCoords.s;
+        var pE = smoothedCoords.e;
+        var pP = smoothedCoords.p;
+        var pK = smoothedCoords.k;
+        var pW = smoothedCoords.w;
 
         currentElbowAng = getAngle(pS, pE, pW);
         currentCoreAng = getAngle(pS, pP, pK);
-        currentKneeAng = (ankle && ankle.visibility > 0.25) ? getAngle(pP, pK, { x: mapX(ankle.x), y: ankle.y * ch }) : 175;
+        currentKneeAng = rawPA ? getAngle(pP, pK, rawPA) : 175;
 
         updateHUDData(currentElbowAng, currentCoreAng, currentKneeAng);
 
@@ -968,9 +995,8 @@
         var isKneeTouch = (currentKneeAng < 150);
 
         var isHeadBob = false;
-        if (nose && nose.visibility >= 0.4 && !isPikeRest) {
-            var pN = { x: mapX(nose.x), y: nose.y * ch };
-            isHeadBob = (currentElbowAng > 110) && ((pN.y - pS.y) > (ch * 0.05));
+        if (rawPN && !isPikeRest) {
+            isHeadBob = (currentElbowAng > 110) && ((rawPN.y - pS.y) > (ch * 0.05));
         }
 
         var isWaveFault = false;
@@ -981,7 +1007,7 @@
         var isCurrentMotionBad = isCoreSag || isKneeTouch || isHeadBob || isWaveFault;
 
         // ==========================================
-        // [정밀 생체역학 판정 및 각도 완화 적용]
+        // [정밀 생체역학 판정 및 각도 완화 로직]
         // ==========================================
         if (isTimerRunning && !isPausedDueToNoBody) {
             if (isPikeRest) {
@@ -1018,7 +1044,7 @@
                     minElbowInCurrentRep = currentElbowAng;
                 }
 
-                // [하강 각도 완화 및 홀딩 방지 가드] (팔이 140도 이상 펴져 있으면 절대 하강 진입 불가)
+                // 하강 각도 완화 및 홀딩 방지 가드 (팔이 140도 이상 펴져 있으면 절대 하강 진입 불가)
                 var isDownTargetReached = false;
                 if (currentElbowAng < 140) {
                     if (exerciseMode === "BAR") {
@@ -1027,7 +1053,7 @@
                         var isDepthReached = (pS.y >= pE.y - 10);
                         isDownTargetReached = (currentElbowAng <= 105) || (isArmBent && isDepthReached);
                     } else {
-                        // 맨땅 모드: 100도 이하로 완화 (조금 덜 내려가도 확실히 하강 인정)
+                        // 맨땅 모드: 100도 이하로 완화
                         isDownTargetReached = (currentElbowAng <= 100);
                     }
                 }
@@ -1048,9 +1074,8 @@
                     maxElbowInCurrentRep = currentElbowAng;
                 }
 
-                // 팔을 150도 이상 펴서 올라온 경우 (상승 완료 기준도 150도로 완화)
+                // 팔을 150도 이상 펴서 올라온 경우 (상승 완료)
                 if (currentElbowAng >= 150) {
-                    // 가동범위 검증: 최저 하강 각도와 상승 각도 차이가 30도 이상 벌어지면 인정
                     var isFullRom = (currentElbowAng - minElbowInCurrentRep >= 30);
 
                     if (isFullRom && !repHasFault && !isCoreSag && !isKneeTouch && !isWaveFault) {
@@ -1076,21 +1101,29 @@
         }
     }
 
+    function handleLostBuffer() {
+        if (jointLostStreak < MAX_LOST_FRAMES && lastValidPoints.s && lastValidPoints.e && lastValidPoints.p && lastValidPoints.k) {
+            jointLostStreak++;
+            return;
+        }
+        latestPoseLandmarks = null;
+        handleCoreBodyLoss();
+    }
+
     function handleCoreBodyLoss() {
         isCoreBodyDetected = false;
-        document.getElementById('fullbodyWarnOverlay').style.display = 'flex';
         isPausedDueToNoBody = true;
 
         state = "UP";
         minElbowInCurrentRep = 180;
         maxElbowInCurrentRep = 90;
 
-        document.getElementById('txtTimerState').innerText = "⚠️ 핵심 관절 미인식 (측정 정지)";
+        document.getElementById('txtTimerState').innerText = "⚠️ 핵심 관절 탐색 중 (일시 정지)";
         document.getElementById('txtTimerState').style.color = "#ff4d4d";
 
         if (wasCoreBodyDetected) {
             wasCoreBodyDetected = false;
-            // 측정 세션 진행 중 최초 1회만 음성 멘트 송출, 이후 세션 종료 전까지 추가 음성 없이 화면 경고만 유지
+            // 세션 진행 중 최초 1회만 음성 멘트 송출, 이후 화면 차분한 알림만 유지
             if (!hasSpokenCoreLossThisSession) {
                 hasSpokenCoreLossThisSession = true;
                 speak("핵심 관절이 인식되지 않았습니다");
@@ -1102,7 +1135,6 @@
         isCoreBodyDetected = true;
         if (!wasCoreBodyDetected) {
             wasCoreBodyDetected = true;
-            document.getElementById('fullbodyWarnOverlay').style.display = 'none';
             isPausedDueToNoBody = false;
 
             if (isTimerRunning) {
@@ -1282,7 +1314,7 @@
 
     function runPreCountdown() {
         isCountingDown = true;
-        hasSpokenCoreLossThisSession = false; // 새로운 측정 시작 시 1회 송출 플래그 초기화
+        hasSpokenCoreLossThisSession = false; // 새로운 측정 시작 시 플래그 리셋
         var count = 5;
         var overlay = document.getElementById('countdownOverlay');
         var countText = document.getElementById('countdownText');
@@ -1766,7 +1798,6 @@
         stopRecording();
         isCountingDown = false;
         document.getElementById('countdownOverlay').style.display = 'none';
-        document.getElementById('fullbodyWarnOverlay').style.display = 'none';
         isPausedDueToNoBody = false;
         wasCoreBodyDetected = true;
         hasSpokenCoreLossThisSession = false; // 0회 초기화 시 플래그 리셋
@@ -1810,8 +1841,8 @@
         pose.setOptions({
             modelComplexity: 1,
             smoothLandmarks: true,
-            minDetectionConfidence: 0.55,
-            minTrackingConfidence: 0.55
+            minDetectionConfidence: 0.45,
+            minTrackingConfidence: 0.45
         });
 
         pose.onResults(onPoseResults);
