@@ -395,7 +395,7 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">정밀판정 엔진 v6.2</div>
+        <div class="badge">검정 표준체계</div>
     </div>
 </header>
 
@@ -433,7 +433,7 @@
         <div class="fs-hud-half" id="fsHudLeft">
             <div class="fs-line-sub" id="fsRecStatus">🔴 REC (WebM)</div>
             <div class="fs-line-sub" id="fsClockTime">2026-11-05 00:00:00</div>
-            <div class="fs-line-main">후보생: <b id="fsCadetInfo">118번 홍길동</b> [<span id="fsModeTag" style="color:#e5a93c;">맨땅</span>]</div>
+            <div class="fs-line-main">후보생: <b id="fsCadetInfo">118번 홍길동</b> [<span id="fsModeTag" style="color:#e5a93c;">맨땅</span>] <span id="fsOrientTag" style="font-size:10px; color:#5dade2;">[머리:자동]</span></div>
         </div>
         <div class="fs-hud-half fs-hud-right" id="fsHudRight">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -444,7 +444,7 @@
         </div>
     </div>
 
-    <!-- 업로드 영상 분석 컨트롤러 바 -->
+    <!-- 업로드 영상 분석 전용 컨트롤 HUD -->
     <div class="upload-ctrl-bar" id="uploadCtrlBar">
         <button type="button" class="btn-mini" onclick="toggleUploadPlayPause()" id="btnUploadPlayPause">⏸ 일시정지</button>
         <button type="button" class="btn-mini" onclick="toggleUploadSpeed()" id="btnUploadSpeed">1.0x</button>
@@ -518,7 +518,7 @@
 
     <div class="card">
         <div class="card-title">
-            <span>⚠️ 실시간 부정자세 감지 이력 (중복방지 및 정밀판정)</span>
+            <span>⚠️ 실시간 부정자세 감지 이력 (양방향 머리 자동보정)</span>
             <span id="failCount" style="color:#ff6b6b; font-size:11px;">0건</span>
         </div>
         <div class="log-table-wrap">
@@ -550,11 +550,11 @@
                 <span class="guide-tag-good">✅ 정자세 인정 기준 (Count 인정)</span>
             </div>
             <div class="guide-desc">
-                1. <b>4대 필수 정렬</b>: 어깨-팔꿈치-골반-무릎 4대 관절을 바르게 정렬합니다.<br>
+                1. <b>양방향 자동 인식</b>: 머리가 좌측이든 우측이든 시스템이 스스로 감지하여 동일하게 채점합니다.<br>
                 2. <b>골반 엄격 정렬</b>: 맨땅은 162° 이상, 봉 모드는 155° 이상으로 허리 처짐 및 엉덩이 솟음을 방지합니다.<br>
                 3. <b>하강 깊이</b>: 맨땅 100° 이하, 봉 모드 105° 이하(또는 심부선)로 충분히 내려갑니다.<br>
                 4. <b>완전 신전 및 가동범위</b>: 팔꿈치를 150° 이상 펴고, 최저점 대비 최소 30° 이상 신전되어야 1회로 인정됩니다.<br>
-                5. <b>유일한 휴식(Pike Rest)</b>: 팔을 편 상태에서 엉덩이를 치켜올리는 휴식은 감점 없이 유지됩니다.
+                5. <b>유일한 휴식(Pike Rest)</b>: 팔을 편 상태에서 엉덩이를 치켜올리는 휴식은 감점 없이 인정됩니다.
             </div>
         </div>
 
@@ -584,43 +584,54 @@
     </div>
 </div>
 
-<!-- 모달 1: 처음 접속 시 사용방법 안내 팝업 -->
+<!-- 모달 1: 처음 접속 시 사용방법 안내 팝업 (실제 사용자 중심 실전 매뉴얼) -->
 <div class="modal-overlay" id="helpModal" style="display: flex;" onclick="if(event.target===this) this.style.display='none';">
     <div class="modal-card">
         <div class="modal-title">
-            <span>🎖️ 팔굽혀펴기 AI 정밀 측정체계 사용 가이드</span>
+            <span>🎖️ 팔굽혀펴기 AI 정밀 측정체계 실전 사용법</span>
             <button type="button" class="btn-mini" style="font-size: 15px; padding: 4px 12px; cursor: pointer;" onclick="this.closest('.modal-overlay').style.display='none';">✖</button>
         </div>
         <div class="modal-body">
             <div class="help-step">
-                <div class="help-step-title">1. 스마트폰 카메라 세팅 (4대 필수 관절)</div>
+                <div class="help-step-title">1단계: 스마트폰 거치 및 카메라 화각 맞추기</div>
                 <div class="help-step-desc">
-                    스마트폰을 신체 <b>측면 1.5m ~ 2.0m 거리</b> 바닥에 세워둡니다. <b>어깨, 팔꿈치, 골반, 무릎</b> 4대 필수 관절만 화면에 들어오면 머리, 손목, 발끝은 잘려도 정상 측정됩니다. (카메라 원본 화각 1:1 비율 보존)
+                    • 스마트폰을 피측정자의 <b>측면 1.5m ~ 2.0m 거리</b> 바닥이나 낮은 받침대에 세워둡니다.<br>
+                    • 준비자세를 취했을 때 <b>어깨, 팔꿈치, 골반, 무릎</b> 4대 관절이 화면 안에 모두 들어와야 합니다.<br>
+                    • 머리가 <b>화면 왼쪽이나 오른쪽</b> 어느 방향을 향해 누워도 시스템이 자동으로 감지하므로 자유롭게 자세를 취하십시오.
                 </div>
             </div>
 
             <div class="help-step">
-                <div class="help-step-title">2. 허리 처짐 vs 골반 높음 세분화 코칭</div>
+                <div class="help-step-title">2단계: 측정 모드 및 후보생 정보 입력</div>
                 <div class="help-step-desc">
-                    골반이 바닥 쪽으로 꺼지면 <b>"허리가 처졌습니다. 허리를 올리십시오"</b>, 골반이 위로 솟으면 <b>"골반이 높습니다. 골반을 낮추십시오"</b>로 정확하게 지적하며 구체적인 교정 방향을 안내합니다.
+                    • 실시 환경에 맞춰 <b>[🏃 맨땅 평지]</b> 또는 <b>[🛑 30cm 봉]</b> 버튼을 선택합니다.<br>
+                    • 후보생의 <b>교번</b>과 <b>성명</b>을 입력하면 영상 및 엑셀 결과표에 각인됩니다.<br>
+                    • 측정 시간은 <b>[2분 (육군검정)]</b> 또는 원하는 시간(초)을 직접 입력하여 설정합니다.
                 </div>
             </div>
 
             <div class="help-step">
-                <div class="help-step-title">3. 촬영 영상 업로드 AI 분석 기능</div>
+                <div class="help-step-title">3단계: 측정 시작 및 정자세 실시 요령</div>
                 <div class="help-step-desc">
-                    미리 촬영해 둔 팔굽혀펴기 동영상을 <b>[📂 촬영 영상 업로드 분석]</b>으로 올리면, AI 스켈레톤을 입혀 횟수와 부정자세를 자동 측정하고 엑셀 성적표를 생성합니다.
+                    • <b>[📹 측정 시작]</b>을 누르면 5초 음성 카운트다운 후 자동으로 시간 계측과 녹화가 시작됩니다.<br>
+                    • <b>하강</b>: 팔꿈치를 기준선까지 충분히 굽혀 가슴을 바닥(또는 봉) 깊숙이 내립니다.<br>
+                    • <b>상승</b>: 팔꿈치를 150° 이상 완전히 곧게 펴야 횟수가 카운트됩니다.<br>
+                    • <b>자세 유지</b>: 머리부터 발끝까지 일직선을 유지하십시오. 허리가 처지거나 엉덩이를 과하게 들면 경고음과 함께 노카운트 처리됩니다.<br>
+                    • <b>유일한 휴식</b>: 팔을 곧게 펴고 엉덩이를 위로 솟구치는 자세만 감점 없이 휴식으로 인정됩니다.
                 </div>
             </div>
 
             <div class="help-step">
-                <div class="help-step-title">4. WebM 녹화 및 카카오톡용 MP4 변환</div>
+                <div class="help-step-title">4단계: 결과 확인, 카카오톡 전송 및 엑셀 보고</div>
                 <div class="help-step-desc">
-                    기본 녹화는 용량이 최적화된 WebM으로 저장되며, 카카오톡 전송 시 인앱 재생이 가능하도록 <b>원클릭 카톡용 Fast-Start MP4 변환</b>을 지원합니다.
+                    • 2분이 종료되면 측정 완료 음성과 함께 종합 성적 팝업창이 나타납니다.<br>
+                    • <b>[💬 카톡용 MP4 변환]</b>: 스마트폰 카카오톡에서 바로 재생되는 MP4 영상으로 변환하여 보고합니다.<br>
+                    • <b>[📊 엑셀 성적표]</b>: 발생 시간대별 부정자세 사유와 관측 각도가 기록된 정밀 CSV 파일을 다운로드합니다.<br>
+                    • 미리 찍어둔 영상이 있다면 <b>[📂 촬영 영상 업로드 분석]</b>을 통해 사후 채점도 가능합니다.
                 </div>
             </div>
         </div>
-        <button type="button" class="action-btn btn-start" style="width: 100%; margin-top: 6px; cursor: pointer;" onclick="this.closest('.modal-overlay').style.display='none';">✅ 확인 및 시작하기</button>
+        <button type="button" class="action-btn btn-start" style="width: 100%; margin-top: 6px; cursor: pointer;" onclick="this.closest('.modal-overlay').style.display='none';">✅ 사용법 확인 및 측정 시작하기</button>
     </div>
 </div>
 
@@ -742,10 +753,13 @@
     var isCoreBodyDetected = false;
     var wasCoreBodyDetected = true;
     var isPausedDueToNoBody = false;
-    var hasSpokenCoreLossThisSession = false; // 세션당 최초 1회 음성 송출 플래그
+    var hasSpokenCoreLossThisSession = false;
+
+    // 머리 좌우 방향 감지 상태 (기본값: 자동 감지)
+    var currentHeadDirection = "UNKNOWN"; // "HEAD_LEFT" or "HEAD_RIGHT"
 
     var jointLostStreak = 0;
-    var MAX_LOST_FRAMES = 8; // 단기 의복 가림 관성 보간 (약 0.25초)
+    var MAX_LOST_FRAMES = 8;
     var lastValidPoints = { s: null, e: null, p: null, k: null, w: null };
     var smoothedCoords = { s: null, e: null, p: null, k: null, w: null, n: null, a: null };
 
@@ -756,7 +770,7 @@
     var currentCoreAng = 0;
     var currentKneeAng = 0;
 
-    // [부정자세 판정 정확도 향상: 지속성 검증 및 절대 쿨다운]
+    // 부정자세 지속성 검증 및 절대 쿨다운
     var faultSustainedCounts = {
         "SAG": 0,
         "HIGH_HIP": 0,
@@ -766,7 +780,7 @@
         "INCOMPLETE": 0
     };
     var lastAnyFaultTime = 0;
-    var FAULT_COOLDOWN_MS = 2500; // 2.5초 절대 쿨다운 (말 끊김 및 음성 겹침 원천 차단)
+    var FAULT_COOLDOWN_MS = 2500;
     var lastFaultKey = "";
 
     var repHasFault = false;
@@ -788,7 +802,6 @@
     // MP4 변환 작업 취소 플래그
     var isMp4ConversionCancelled = false;
 
-    // 토스트 알림 함수
     function showToast(msg) {
         var box = document.getElementById('toastBox');
         box.innerText = msg;
@@ -863,7 +876,6 @@
             var activeVideo = isUploadAnalysisMode ? uploadVideo : videoElement;
             if (!cameraStarted && !isUploadAnalysisMode) return;
 
-            // 카메라 영상의 실제 원본 종횡비(가로:세로 비율) 감지
             var vw = activeVideo.videoWidth;
             var vh = activeVideo.videoHeight;
             if (!vw || !vh) {
@@ -874,15 +886,14 @@
             var vRatio = vw / vh;
             var targetWidth, targetHeight;
 
-            // 카메라 원본 비율을 100% 온전히 유지하여 캔버스 크기 동적 동기화
             if (recordingRes === "480p") {
                 targetHeight = 480;
                 targetWidth = Math.round(targetHeight * vRatio);
-                targetWidth = targetWidth - (targetWidth % 2); // 짝수 보정
+                targetWidth = targetWidth - (targetWidth % 2);
             } else {
                 targetHeight = 720;
                 targetWidth = Math.round(targetHeight * vRatio);
-                targetWidth = targetWidth - (targetWidth % 2); // 짝수 보정
+                targetWidth = targetWidth - (targetWidth % 2);
             }
 
             if (canvasElement.width !== targetWidth || canvasElement.height !== targetHeight) {
@@ -893,7 +904,6 @@
             var cw = canvasElement.width;
             var ch = canvasElement.height;
 
-            // 1. 비디오 프레임 출력 (전면 카메라일 때만 거울 반전, 업로드 영상은 원본 유지)
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, cw, ch);
             if (!isUploadAnalysisMode && facingMode === "user") {
@@ -905,12 +915,10 @@
             }
             canvasCtx.restore();
 
-            // 2. 관절 스켈레톤 렌더링
             if (isCoreBodyDetected && latestPoseLandmarks && smoothedCoords.s && smoothedCoords.e && smoothedCoords.p && smoothedCoords.k) {
                 drawSkeletonOverlay(canvasCtx, cw, ch);
             }
 
-            // 3. 실시간 OSD 직각인 (녹화 영상에 시간/카운트/경고가 그대로 박힘)
             drawDirectOSD(canvasCtx, cw, ch);
         }
         renderLoopId = requestAnimationFrame(loop);
@@ -925,13 +933,12 @@
         var pN = smoothedCoords.n;
         var pA = smoothedCoords.a;
 
-        var hipDev = getHipDeviation(pS, pP, pK);
+        var hipDev = getNormalizedHipDeviation(pS, pP, pK);
         var isPikeRest = (currentElbowAng >= 140 && hipDev < -15);
         var isAngleBroken = currentCoreAng < (exerciseMode === "BAR" ? 155 : 162);
         var isBad = (isAngleBroken && !isPikeRest) || (currentKneeAng < 150) || repHasFault;
         var boneColor = isBad ? "#ff3333" : (isPikeRest ? "#5dade2" : (state === "DOWN" ? "#e5a93c" : "#39e75f"));
 
-        // 4대 필수 관절선 연결
         drawBone(ctx, pS, pE, boneColor, 6);
         drawBone(ctx, pS, pP, boneColor, 6);
         drawBone(ctx, pP, pK, boneColor, 5);
@@ -959,7 +966,6 @@
 
         ctx.save();
 
-        // 상단 좌측 OSD
         var leftW = Math.min(270, cw * 0.48);
         ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
         ctx.fillRect(8, 8, leftW, 54);
@@ -981,9 +987,9 @@
 
         ctx.fillStyle = "#39e75f";
         ctx.font = "bold 11px sans-serif";
-        ctx.fillText("교번 " + cId + " " + cName, 18, 55);
+        var orientTxt = currentHeadDirection === "HEAD_LEFT" ? " [머리:좌]" : (currentHeadDirection === "HEAD_RIGHT" ? " [머리:우]" : "");
+        ctx.fillText("교번 " + cId + " " + cName + orientTxt, 18, 55);
 
-        // 상단 우측 OSD
         var rightW = Math.min(270, cw * 0.48);
         var rightX = cw - rightW - 8;
         ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
@@ -1005,7 +1011,6 @@
         ctx.font = "10px sans-serif";
         ctx.fillText("팔 " + currentElbowAng + "° | 코어 " + currentCoreAng + "° | 무릎 " + currentKneeAng + "°", rightX + 8, 51);
 
-        // 하단 상태 배너
         var bannerBg = isCurrentFaultWarn ? "rgba(90, 15, 15, 0.92)" : (isPausedDueToNoBody ? "rgba(50, 35, 10, 0.92)" : "rgba(10, 30, 15, 0.88)");
         var bannerBorder = isCurrentFaultWarn ? "#ff4444" : (isPausedDueToNoBody ? "#e5a93c" : "#39e75f");
         var bannerColor = isCurrentFaultWarn ? "#ff6b6b" : (isPausedDueToNoBody ? "#e5a93c" : "#39e75f");
@@ -1026,27 +1031,44 @@
     }
 
     // ==========================================
-    // [해부학적 골반 수직 편차 계산 함수]
-    // 어깨(S)와 무릎(K)을 잇는 직선 상에서 골반(P)의 수직 이탈 거리 측정
-    // 화면 좌표계(Y축 아래가 양수):
-    // 반환값 > 0: 골반이 바닥 쪽으로 처짐 (Sagging)
-    // 반환값 < 0: 골반이 천장 쪽으로 솟음 (High Hip / Pike)
+    // [양방향 머리 위치 자동보정 수직 편차 엔진]
     // ==========================================
-    function getHipDeviation(pS, pP, pK) {
+    function getNormalizedHipDeviation(pS, pP, pK) {
         if (!pS || !pP || !pK) return 0;
+        
         var dx = pK.x - pS.x;
-        if (Math.abs(dx) < 15) return 0; // 극단적인 수직 각도 방어
+        if (Math.abs(dx) < 15) {
+            return pP.y - ((pS.y + pK.y) / 2);
+        }
+
         var t = (pP.x - pS.x) / dx;
         var expectedY = pS.y + t * (pK.y - pS.y);
-        return pP.y - expectedY;
+
+        return (pP.y - expectedY);
+    }
+
+    // ==========================================
+    // [순수 내적각(Dot Product) 계산 함수]
+    // ==========================================
+    function getTrueInnerAngle(A, B, C) {
+        if (!A || !B || !C) return 180;
+        var v1x = A.x - B.x;
+        var v1y = A.y - B.y;
+        var v2x = C.x - B.x;
+        var v2y = C.y - B.y;
+
+        var dot = v1x * v2x + v1y * v2y;
+        var mag1 = Math.sqrt(v1x * v1x + v1y * v1y);
+        var mag2 = Math.sqrt(v2x * v2x + v2y * v2y);
+
+        if (mag1 === 0 || mag2 === 0) return 180;
+        var cosTheta = dot / (mag1 * mag2);
+        cosTheta = Math.max(-1.0, Math.min(1.0, cosTheta));
+        return Math.round(Math.acos(cosTheta) * (180.0 / Math.PI));
     }
 
     // ==========================================
     // [MediaPipe AI 자세 판정 엔진]
-    // 1. 머리 움직임 완전 제외
-    // 2. 허공/배경 오인식 원천 차단
-    // 3. 골반 처짐(SAG) vs 골반 높음(HIGH_HIP) 해부학적 완벽 분리 판정
-    // 4. Pike 정상 휴식 판정 버그 해결
     // ==========================================
     function onPoseResults(results) {
         if (!results.poseLandmarks) {
@@ -1056,7 +1078,6 @@
 
         var lm = results.poseLandmarks;
 
-        // [신체 검증 1단계: 실제 사람 몸통 존재 여부 (허공 잡음 차단)]
         var sVisL = lm[11] ? (lm[11].visibility || 0) : 0;
         var sVisR = lm[12] ? (lm[12].visibility || 0) : 0;
         var hVisL = lm[23] ? (lm[23].visibility || 0) : 0;
@@ -1070,7 +1091,6 @@
             return;
         }
 
-        // 양측성 최적 관절 동적 융합
         var leftScore = (lm[11].visibility || 0) + (lm[13].visibility || 0) + (lm[23].visibility || 0) + (lm[25].visibility || 0);
         var rightScore = (lm[12].visibility || 0) + (lm[14].visibility || 0) + (lm[24].visibility || 0) + (lm[26].visibility || 0);
         var preferLeft = leftScore >= rightScore;
@@ -1098,7 +1118,6 @@
             return (pt.visibility >= minVis && pt.x >= -0.05 && pt.x <= 1.05 && pt.y >= -0.05 && pt.y <= 1.05);
         }
 
-        // [신체 검증 2단계: 신체 크기 비례 검증]
         if (shoulder && hip) {
             var dx = shoulder.x - hip.x;
             var dy = shoulder.y - hip.y;
@@ -1109,7 +1128,6 @@
             }
         }
 
-        // [두꺼운 상의/야상 의복 가림 보정: 골반 해부학적 추정 복원]
         var hipValid = isPointValid(hip, 0.30);
         if (!hipValid && isPointValid(shoulder, 0.40) && isPointValid(knee, 0.35)) {
             hip = {
@@ -1197,40 +1215,40 @@
         var pK = smoothedCoords.k;
         var pW = smoothedCoords.w;
 
-        currentElbowAng = getAngle(pS, pE, pW);
-        currentCoreAng = getAngle(pS, pP, pK);
-        currentKneeAng = rawPA ? getAngle(pP, pK, rawPA) : 175;
+        if (pS.x < pK.x) {
+            currentHeadDirection = "HEAD_LEFT";
+            document.getElementById('fsOrientTag').innerText = "[머리:좌]";
+            document.getElementById('fsOrientTag').style.color = "#5dade2";
+        } else {
+            currentHeadDirection = "HEAD_RIGHT";
+            document.getElementById('fsOrientTag').innerText = "[머리:우]";
+            document.getElementById('fsOrientTag').style.color = "#f39c12";
+        }
+
+        currentElbowAng = getTrueInnerAngle(pS, pE, pW);
+        currentCoreAng = getTrueInnerAngle(pS, pP, pK);
+        currentKneeAng = rawPA ? getTrueInnerAngle(pP, pK, rawPA) : 175;
 
         updateHUDData(currentElbowAng, currentCoreAng, currentKneeAng);
 
-        // ==========================================
-        // [골반 수직 편차 기반 명확한 분기 판정]
-        // ==========================================
-        var hipDev = getHipDeviation(pS, pP, pK);
+        var hipDev = getNormalizedHipDeviation(pS, pP, pK);
         var coreThreshold = (exerciseMode === "BAR" ? 155 : 162);
         var isAngleBroken = (currentCoreAng < coreThreshold);
 
-        // 1. 정상 휴식 (Pike Rest): 양팔을 곧게 펴고(>=140°), 엉덩이가 천장 쪽으로 솟은 자세(hipDev < -15)
         var isPikeRest = (currentElbowAng >= 140 && hipDev < -15);
-
-        // 2. 골반 처짐 vs 골반 높음 명확한 분기 (각도가 깨지고 정상 휴식이 아닐 때)
         var isCoreSag = false;
         var isHipHigh = false;
 
         if (isAngleBroken && !isPikeRest) {
-            // 골반이 기준선보다 바닥 쪽(Y축 양수)으로 10px 이상 처진 경우에만 확실한 허리 처짐
             if (hipDev > 10) {
                 isCoreSag = true;
                 isHipHigh = false;
-            }
-            // 골반이 기준선보다 천장 쪽(Y축 음수)으로 10px 이상 솟은 상태에서 팔을 굽히고 운동할 때
-            else if (hipDev < -10 && currentElbowAng < 140) {
+            } else if (hipDev < -10 && currentElbowAng < 140) {
                 isHipHigh = true;
                 isCoreSag = false;
             }
         }
 
-        // 3. 상체 선행 상승 (배치기): 상승 구간에서 상체는 올라오는데 골반이 바닥에 처져 있을 때
         var isWaveFault = false;
         if (state === "DOWN" && currentElbowAng > 105 && currentElbowAng < 150) {
             if (hipDev > 12 && isAngleBroken) {
@@ -1238,21 +1256,16 @@
             }
         }
 
-        // 4. 무릎 닿음
         var isKneeTouch = (currentKneeAng < 150);
-
         var isCurrentMotionBad = isCoreSag || isHipHigh || isKneeTouch || isWaveFault;
 
-        // 판정 상태 머신 실행
         if ((isTimerRunning || isUploadAnalysisMode) && !isPausedDueToNoBody) {
             if (isPikeRest) {
                 currentFaultBannerText = "🧘 엉덩이 솟음 휴식 중 (정상 휴식)";
                 isCurrentFaultWarn = false;
-                // 휴식 중에는 지속 카운터 초기화
                 faultSustainedCounts["HIGH_HIP"] = 0;
                 faultSustainedCounts["SAG"] = 0;
             } else {
-                // 지속성 검증(3프레임 디바운스)을 통한 오인식 완전 차단
                 if (isWaveFault) {
                     faultSustainedCounts["WAVE"]++;
                     if (faultSustainedCounts["WAVE"] >= 3) {
@@ -1411,9 +1424,6 @@
 
     // ==========================================
     // [부정자세 트리거 및 육군 표준 음성 피드백 엔진]
-    // 1. 회차 무효화(repHasFault) 즉각 적용
-    // 2. 2.5초 절대 쿨다운으로 음성 겹침 및 급상승 방지
-    // 3. 지적 멘트 + 교정 지시어 + 경고 차수 일치화
     // ==========================================
     function triggerMovementFault(typeKey, reason, ttsSpeech, detail) {
         var now = Date.now();
@@ -1421,7 +1431,6 @@
         faultReasonCurrentRep = reason;
         isCurrentFaultWarn = true;
 
-        // 2.5초 절대 쿨다운 미도달 시 화면 배너만 갱신하고 음성 중복 차단
         if (now - lastAnyFaultTime < FAULT_COOLDOWN_MS) {
             currentFaultBannerText = "⚠️ " + reason;
             return;
@@ -1458,13 +1467,6 @@
         msg.rate = 1.15;
         msg.pitch = 1.0;
         window.speechSynthesis.speak(msg);
-    }
-
-    function getAngle(A, B, C) {
-        var rad = Math.atan2(C.y - B.y, C.x - B.x) - Math.atan2(A.y - B.y, A.x - B.x);
-        var deg = Math.abs(rad * 180.0 / Math.PI);
-        if (deg > 180.0) deg = 360.0 - deg;
-        return Math.round(deg);
     }
 
     function logInvalidRep(reason, detail) {
@@ -1901,7 +1903,6 @@
             console.warn("Fast-Start 하드웨어 인코더 우회, 실시간 레코더 폴백 사용:", err);
         }
 
-        // 브라우저 캔버스 캡처 폴백
         sText.innerText = '표준 캔버스 MP4 재인코딩 진행 중...';
         var cvCanvas = document.createElement('canvas');
         cvCanvas.width = targetW;
@@ -2360,8 +2361,8 @@
         hasSpokenCoreLossThisSession = false;
         lastFaultKey = "";
         lastAnyFaultTime = 0;
+        currentHeadDirection = "UNKNOWN";
 
-        // 부정자세 지속 프레임 카운터 전체 초기화
         for (var k in faultSustainedCounts) {
             faultSustainedCounts[k] = 0;
         }
@@ -2394,6 +2395,8 @@
         document.getElementById('logTableBody').innerHTML = '<tr id="emptyRow"><td colspan="3" style="text-align:center; color:#8b9b8e; padding:12px;">부정자세 기록이 없습니다.</td></tr>';
         document.getElementById('txtTimerState').innerText = "대기 중";
         document.getElementById('txtTimerState').style.color = "#8b9b8e";
+        document.getElementById('fsOrientTag').innerText = "[머리:자동]";
+        document.getElementById('fsOrientTag').style.color = "#5dade2";
         updateActionButtons("📹 측정 시작 (녹화 ON)", "btn-start");
     }
 
