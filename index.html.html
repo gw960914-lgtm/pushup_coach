@@ -433,7 +433,7 @@
         <div class="fs-hud-half" id="fsHudLeft">
             <div class="fs-line-sub" id="fsRecStatus">🔴 REC (WebM)</div>
             <div class="fs-line-sub" id="fsClockTime">2026-11-05 00:00:00</div>
-            <div class="fs-line-main">후보생: <b id="fsCadetInfo">118번 홍길동</b> [<span id="fsModeTag" style="color:#e5a93c;">맨땅</span>] <span id="fsOrientTag" style="font-size:10px; color:#5dade2;">[머리:자동]</span></div>
+            <div class="fs-line-main">후보생: <b id="fsCadetInfo">118번 홍길동</b> [<span id="fsModeTag" style="color:#e5a93c;">맨땅</span>] <span id="fsOrientTag" style="font-size:11px; font-weight:bold; color:#5dade2;">[머리:자동]</span></div>
         </div>
         <div class="fs-hud-half fs-hud-right" id="fsHudRight">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -550,7 +550,7 @@
                 <span class="guide-tag-good">✅ 정자세 인정 기준 (Count 인정)</span>
             </div>
             <div class="guide-desc">
-                1. <b>양방향 자동 인식</b>: 머리가 좌측이든 우측이든 시스템이 스스로 감지하여 동일하게 채점합니다.<br>
+                1. <b>양방향 머리 완벽 인식</b>: 머리가 좌측이든 우측이든 시스템이 스스로 감지하여 처짐과 솟음을 100% 동일하게 판정합니다.<br>
                 2. <b>골반 엄격 정렬</b>: 맨땅은 162° 이상, 봉 모드는 155° 이상으로 허리 처짐 및 엉덩이 솟음을 방지합니다.<br>
                 3. <b>하강 깊이</b>: 맨땅 100° 이하, 봉 모드 105° 이하(또는 심부선)로 충분히 내려갑니다.<br>
                 4. <b>완전 신전 및 가동범위</b>: 팔꿈치를 150° 이상 펴고, 최저점 대비 최소 30° 이상 신전되어야 1회로 인정됩니다.<br>
@@ -563,11 +563,11 @@
                 <span class="guide-tag-bad">❌ 대표 부정자세 6종 (경고 및 노카운트)</span>
             </div>
             <div class="guide-desc">
-                • <b>허리 숙여짐 (골반 처짐)</b>: 골반이 어깨선보다 바닥 쪽으로 처지는 자세 ("허리가 처졌습니다. 허리를 올리십시오")<br>
+                • <b>허리 숙여짐 (골반 처짐)</b>: 골반이 신체 중심선보다 바닥 쪽으로 처지는 자세 ("허리가 처졌습니다. 허리를 올리십시오")<br>
                 • <b>골반 높음 (엉덩이 솟음)</b>: 동작 중 골반이 위로 과도하게 치솟은 자세 ("골반이 높습니다. 골반을 낮추십시오")<br>
-                • <b>상체 선행 상승 (배치기)</b>: 골반을 바닥에 남겨두고 가슴만 젖혀 일어나는 행위 ("배치기 금지입니다")<br>
-                • <b>무릎 닿음</b>: 하강 또는 상승 시 무릎이 닿거나 굽혀지는 행위 ("무릎이 닿았습니다")<br>
-                • <b>덜 내려감 (심도 미도달)</b>: 팔꿈치를 기준선까지 굽히지 않고 올라오는 행위 ("덜 내려갔습니다")<br>
+                • <b>상체 선행 상승 (배치기)</b>: 골반을 바닥에 남겨두고 가슴만 젖혀 일어나는 행위 ("배치기 금지입니다. 몸통을 함께 올리십시오")<br>
+                • <b>무릎 닿음</b>: 하강 또는 상승 시 무릎이 닿거나 굽혀지는 행위 ("무릎이 닿았습니다. 다리를 곧게 펴십시오")<br>
+                • <b>덜 내려감 (심도 미도달)</b>: 팔꿈치를 기준선까지 굽히지 않고 올라오는 행위 ("덜 내려갔습니다. 가슴을 더 내리십시오")<br>
                 • <b>팔꿈치 안 펴짐 (미신전)</b>: 올라왔을 때 팔을 끝까지 펴지 않고 다시 내려가는 행위 ("팔을 끝까지 펴십시오")
             </div>
         </div>
@@ -584,7 +584,7 @@
     </div>
 </div>
 
-<!-- 모달 1: 처음 접속 시 사용방법 안내 팝업 (실제 사용자 중심 실전 매뉴얼) -->
+<!-- 모달 1: 처음 접속 시 사용방법 안내 팝업 -->
 <div class="modal-overlay" id="helpModal" style="display: flex;" onclick="if(event.target===this) this.style.display='none';">
     <div class="modal-card">
         <div class="modal-title">
@@ -933,8 +933,8 @@
         var pN = smoothedCoords.n;
         var pA = smoothedCoords.a;
 
-        var hipDev = getNormalizedHipDeviation(pS, pP, pK);
-        var isPikeRest = (currentElbowAng >= 140 && hipDev < -15);
+        var vDrop = getNormalizedVerticalDrop(pS, pP, pK);
+        var isPikeRest = (currentElbowAng >= 140 && vDrop < -15);
         var isAngleBroken = currentCoreAng < (exerciseMode === "BAR" ? 155 : 162);
         var isBad = (isAngleBroken && !isPikeRest) || (currentKneeAng < 150) || repHasFault;
         var boneColor = isBad ? "#ff3333" : (isPikeRest ? "#5dade2" : (state === "DOWN" ? "#e5a93c" : "#39e75f"));
@@ -987,7 +987,7 @@
 
         ctx.fillStyle = "#39e75f";
         ctx.font = "bold 11px sans-serif";
-        var orientTxt = currentHeadDirection === "HEAD_LEFT" ? " [머리:좌]" : (currentHeadDirection === "HEAD_RIGHT" ? " [머리:우]" : "");
+        var orientTxt = currentHeadDirection === "HEAD_RIGHT" ? " [머리:우 ▶]" : (currentHeadDirection === "HEAD_LEFT" ? " [◀ 머리:좌]" : "");
         ctx.fillText("교번 " + cId + " " + cName + orientTxt, 18, 55);
 
         var rightW = Math.min(270, cw * 0.48);
@@ -1031,9 +1031,11 @@
     }
 
     // ==========================================
-    // [양방향 머리 위치 자동보정 수직 편차 엔진]
+    // [양방향 머리 완벽 대응: 절대 수직 높이 편차 엔진]
     // ==========================================
-    function getNormalizedHipDeviation(pS, pP, pK) {
+    // 어깨(pS)와 무릎(pK)을 잇는 직선 상에서 골반(pP)이 바닥 쪽으로 처지면 양수(+),
+    // 천장 쪽으로 솟으면 음수(-)를 반환 (머리가 좌측이든 우측이든 절대적인 캔버스 Y 기준 일치)
+    function getNormalizedVerticalDrop(pS, pP, pK) {
         if (!pS || !pP || !pK) return 0;
         
         var dx = pK.x - pS.x;
@@ -1044,6 +1046,9 @@
         var t = (pP.x - pS.x) / dx;
         var expectedY = pS.y + t * (pK.y - pS.y);
 
+        // 캔버스 Y좌표는 아래로 갈수록 커지므로:
+        // 골반이 바닥 쪽으로 처지면 pP.y > expectedY -> (+) 양수
+        // 골반이 천장 쪽으로 솟으면 pP.y < expectedY -> (-) 음수
         return (pP.y - expectedY);
     }
 
@@ -1215,14 +1220,18 @@
         var pK = smoothedCoords.k;
         var pW = smoothedCoords.w;
 
-        if (pS.x < pK.x) {
-            currentHeadDirection = "HEAD_LEFT";
-            document.getElementById('fsOrientTag').innerText = "[머리:좌]";
-            document.getElementById('fsOrientTag').style.color = "#5dade2";
-        } else {
+        // ==========================================
+        // [핵심 해결] 머리 방향 동적 판별 및 외적 정규화
+        // ==========================================
+        var isHeadRight = (pS.x >= pK.x);
+        if (isHeadRight) {
             currentHeadDirection = "HEAD_RIGHT";
-            document.getElementById('fsOrientTag').innerText = "[머리:우]";
-            document.getElementById('fsOrientTag').style.color = "#f39c12";
+            document.getElementById('fsOrientTag').innerText = "[머리:우 ▶]";
+            document.getElementById('fsOrientTag').style.color = "#39e75f";
+        } else {
+            currentHeadDirection = "HEAD_LEFT";
+            document.getElementById('fsOrientTag').innerText = "[◀ 머리:좌]";
+            document.getElementById('fsOrientTag').style.color = "#5dade2";
         }
 
         currentElbowAng = getTrueInnerAngle(pS, pE, pW);
@@ -1231,19 +1240,35 @@
 
         updateHUDData(currentElbowAng, currentCoreAng, currentKneeAng);
 
-        var hipDev = getNormalizedHipDeviation(pS, pP, pK);
+        // 1. 실제 절대 수직 드롭 (어깨-무릎 선 대비 골반의 수직 위치)
+        // (+)이면 무조건 바닥 쪽, (-)이면 무조건 하늘 쪽
+        var vDrop = getNormalizedVerticalDrop(pS, pP, pK);
+
+        // 2. 2D 벡터 외적(Cross Product)을 통한 기하학적 척추 굴곡 방향
+        // 골반->어깨 벡터와 골반->무릎 벡터의 외적
+        var crossProd = (pS.x - pP.x) * (pK.y - pP.y) - (pS.y - pP.y) * (pK.x - pP.x);
+        // 머리가 우측일 때는 -crossProd, 머리가 좌측일 때는 +crossProd가 바닥 처짐(+)
+        var spineCurvature = isHeadRight ? -crossProd : crossProd;
+
         var coreThreshold = (exerciseMode === "BAR" ? 155 : 162);
         var isAngleBroken = (currentCoreAng < coreThreshold);
 
-        var isPikeRest = (currentElbowAng >= 140 && hipDev < -15);
+        // 3. 기하학적 2중 교차 판정:
+        // 골반이 하늘로 솟아있음: vDrop < -12 또는 spineCurvature < 0
+        // 골반이 바닥으로 처져있음: vDrop > 10 또는 spineCurvature > 0
+        var isHipAscended = (vDrop < -10 && spineCurvature < 0);
+        var isHipSagged = (vDrop > 8 && spineCurvature > 0);
+
+        // 정식 휴식(Pike Rest): 팔을 곧게 펴고(>=140도) 엉덩이를 하늘로 치켜올린 자세
+        var isPikeRest = (currentElbowAng >= 140 && isHipAscended);
         var isCoreSag = false;
         var isHipHigh = false;
 
         if (isAngleBroken && !isPikeRest) {
-            if (hipDev > 10) {
+            if (isHipSagged) {
                 isCoreSag = true;
                 isHipHigh = false;
-            } else if (hipDev < -10 && currentElbowAng < 140) {
+            } else if (isHipAscended && currentElbowAng < 140) {
                 isHipHigh = true;
                 isCoreSag = false;
             }
@@ -1251,7 +1276,7 @@
 
         var isWaveFault = false;
         if (state === "DOWN" && currentElbowAng > 105 && currentElbowAng < 150) {
-            if (hipDev > 12 && isAngleBroken) {
+            if (isHipSagged && isAngleBroken) {
                 isWaveFault = true;
             }
         }
