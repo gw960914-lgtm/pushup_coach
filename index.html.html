@@ -7,8 +7,8 @@
     <!-- MediaPipe Pose CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-    <!-- mp4-muxer CDN (카카오톡 공유용 Fast-Start MP4 변환 지원) -->
-    <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.4/build/mp4-muxer.min.js"></script>
+    <!-- mp4-muxer (카카오톡 Fast-Start MP4 변환 지원) -->
+    <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.4/build/mp4-muxer.min.js" crossorigin="anonymous"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body {
@@ -70,12 +70,13 @@
             border: none; background: #000;
         }
 
+        /* 비율 왜곡 없는 카메라 캔버스 렌더링 */
         canvas#outputCanvas {
             width: 100%;
             height: auto;
             max-height: 75vh;
-            object-fit: contain;
             display: block;
+            object-fit: contain;
         }
         .camera-container.is-fullscreen canvas#outputCanvas {
             width: 100%;
@@ -84,8 +85,8 @@
             object-fit: contain;
         }
         
-        /* 모바일 브라우저 프레임 디코딩 차단 방지 (화면 밖 배치) */
-        video#inputVideo, video#uploadedVideo {
+        /* 모바일 브라우저 프레임 디코딩 차단 방지 */
+        video#inputVideo, video#uploadAnalysisVideo {
             position: absolute;
             top: -9999px;
             left: -9999px;
@@ -156,6 +157,22 @@
         }
         .fs-count-highlight.warn { color: #ff5252; }
 
+        /* 업로드 영상 분석 전용 컨트롤 HUD */
+        .upload-ctrl-bar {
+            position: absolute;
+            bottom: 8px; left: 8px; right: 8px;
+            background: rgba(11, 17, 12, 0.92);
+            border: 1px solid #39e75f;
+            border-radius: 6px;
+            padding: 6px 10px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 28;
+            gap: 8px;
+        }
+        .upload-ctrl-bar .progress-text { font-size: 11px; font-family: monospace; color: #e5a93c; }
+
         /* 5초 카운트다운 레이어 */
         .countdown-overlay {
             position: absolute;
@@ -198,28 +215,6 @@
         .camera-container.is-fullscreen .fullscreen-controls { display: flex; }
         .camera-container.is-fullscreen .btn-fullscreen-toggle { display: none; }
 
-        /* 영상 파일 사후 분석 제어 패널 */
-        .upload-analysis-panel {
-            display: none;
-            background: #172419;
-            border: 1.5px solid #39e75f;
-            border-radius: 6px;
-            padding: 8px 10px;
-            flex-direction: column;
-            gap: 6px;
-            margin-top: 6px;
-        }
-        .upload-progress-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .upload-slider {
-            flex: 1;
-            accent-color: #39e75f;
-            cursor: pointer;
-        }
-
         .main-panel {
             width: 100%; max-width: 540px; padding: 10px;
             display: flex; flex-direction: column; gap: 8px;
@@ -236,7 +231,7 @@
 
         .mode-toggle-group { display: flex; gap: 6px; margin-bottom: 6px; }
         .btn-mode {
-            flex: 1; padding: 8px; font-size: 11.5px; font-weight: bold;
+            flex: 1; padding: 8px; font-size: 11px; font-weight: bold;
             background: #1a271d; border: 1px solid #2d4233; color: #a3b8a6;
             border-radius: 4px; cursor: pointer; transition: all 0.2s;
         }
@@ -275,15 +270,15 @@
             color: #8b9b8e; font-size: 12px; font-weight: bold; margin-left: 5px; white-space: nowrap;
         }
 
-        .btn-group { display: flex; gap: 6px; margin-top: 4px; }
+        .btn-group { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
         button.action-btn {
-            flex: 1; padding: 10px; font-size: 12px; font-weight: bold;
+            flex: 1; min-width: 110px; padding: 10px; font-size: 11.5px; font-weight: bold;
             border-radius: 5px; cursor: pointer; border: 1px solid transparent;
         }
         .btn-start { background: #218c39; border-color: #39e75f; color: #fff; }
         .btn-pause { background: #d35400; border-color: #e67e22; color: #fff; }
         .btn-sub { background: #1f3323; border-color: #2d4233; color: #a3b8a6; }
-        .btn-upload { background: #1b4965; border-color: #62b6cb; color: #fff; }
+        .btn-upload { background: #1a493b; border-color: #2ecc71; color: #ffffff; }
         .btn-excel { background: #1f508a; border-color: #5dade2; color: #fff; }
         .btn-reset { background: #7a1f1f; border-color: #e74c3c; color: #fff; }
 
@@ -315,9 +310,8 @@
             border-radius: 3px; border: 1px solid #2d4233; background: #19251c; color: #a3b8a6; cursor: pointer;
         }
         .btn-mini:hover { border-color: #39e75f; color: #39e75f; }
-        .btn-mini-mp4 { border-color: #e5a93c; color: #e5a93c; }
+        .btn-mini-kakaomp4 { border-color: #f1c40f; color: #f1c40f; }
 
-        /* 가이드 안내 카드 */
         .guide-box {
             background: #0d140e;
             border: 1px solid #1a261c;
@@ -335,7 +329,6 @@
         .guide-tag-bad { color: #ff6b6b; font-weight: bold; font-size: 11px; }
         .guide-desc { font-size: 10.5px; color: #a3b8a6; line-height: 1.45; }
 
-        /* 모달 스타일 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.85); display: none;
@@ -352,16 +345,6 @@
         .modal-video-wrap { width: 100%; max-height: 55vh; background: #000; border-radius: 4px; overflow: hidden; margin: 0 auto; }
         .modal-video-wrap video { width: 100%; height: 100%; display: block; object-fit: contain; }
 
-        .progress-bar-wrap {
-            width: 100%; height: 16px; background: #0d120e;
-            border-radius: 8px; border: 1px solid #2d4233; overflow: hidden;
-            margin: 8px 0;
-        }
-        .progress-bar-fill {
-            width: 0%; height: 100%; background: #39e75f;
-            transition: width 0.15s ease;
-        }
-
         .help-step {
             background: #0d140e;
             border-left: 3px solid #39e75f;
@@ -372,10 +355,9 @@
         .help-step-title { font-weight: bold; color: #e5a93c; font-size: 12px; margin-bottom: 3px; }
         .help-step-desc { font-size: 11px; color: #a3b8a6; line-height: 1.45; }
 
-        /* 토스트 알림 (alert 대체) */
-        .toast-msg {
+        .toast-box {
             position: fixed;
-            bottom: 25px;
+            bottom: 24px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(17, 30, 20, 0.95);
@@ -383,12 +365,29 @@
             color: #ffffff;
             font-size: 12px;
             font-weight: bold;
-            padding: 8px 16px;
+            padding: 10px 18px;
             border-radius: 20px;
-            z-index: 100005;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.8);
+            z-index: 200000;
             display: none;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.8);
             text-align: center;
+            max-width: 90%;
+        }
+
+        .progress-bar-wrap {
+            width: 100%;
+            background: #0d140e;
+            border: 1px solid #233827;
+            border-radius: 5px;
+            overflow: hidden;
+            height: 14px;
+            margin: 8px 0;
+        }
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #1e7e34, #39e75f);
+            transition: width 0.1s;
         }
     </style>
 </head>
@@ -398,14 +397,14 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">검증 완료 최종본</div>
+        <div class="badge">통합 최종본 v6.1</div>
     </div>
 </header>
 
 <div class="camera-container" id="cameraBox">
     <canvas id="outputCanvas"></canvas>
     <video id="inputVideo" playsinline webkit-playsinline muted autoplay></video>
-    <video id="uploadedVideo" playsinline webkit-playsinline muted></video>
+    <video id="uploadAnalysisVideo" playsinline webkit-playsinline muted></video>
 
     <!-- 창모드 HUD -->
     <div class="window-hud" id="windowHud">
@@ -415,7 +414,7 @@
         </div>
         <div class="hud-card">
             <div class="hud-val" id="dispTimerWin" style="color:#e5a93c;">02:00</div>
-            <div class="hud-lbl" id="lblTimerWin">잔여시간</div>
+            <div class="hud-lbl">잔여시간</div>
         </div>
         <div class="hud-card">
             <div class="hud-val" id="elbowAngleWin">0°</div>
@@ -423,7 +422,7 @@
         </div>
         <div class="hud-card">
             <div class="hud-val" id="coreAngleWin">0°</div>
-            <div class="hud-lbl" id="lblCoreThreshold">코어(≥162°/엄격)</div>
+            <div class="hud-lbl" id="lblCoreThreshold">코어(≥162°)</div>
         </div>
         <div class="hud-card">
             <div class="hud-val" id="kneeAngleWin">0°</div>
@@ -436,7 +435,7 @@
         <div class="fs-hud-half" id="fsHudLeft">
             <div class="fs-line-sub" id="fsRecStatus">🔴 REC (WebM)</div>
             <div class="fs-line-sub" id="fsClockTime">2026-11-05 00:00:00</div>
-            <div class="fs-line-main">후보생: <b id="fsCadetInfo">118번 홍길동</b> [<span id="fsModeTag" style="color:#e5a93c;">맨땅(엄격)</span>]</div>
+            <div class="fs-line-main">후보생: <b id="fsCadetInfo">118번 홍길동</b> [<span id="fsModeTag" style="color:#e5a93c;">맨땅</span>]</div>
         </div>
         <div class="fs-hud-half fs-hud-right" id="fsHudRight">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -445,6 +444,14 @@
             </div>
             <div class="fs-line-sub" id="fsAngleSummary" style="margin-top:2px;">팔 0° | 코어 0° | 무릎 0°</div>
         </div>
+    </div>
+
+    <!-- 업로드 영상 분석 컨트롤러 바 -->
+    <div class="upload-ctrl-bar" id="uploadCtrlBar">
+        <button type="button" class="btn-mini" onclick="toggleUploadPlayPause()" id="btnUploadPlayPause">⏸ 일시정지</button>
+        <button type="button" class="btn-mini" onclick="toggleUploadSpeed()" id="btnUploadSpeed">1.0x</button>
+        <span class="progress-text" id="uploadProgressText">분석 중: 00:00 / 00:00</span>
+        <button type="button" class="btn-mini" style="color:#ff6b6b;" onclick="exitUploadAnalysis()">✖ 카메라 복귀</button>
     </div>
 
     <div class="countdown-overlay" id="countdownOverlay">
@@ -462,47 +469,23 @@
     </div>
 </div>
 
-<!-- 영상 파일 사후 분석 제어 패널 (업로드 모드 시 노출) -->
-<div class="upload-analysis-panel" id="uploadAnalysisPanel">
-    <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px;">
-        <span style="color:#39e75f; font-weight:bold;">📂 업로드 영상 AI 정밀 분석 중</span>
-        <span id="uploadTimeStatus" style="color:#e5a93c; font-family:monospace; font-weight:bold;">00:00 / 00:00</span>
-    </div>
-    <div class="upload-progress-row">
-        <button type="button" class="btn-mini" id="btnUploadPlayPause" onclick="toggleUploadVideoPlayback()">⏸️ 일시정지</button>
-        <input type="range" class="upload-slider" id="uploadVideoSeeker" min="0" max="100" value="0" oninput="seekUploadVideo(this.value)">
-        <button type="button" class="btn-mini" onclick="setUploadVideoRate(1.0)">1.0x</button>
-        <button type="button" class="btn-mini" onclick="setUploadVideoRate(1.5)">1.5x</button>
-        <button type="button" class="btn-mini" style="color:#ff6b6b;" onclick="exitUploadAnalysisMode()">✖ 분석 종료</button>
-    </div>
-</div>
-
 <div class="main-panel">
-    <!-- 1. 측정 환경 및 골반처짐 엄격모드 선택 -->
+    <!-- 환경 모드 선택 (맨땅 vs 30cm 봉) -->
     <div class="card">
         <div class="card-title">
-            <span>⚙️ 측정 환경 모드 (골반처짐 보수적·엄격 판정 적용)</span>
-            <span id="txtModeDesc" style="font-size:10.5px; color:#39e75f;">맨땅 (팔 ≤100° / 골반처짐 &lt;162° 엄격감지)</span>
+            <span>⚙️ 측정 환경 모드 및 녹화 화질</span>
+            <span id="txtModeDesc" style="font-size:10.5px; color:#a3b8a6;">맨땅 평지 (팔 100° 이하 / 코어 162° 이상)</span>
         </div>
         <div class="mode-toggle-group">
-            <button type="button" class="btn-mode active" id="btnModeFloor" onclick="setExerciseMode('FLOOR')">🏃 맨땅 평지 (골반 &lt;162° 엄격)</button>
-            <button type="button" class="btn-mode" id="btnModeBar" onclick="setExerciseMode('BAR')">🛑 30cm 봉 (골반 &lt;155° 엄격)</button>
+            <button type="button" class="btn-mode active" id="btnModeFloor" onclick="setExerciseMode('FLOOR')">🏃 맨땅 평지 측정</button>
+            <button type="button" class="btn-mode" id="btnModeBar" onclick="setExerciseMode('BAR')">🛑 30cm 봉 측정</button>
+        </div>
+        <div class="mode-toggle-group" style="margin-top: 4px;">
+            <button type="button" class="btn-mode active" id="btnRes480" onclick="setRecordingRes('480p')">📱 480p (용량 최적화 WebM)</button>
+            <button type="button" class="btn-mode" id="btnRes720" onclick="setRecordingRes('720p')">🖥️ 720p (선명한 HD WebM)</button>
         </div>
     </div>
 
-    <!-- 2. WebM 기본 녹화 화질 설정 (480p / 720p) -->
-    <div class="card">
-        <div class="card-title">
-            <span>📹 기본 녹화 화질 (WebM 고속 안정화 포맷)</span>
-            <span id="txtResDesc" style="font-size:10.5px; color:#39e75f;">480p (용량 최적화, 모바일 고속)</span>
-        </div>
-        <div class="mode-toggle-group">
-            <button type="button" class="btn-mode active" id="btnRes480p" onclick="setRecordingResolution('480p')">📱 480p (용량 최적화 / 기본)</button>
-            <button type="button" class="btn-mode" id="btnRes720p" onclick="setRecordingResolution('720p')">🖥️ 720p (선명한 HD 화질)</button>
-        </div>
-    </div>
-
-    <!-- 3. 후보생 정보 -->
     <div class="card">
         <div class="card-title">
             <span>👤 후보생 정보 (영상 및 엑셀 로그 각인용)</span>
@@ -513,7 +496,6 @@
         </div>
     </div>
 
-    <!-- 4. 측정 시간 설정 -->
     <div class="card">
         <div class="card-title">
             <span>⏱️ 측정 시간 설정</span>
@@ -528,17 +510,14 @@
         </div>
     </div>
 
-    <!-- 5. 액션 버튼 (실시간 측정 & 영상 파일 업로드 분석) -->
     <div class="btn-group">
-        <button type="button" class="action-btn btn-start" id="btnMainAction" onclick="handleStartOrToggle()">📹 실시간 측정 시작 (WebM 녹화)</button>
+        <button type="button" class="action-btn btn-start" id="btnMainAction" onclick="handleStartOrToggle()">📹 측정 시작 (녹화 ON)</button>
+        <button type="button" class="action-btn btn-upload" onclick="triggerVideoUpload()">📂 촬영 영상 업로드 분석</button>
         <button type="button" class="action-btn btn-sub" onclick="switchCamera()">🔄 전/후면</button>
-        <button type="button" class="action-btn btn-upload" onclick="triggerVideoFileUpload()">📂 촬영 영상 업로드 분석</button>
         <button type="button" class="action-btn btn-reset" onclick="resetAll()">0회 초기화</button>
     </div>
-    <!-- 파일 선택용 숨겨진 input -->
-    <input type="file" id="videoFileInput" accept="video/*" onchange="handleVideoFileSelected(event)" style="display:none">
+    <input type="file" id="videoFileInput" accept="video/*" style="display: none;" onchange="onVideoFileSelected(event)">
 
-    <!-- 6. 실시간 부정자세 감지 이력 -->
     <div class="card">
         <div class="card-title">
             <span>⚠️ 실시간 부정자세 감지 이력 (3초 쿨다운 / 신규 즉각)</span>
@@ -562,7 +541,7 @@
         </div>
     </div>
 
-    <!-- 7. 정자세 및 부정자세 가이드 (머리 숙임 제외, 골반처짐 엄격 반영) -->
+    <!-- 정자세 및 부정자세 가이드 -->
     <div class="card">
         <div class="card-title">
             <span>📖 육군 표준 팔굽혀펴기 정자세 및 부정자세 판정 가이드</span>
@@ -573,20 +552,22 @@
                 <span class="guide-tag-good">✅ 정자세 인정 기준 (Count 인정)</span>
             </div>
             <div class="guide-desc">
-                1. <b>4대 필수 정렬</b>: 어깨-팔꿈치-골반-무릎 4대 핵심 관절을 바르게 정렬합니다.<br>
-                2. <b>하강 깊이</b>: 맨땅은 100° 이하, 봉 모드는 105° 이하(또는 심부선 도달)로 내려가면 충분 하강으로 인정됩니다.<br>
-                3. <b>완전 신전 및 가동범위</b>: 팔꿈치를 150° 이상 펴고, 최저점 대비 최소 30° 이상 가동범위가 확보되면 카운트됩니다.<br>
-                4. <b>유일한 휴식(Pike Rest)</b>: 팔을 펴고 엉덩이를 천장으로 치켜올리는 자세만 감점 없이 휴식으로 인정됩니다.
+                1. <b>4대 필수 정렬</b>: 어깨-팔꿈치-골반-무릎 4대 관절을 바르게 정렬합니다.<br>
+                2. <b>골반 보수적 엄격 관리</b>: 맨땅은 162° 이상, 봉 모드는 155° 이상으로 허리 처짐 및 엉덩이 솟음을 엄격히 방지합니다.<br>
+                3. <b>하강 깊이(심부선 완화)</b>: 맨땅은 100° 이하, 봉 모드는 105° 이하(또는 심부선)로 내려가면 충분 하강으로 인정됩니다.<br>
+                4. <b>완전 신전 및 가동범위</b>: 팔꿈치를 150° 이상 펴고, 최저점 대비 최소 30° 이상 가동범위가 확보되면 인정됩니다.<br>
+                5. <b>유일한 휴식(Pike Rest)</b>: 팔을 펴고 엉덩이를 천장으로 치켜올리는 자세만 감점 없이 휴식으로 인정됩니다.
             </div>
         </div>
 
         <div class="guide-box">
             <div class="guide-title-row">
-                <span class="guide-tag-bad">❌ 대표 부정자세 5종 (경고 및 노카운트)</span>
+                <span class="guide-tag-bad">❌ 대표 부정자세 6종 (경고 및 노카운트)</span>
             </div>
             <div class="guide-desc">
-                • <b>허리 숙여짐 (골반처짐 - 엄격 판정)</b>: 맨땅 &lt; 162°, 봉 모드 &lt; 155° 처짐 발생 시 즉각 경고 및 노카운트<br>
-                • <b>무릎 닿음</b>: 하강 또는 상승 시 무릎이 지면에 닿거나 굽혀지는 행위 (무릎각 &lt; 150°)<br>
+                • <b>허리 숙여짐 (골반 처짐)</b>: 골반이 어깨선보다 바닥 쪽으로 푹 꺼지는 자세 ("허리가 처졌습니다")<br>
+                • <b>골반 높음 (엉덩이 솟음)</b>: 골반이 어깨선보다 천장 쪽으로 높게 치솟은 자세 ("골반이 높습니다")<br>
+                • <b>무릎 닿음</b>: 하강 또는 상승 시 무릎이 지면에 닿거나 굽혀지는 행위 (&lt; 150°)<br>
                 • <b>상체 선행 상승 (웨이브)</b>: 골반을 바닥에 남겨두고 가슴만 젖혀 일어나는 배치기<br>
                 • <b>덜 내려감 (심도 미도달)</b>: 팔꿈치를 기준선까지 굽히지 않고 튕겨 올라오는 행위<br>
                 • <b>팔꿈치 안 펴짐 (미신전)</b>: 올라왔을 때 팔을 끝까지 펴지 않고 다시 내려가는 행위
@@ -594,11 +575,10 @@
         </div>
     </div>
 
-    <!-- 8. 날짜별 측정 이력 및 다시보기/MP4 변환 -->
     <div class="card">
         <div class="card-title">
             <span>📅 날짜별 측정 이력 및 영상 다시보기</span>
-            <button type="button" class="btn-mini" onclick="askClearAllHistoryDB()">전체 기록 삭제</button>
+            <button type="button" class="btn-mini" onclick="askClearAllHistory()">전체 기록 삭제</button>
         </div>
         <div class="history-list" id="historyContainer">
             <div style="text-align:center; color:#8b9b8e; font-size:11px; padding:15px;">저장된 측정 이력이 없습니다.</div>
@@ -606,7 +586,7 @@
     </div>
 </div>
 
-<!-- 모달 1: 처음 접속 시 사용방법 안내 팝업 (네이티브 3중 닫기 적용) -->
+<!-- 모달 1: 처음 접속 시 사용방법 안내 팝업 -->
 <div class="modal-overlay" id="helpModal" style="display: flex;" onclick="if(event.target===this) this.style.display='none';">
     <div class="modal-card">
         <div class="modal-title">
@@ -617,86 +597,53 @@
             <div class="help-step">
                 <div class="help-step-title">1. 스마트폰 카메라 세팅 (4대 필수 관절)</div>
                 <div class="help-step-desc">
-                    스마트폰을 신체 <b>측면 1.5m ~ 2.0m 거리</b> 바닥에 세워둡니다. <b>어깨, 팔꿈치, 골반, 무릎</b> 4대 필수 관절만 화면에 들어오면 머리, 손목, 발끝은 잘려도 정상 측정됩니다. (자연스러운 고개 움직임은 점수에 영향 없음)
+                    스마트폰을 신체 <b>측면 1.5m ~ 2.0m 거리</b> 바닥에 세워둡니다. <b>어깨, 팔꿈치, 골반, 무릎</b> 4대 필수 관절만 화면에 들어오면 머리, 손목, 발끝은 잘려도 정상 측정됩니다. (화각 비율이 찌그러지지 않고 원본 비율 그대로 출력됩니다)
                 </div>
             </div>
 
             <div class="help-step">
-                <div class="help-step-title">2. 골반 처짐(코어) 보수적·엄격 판정</div>
+                <div class="help-step-title">2. 허리 처짐 vs 골반 높음 정밀 구분</div>
                 <div class="help-step-desc">
-                    군 정자세 기준에 맞추어 <b>맨땅 &lt; 162°, 봉 모드 &lt; 155°</b>로 조금만 골반이 처져도 엄격하게 부정자세 경고 및 노카운트가 부여됩니다. 플랭크 일직선을 곧게 유지하십시오.
+                    골반이 어깨보다 낮게 꺼지면 <b>"허리가 처졌습니다"</b>, 골반이 어깨보다 높게 치솟으면 <b>"골반이 높습니다"</b>로 세분화하여 정밀 음성 피드백을 제공합니다.
                 </div>
             </div>
 
             <div class="help-step">
-                <div class="help-step-title">3. WebM 기본 저장 & 카카오톡용 MP4 변환</div>
+                <div class="help-step-title">3. 촬영 영상 업로드 AI 분석 기능</div>
                 <div class="help-step-desc">
-                    기본 녹화는 브라우저 친화적인 WebM(480p/720p)으로 안전 저장되며, 측정 종료 후나 다시보기 목록에서 <b>[💬 카톡용 MP4 변환]</b>을 누르면 카카오톡 전송 시 즉시 재생되는 MP4로 고속 변환 다운로드됩니다.
+                    기기에 미리 촬영해 둔 팔굽혀펴기 동영상을 <b>[📂 촬영 영상 업로드 분석]</b>으로 올리면, AI 스켈레톤을 입혀 횟수와 부정자세를 자동 측정하고 성적표를 생성합니다.
                 </div>
             </div>
 
             <div class="help-step">
-                <div class="help-step-title">4. 촬영 영상 파일 업로드 AI 분석</div>
+                <div class="help-step-title">4. WebM 녹화 및 카카오톡용 MP4 변환</div>
                 <div class="help-step-desc">
-                    스마트폰 카메라로 미리 찍어둔 영상 파일을 <b>[📂 촬영 영상 업로드 분석]</b>으로 올리면, AI가 프레임별 스켈레톤을 씌우고 정자세/부정자세를 자동으로 측정해 기록을 보관해 줍니다.
+                    기본 녹화는 용량이 최적화된 WebM으로 저장되며, 카카오톡 전송 시 인앱 재생이 가능하도록 <b>원클릭 카톡용 MP4 변환(480p/720p)</b>을 지원합니다.
                 </div>
             </div>
         </div>
-        <button type="button" class="action-btn btn-start" style="width: 100%; margin-top: 6px; cursor: pointer;" onclick="this.closest('.modal-overlay').style.display='none';">✅ 확인 및 닫기</button>
+        <button type="button" class="action-btn btn-start" style="width: 100%; margin-top: 6px; cursor: pointer;" onclick="this.closest('.modal-overlay').style.display='none';">✅ 확인 및 시작하기</button>
     </div>
 </div>
 
-<!-- 모달 2: 측정 종료 다운로드 안내 -->
+<!-- 모달 2: 측정 종료 및 저장 안내 -->
 <div class="modal-overlay" id="saveAlertModal" onclick="if(event.target===this) this.style.display='none';">
     <div class="modal-card">
         <div class="modal-title">🎉 측정 종료 및 데이터 보관 안내</div>
         <div class="modal-body">
             측정 영상과 부정자세 로그가 <b>스마트폰 내부 저장소(IndexedDB)</b>에 안전하게 보관되었습니다.<br><br>
-            <span style="color:#e5a93c;">⚠️ 카카오톡 전송용 MP4 또는 원본 WebM을 내려받으십시오.</span>
+            <span style="color:#e5a93c;">⚠️ 카카오톡 전송 및 갤러리 보관을 위해 파일을 지금 다운로드하십시오.</span>
         </div>
         <div class="btn-group">
-            <button type="button" class="action-btn btn-start" onclick="downloadLastRecordedVideo()">📥 WebM 원본 다운로드</button>
-            <button type="button" class="action-btn btn-excel" onclick="exportCurrentSessionCSV()">📊 엑셀 로그 (.csv)</button>
+            <button type="button" class="action-btn btn-start" onclick="downloadLastRecordedVideo()">📥 WebM 다운로드</button>
+            <button type="button" class="action-btn btn-upload" onclick="startKakaoMp4ConvertFromCurrent()">💬 카톡용 MP4 변환</button>
         </div>
-        <button type="button" class="action-btn btn-upload" style="margin-top:4px;" onclick="openMp4ConvertFromLastSession()">💬 카카오톡용 MP4 변환 다운로드</button>
-        <button type="button" class="action-btn btn-sub" onclick="this.closest('.modal-overlay').style.display='none';">확인 및 닫기</button>
+        <button type="button" class="action-btn btn-excel" style="width:100%; margin-top:4px;" onclick="exportCurrentSessionCSV()">📊 엑셀 성적표 다운로드 (.csv)</button>
+        <button type="button" class="action-btn btn-sub" style="width:100%; margin-top:4px;" onclick="this.closest('.modal-overlay').style.display='none';">확인 및 닫기</button>
     </div>
 </div>
 
-<!-- 모달 3: 카카오톡용 MP4 변환 모달 -->
-<div class="modal-overlay" id="mp4ConvertModal" onclick="if(event.target===this) closeMp4ConvertModal();">
-    <div class="modal-card">
-        <div class="modal-title">
-            <span>💬 카카오톡 공유용 MP4 변환</span>
-            <button type="button" class="btn-mini" onclick="closeMp4ConvertModal()">✖</button>
-        </div>
-        <div class="modal-body">
-            카카오톡 채팅방 및 갤러리에서 즉시 썸네일과 인앱 재생이 완벽히 지원되는 표준 H.264 MP4로 변환합니다.<br><br>
-            <b>변환 해상도 선택:</b>
-            <div class="mode-toggle-group" style="margin-top:6px;">
-                <button type="button" class="btn-mode active" id="btnMp4Res480p" onclick="setMp4ConvertTargetRes('480p')">📱 480p (용량 최적화)</button>
-                <button type="button" class="btn-mode" id="btnMp4Res720p" onclick="setMp4ConvertTargetRes('720p')">🖥️ 720p (고화질 HD)</button>
-            </div>
-
-            <div id="mp4ProgressArea" style="display:none; margin-top:10px;">
-                <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:bold;">
-                    <span id="mp4ProgressStatusText" style="color:#39e75f;">인코딩 준비 중...</span>
-                    <span id="mp4ProgressPercentText" style="color:#e5a93c;">0%</span>
-                </div>
-                <div class="progress-bar-wrap">
-                    <div class="progress-bar-fill" id="mp4ProgressBarFill"></div>
-                </div>
-                <span style="font-size:10px; color:#8b9b8e;">* 변환 중에는 창을 닫지 마십시오.</span>
-            </div>
-        </div>
-        <div class="btn-group" id="mp4ActionGroup">
-            <button type="button" class="action-btn btn-start" id="btnStartConvertMp4" onclick="executeMp4Conversion()">⚡ MP4 변환 시작</button>
-            <button type="button" class="action-btn btn-sub" onclick="closeMp4ConvertModal()">취소</button>
-        </div>
-    </div>
-</div>
-
-<!-- 모달 4: 영상 다시보기 (PiP 및 시간 점프 지원) -->
+<!-- 모달 3: 영상 다시보기 (PiP 및 시간 점프 지원) -->
 <div class="modal-overlay" id="videoPlayerModal">
     <div class="modal-card">
         <div class="modal-title" id="playerModalTitle">
@@ -722,49 +669,61 @@
         </div>
         <div class="btn-group">
             <button type="button" class="action-btn btn-start" onclick="downloadPlayingVideo()">💾 WebM 다운로드</button>
-            <button type="button" class="action-btn btn-upload" onclick="openMp4ConvertFromPlayingVideo()">💬 카톡용 MP4 변환</button>
-            <button type="button" class="action-btn btn-sub" onclick="closeVideoPlayerModal()">닫기</button>
+            <button type="button" class="action-btn btn-upload" onclick="startKakaoMp4ConvertFromPlaying()">💬 카톡용 MP4 변환</button>
         </div>
+        <button type="button" class="action-btn btn-sub" style="width:100%; margin-top:4px;" onclick="closeVideoPlayerModal()">닫기</button>
     </div>
 </div>
 
-<!-- 모달 5: 확인 모달 (confirm 대체) -->
+<!-- 모달 4: MP4 변환 진행률 모달 -->
+<div class="modal-overlay" id="mp4ConvertModal">
+    <div class="modal-card" style="max-width: 380px; text-align: center;">
+        <div class="modal-title">
+            <span>⚙️ 카카오톡용 MP4 고속 변환</span>
+        </div>
+        <div class="modal-body" style="padding: 10px 0;">
+            <div id="mp4ConvertStatusText">비디오 프레임을 재인코딩하고 있습니다...</div>
+            <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" id="mp4ProgressBar"></div>
+            </div>
+            <div style="font-size: 11px; color: #8b9b8e;" id="mp4ProgressPercent">0%</div>
+        </div>
+        <button type="button" class="action-btn btn-sub" id="btnCancelMp4Convert" onclick="cancelMp4Convert()">취소</button>
+    </div>
+</div>
+
+<!-- 모달 5: 공용 커스텀 확인 모달 -->
 <div class="modal-overlay" id="confirmModal">
-    <div class="modal-card" style="max-width:340px;">
-        <div class="modal-title">⚠️ 확인 안내</div>
-        <div class="modal-body" id="confirmModalText">해당 작업을 진행하시겠습니까?</div>
-        <div class="btn-group">
-            <button type="button" class="action-btn btn-reset" id="btnConfirmOk">확인</button>
-            <button type="button" class="action-btn btn-sub" onclick="closeConfirmModal()">취소</button>
+    <div class="modal-card" style="max-width: 360px; text-align: center;">
+        <div class="modal-title">⚠️ 확인 필요</div>
+        <div class="modal-body" id="confirmModalMsg">정말 진행하시겠습니까?</div>
+        <div class="btn-group" style="margin-top: 10px;">
+            <button type="button" class="action-btn btn-reset" id="btnConfirmOk">삭제 진행</button>
+            <button type="button" class="action-btn btn-sub" onclick="document.getElementById('confirmModal').style.display='none';">취소</button>
         </div>
     </div>
 </div>
 
 <!-- 토스트 알림창 -->
-<div class="toast-msg" id="toastMessage">안내 메시지</div>
+<div class="toast-box" id="toastBox">알림 메시지</div>
 
 <script>
-    // DOM 요소 캐시
     var videoElement = document.getElementById('inputVideo');
-    var uploadedVideo = document.getElementById('uploadedVideo');
+    var uploadVideo = document.getElementById('uploadAnalysisVideo');
     var canvasElement = document.getElementById('outputCanvas');
     var canvasCtx = canvasElement.getContext('2d');
     var cameraBox = document.getElementById('cameraBox');
 
-    // 측정 상태 변수
     var repCount = 0;
     var state = "UP";
     var facingMode = "environment";
     var pose = null;
     var camera = null;
     var cameraStarted = false;
-    var isUploadMode = false; // 동영상 파일 분석 모드 여부
 
-    // 측정 환경 모드 (FLOOR: 맨땅, BAR: 30cm 봉)
-    var exerciseMode = "FLOOR";
-
-    // 녹화 해상도 설정 ('480p' | '720p')
-    var recordingRes = "480p";
+    // 측정 환경 모드 및 녹화 화질
+    var exerciseMode = "FLOOR"; // FLOOR (맨땅) vs BAR (30cm 봉)
+    var recordingRes = "480p";  // 480p vs 720p
 
     // 타이머
     var totalSeconds = 120;
@@ -774,7 +733,12 @@
     var isCountingDown = false;
     var recordingStartTimestamp = 0;
 
-    // 4대 핵심 관절(어깨, 팔꿈치, 골반, 무릎) 감지 및 스무딩 상태
+    // 업로드 영상 분석 모드 플래그
+    var isUploadAnalysisMode = false;
+    var uploadAnalysisFrameId = null;
+    var uploadPlaySpeed = 1.0;
+
+    // 관절 감지 및 두꺼운 옷/허공 오인식 방지 상태
     var renderLoopId = null;
     var latestPoseLandmarks = null;
     var isCoreBodyDetected = false;
@@ -783,7 +747,7 @@
     var hasSpokenCoreLossThisSession = false; // 세션당 최초 1회 음성 송출 플래그
 
     var jointLostStreak = 0;
-    var MAX_LOST_FRAMES = 8;
+    var MAX_LOST_FRAMES = 8; // 단기 의복 가림 관성 보간 (약 0.25초)
     var lastValidPoints = { s: null, e: null, p: null, k: null, w: null };
     var smoothedCoords = { s: null, e: null, p: null, k: null, w: null, n: null, a: null };
 
@@ -794,7 +758,7 @@
     var currentCoreAng = 0;
     var currentKneeAng = 0;
 
-    // 부정자세 3단계 스마트 피드백
+    // 부정자세 피드백
     var lastFaultKey = "";
     var lastFaultTime = 0;
     var repHasFault = false;
@@ -804,93 +768,72 @@
     var failCount = 0;
     var totalFaultWarningCount = 0;
 
-    // WebM MediaRecorder
+    // MediaRecorder 직접 활성 캔버스 30 FPS 캡처 (WebM 기본)
     var mediaRecorder = null;
     var recordedChunks = [];
     var isRecording = false;
     var lastRecordedBlob = null;
-    var lastRecordedMime = "";
     var currentPlayingBlob = null;
-    var mp4ConvertSourceBlob = null;
-    var mp4TargetRes = "480p";
 
     var currentSessionFaultLogs = [];
 
-    // ==========================================
-    // [UI 토스트 및 확인 모달 (alert/confirm 대체)]
-    // ==========================================
-    var toastTimer = null;
-    function showToast(text) {
-        var toast = document.getElementById('toastMessage');
-        if (!toast) return;
-        toast.innerText = text;
-        toast.style.display = 'block';
-        if (toastTimer) clearTimeout(toastTimer);
-        toastTimer = setTimeout(function() {
-            toast.style.display = 'none';
-        }, 2600);
+    // MP4 변환 작업 취소 플래그
+    var isMp4ConversionCancelled = false;
+
+    // 토스트 알림 함수
+    function showToast(msg) {
+        var box = document.getElementById('toastBox');
+        box.innerText = msg;
+        box.style.display = 'block';
+        clearTimeout(box._timer);
+        box._timer = setTimeout(function() {
+            box.style.display = 'none';
+        }, 2200);
     }
 
-    var confirmCallback = null;
-    function showConfirmModal(text, onOk) {
-        document.getElementById('confirmModalText').innerText = text;
-        confirmCallback = onOk;
-        document.getElementById('btnConfirmOk').onclick = function() {
-            closeConfirmModal();
-            if (confirmCallback) confirmCallback();
-        };
-        document.getElementById('confirmModal').style.display = 'flex';
-    }
-
-    function closeConfirmModal() {
-        document.getElementById('confirmModal').style.display = 'none';
-        confirmCallback = null;
-    }
-
-    // 가이드 모달 제어
     function openHelpModal() {
-        var modal = document.getElementById('helpModal');
-        if (modal) modal.style.display = 'flex';
+        document.getElementById('helpModal').style.display = 'flex';
     }
     function closeHelpModal() {
-        var modal = document.getElementById('helpModal');
-        if (modal) modal.style.display = 'none';
+        document.getElementById('helpModal').style.display = 'none';
     }
+    window.openHelpModal = openHelpModal;
+    window.closeHelpModal = closeHelpModal;
 
-    // ==========================================
-    // [설정 모드 (골반처짐 엄격모드 & 480p/720p)]
-    // ==========================================
     function setExerciseMode(mode) {
-        if (isTimerRunning || isCountingDown) return;
+        if (isTimerRunning || isCountingDown || isUploadAnalysisMode) return;
         exerciseMode = mode;
         if (mode === "FLOOR") {
             document.getElementById('btnModeFloor').classList.add('active');
             document.getElementById('btnModeBar').classList.remove('active');
-            document.getElementById('txtModeDesc').innerText = "맨땅 (팔 ≤100° / 골반처짐 <162° 엄격감지)";
+            document.getElementById('txtModeDesc').innerText = "맨땅 평지 (팔 100° 이하 / 코어 162° 이상)";
             document.getElementById('lblElbowThreshold').innerText = "팔꿈치(≤100°)";
-            document.getElementById('lblCoreThreshold').innerText = "코어(≥162°/엄격)";
-            document.getElementById('fsModeTag').innerText = "맨땅(엄격)";
+            document.getElementById('lblCoreThreshold').innerText = "코어(≥162°)";
+            document.getElementById('fsModeTag').innerText = "맨땅";
         } else {
             document.getElementById('btnModeBar').classList.add('active');
             document.getElementById('btnModeFloor').classList.remove('active');
-            document.getElementById('txtModeDesc').innerText = "30cm 봉 (팔 ≤105° / 골반처짐 <155° 엄격감지)";
+            document.getElementById('txtModeDesc').innerText = "30cm 봉 (팔 105° 이하 / 코어 155° 이상)";
             document.getElementById('lblElbowThreshold').innerText = "팔꿈치(≤105°/봉)";
-            document.getElementById('lblCoreThreshold').innerText = "코어(≥155°/엄격)";
-            document.getElementById('fsModeTag').innerText = "30cm봉(엄격)";
+            document.getElementById('lblCoreThreshold').innerText = "코어(≥155°)";
+            document.getElementById('fsModeTag').innerText = "30cm 봉";
         }
     }
 
-    function setRecordingResolution(res) {
-        if (isRecording || isTimerRunning) return;
+    function setRecordingRes(res) {
+        if (isRecording) {
+            showToast("측정 녹화 중에는 해상도를 변경할 수 없습니다.");
+            return;
+        }
         recordingRes = res;
-        if (res === '480p') {
-            document.getElementById('btnRes480p').classList.add('active');
-            document.getElementById('btnRes720p').classList.remove('active');
-            document.getElementById('txtResDesc').innerText = "480p (용량 최적화, 모바일 고속)";
+        if (res === "480p") {
+            document.getElementById('btnRes480').classList.add('active');
+            document.getElementById('btnRes720').classList.remove('active');
+            showToast("녹화 해상도가 480p(용량 최적화)로 설정되었습니다.");
         } else {
-            document.getElementById('btnRes720p').classList.add('active');
-            document.getElementById('btnRes480p').classList.remove('active');
-            document.getElementById('txtResDesc').innerText = "720p (선명한 HD 고화질)";
+            document.getElementById('btnRes720').classList.add('active');
+            document.getElementById('btnRes480').classList.remove('active');
+            showToast("녹화 해상도가 720p(선명한 HD)로 설정되었습니다.");
         }
     }
 
@@ -901,7 +844,7 @@
     }
 
     // ==========================================
-    // [메인 캔버스 30 FPS 직접 렌더링 파이프라인]
+    // [메인 캔버스 렌더링 파이프라인 (카메라 실제 화각 1:1 완벽 보존)]
     // ==========================================
     function startRenderPipeline() {
         if (renderLoopId) return;
@@ -909,30 +852,48 @@
         function loop() {
             renderLoopId = requestAnimationFrame(loop);
 
-            if (!cameraStarted && !isUploadMode) return;
+            var activeVideo = isUploadAnalysisMode ? uploadVideo : videoElement;
+            if (!cameraStarted && !isUploadAnalysisMode) return;
 
-            var activeSource = isUploadMode ? uploadedVideo : videoElement;
+            // 카메라 영상의 실제 원본 종횡비(가로:세로 비율) 감지
+            var vw = activeVideo.videoWidth;
+            var vh = activeVideo.videoHeight;
+            if (!vw || !vh) {
+                vw = (recordingRes === "480p") ? 854 : 1280;
+                vh = (recordingRes === "480p") ? 480 : 720;
+            }
 
-            var targetW = (recordingRes === '480p') ? 854 : 1280;
-            var targetH = (recordingRes === '480p') ? 480 : 720;
+            var vRatio = vw / vh;
+            var targetWidth, targetHeight;
 
-            if (canvasElement.width !== targetW || canvasElement.height !== targetH) {
-                canvasElement.width = targetW;
-                canvasElement.height = targetH;
+            // 카메라 원본 비율을 100% 온전히 유지하여 캔버스 크기 동적 동기화
+            if (recordingRes === "480p") {
+                targetHeight = 480;
+                targetWidth = Math.round(targetHeight * vRatio);
+                targetWidth = targetWidth - (targetWidth % 2); // 짝수 보정
+            } else {
+                targetHeight = 720;
+                targetWidth = Math.round(targetHeight * vRatio);
+                targetWidth = targetWidth - (targetWidth % 2); // 짝수 보정
+            }
+
+            if (canvasElement.width !== targetWidth || canvasElement.height !== targetHeight) {
+                canvasElement.width = targetWidth;
+                canvasElement.height = targetHeight;
             }
 
             var cw = canvasElement.width;
             var ch = canvasElement.height;
 
-            // 1. 카메라 또는 업로드 영상 피드 출력
+            // 1. 비디오 프레임 출력 (전면 카메라일 때만 거울 반전, 업로드 영상은 원본 유지)
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, cw, ch);
-            if (!isUploadMode && facingMode === "user") {
+            if (!isUploadAnalysisMode && facingMode === "user") {
                 canvasCtx.translate(cw, 0);
                 canvasCtx.scale(-1, 1);
             }
-            if (activeSource && activeSource.readyState >= 2) {
-                canvasCtx.drawImage(activeSource, 0, 0, cw, ch);
+            if (activeVideo && activeVideo.readyState >= 2) {
+                canvasCtx.drawImage(activeVideo, 0, 0, cw, ch);
             }
             canvasCtx.restore();
 
@@ -941,7 +902,7 @@
                 drawSkeletonOverlay(canvasCtx, cw, ch);
             }
 
-            // 3. 실시간 OSD 직각인 (녹화 영상에 시간/카운트/경고 반영)
+            // 3. 실시간 OSD 직각인 (녹화 영상에 시간/카운트/경고가 그대로 박힘)
             drawDirectOSD(canvasCtx, cw, ch);
         }
         renderLoopId = requestAnimationFrame(loop);
@@ -956,12 +917,12 @@
         var pN = smoothedCoords.n;
         var pA = smoothedCoords.a;
 
-        // 골반처짐 엄격 기준 연동 스켈레톤 색상
-        var coreStrictThreshold = (exerciseMode === "BAR") ? 155 : 162;
         var isPikeRest = (currentElbowAng >= 145 && currentCoreAng > 180);
-        var isBad = (currentCoreAng < coreStrictThreshold && !isPikeRest) || (currentKneeAng < 150) || repHasFault;
+        var isAngleBroken = currentCoreAng < (exerciseMode === "BAR" ? 155 : 162);
+        var isBad = (isAngleBroken && !isPikeRest) || (currentKneeAng < 150) || repHasFault;
         var boneColor = isBad ? "#ff3333" : (isPikeRest ? "#5dade2" : (state === "DOWN" ? "#e5a93c" : "#39e75f"));
 
+        // 4대 필수 관절선 연결
         drawBone(ctx, pS, pE, boneColor, 6);
         drawBone(ctx, pS, pP, boneColor, 6);
         drawBone(ctx, pP, pK, boneColor, 5);
@@ -975,7 +936,7 @@
 
         drawJoint(ctx, pS, "#39e75f", "어깨");
         drawJoint(ctx, pE, "#e5a93c", "팔 " + currentElbowAng + "°");
-        drawJoint(ctx, pP, isPikeRest ? "#5dade2" : (currentCoreAng < coreStrictThreshold ? "#ff3333" : "#f4d03f"), "골반 " + currentCoreAng + "°");
+        drawJoint(ctx, pP, isPikeRest ? "#5dade2" : "#f4d03f", "골반 " + currentCoreAng + "°");
         drawJoint(ctx, pK, (currentKneeAng < 150) ? "#ff3333" : "#39e75f", "무릎 " + currentKneeAng + "°");
     }
 
@@ -990,18 +951,20 @@
         ctx.save();
 
         // 상단 좌측 OSD
+        var leftW = Math.min(270, cw * 0.48);
         ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
-        ctx.fillRect(8, 8, Math.min(260, cw * 0.48), 54);
+        ctx.fillRect(8, 8, leftW, 54);
         ctx.strokeStyle = "#233827";
         ctx.lineWidth = 1.5;
-        ctx.strokeRect(8, 8, Math.min(260, cw * 0.48), 54);
+        ctx.strokeRect(8, 8, leftW, 54);
 
         ctx.fillStyle = isPausedDueToNoBody ? "#ffae19" : (isRecording ? "#ff4444" : "#8b9b8e");
         ctx.beginPath();
         ctx.arc(20, 24, 4, 0, Math.PI * 2);
         ctx.fill();
         ctx.font = "bold 10.5px monospace";
-        ctx.fillText(isPausedDueToNoBody ? "PAUSED" : (isRecording ? "REC (" + recordingRes + " WebM)" : "STANDBY"), 28, 27);
+        var recTag = isUploadAnalysisMode ? "ANALYSIS (" + recordingRes + ")" : (isRecording ? "REC (" + recordingRes + ")" : "STANDBY");
+        ctx.fillText(isPausedDueToNoBody ? "PAUSED" : recTag, 28, 27);
 
         ctx.fillStyle = "#ffffff";
         ctx.font = "9.5px monospace";
@@ -1009,10 +972,10 @@
 
         ctx.fillStyle = "#39e75f";
         ctx.font = "bold 11px sans-serif";
-        ctx.fillText("교번 " + cId + " " + cName + (isUploadMode ? " [파일분석]" : ""), 18, 55);
+        ctx.fillText("교번 " + cId + " " + cName, 18, 55);
 
         // 상단 우측 OSD
-        var rightW = Math.min(260, cw * 0.48);
+        var rightW = Math.min(270, cw * 0.48);
         var rightX = cw - rightW - 8;
         ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
         ctx.fillRect(rightX, 8, rightW, 54);
@@ -1054,7 +1017,10 @@
     }
 
     // ==========================================
-    // [MediaPipe AI 자세 판정 (머리 숙임 제외 & 골반처짐 엄격화)]
+    // [MediaPipe AI 자세 판정 엔진]
+    // 1. 머리 움직임 완전 제외
+    // 2. 허공/배경 오인식 원천 차단
+    // 3. 골반 처짐(SAG) vs 골반 높음(HIGH_HIP) 해부학적 완벽 분리 판정
     // ==========================================
     function onPoseResults(results) {
         if (!results.poseLandmarks) {
@@ -1064,6 +1030,21 @@
 
         var lm = results.poseLandmarks;
 
+        // [신체 검증 1단계: 실제 사람 몸통 존재 여부 (허공 잡음 차단)]
+        var sVisL = lm[11] ? (lm[11].visibility || 0) : 0;
+        var sVisR = lm[12] ? (lm[12].visibility || 0) : 0;
+        var hVisL = lm[23] ? (lm[23].visibility || 0) : 0;
+        var hVisR = lm[24] ? (lm[24].visibility || 0) : 0;
+
+        var bestSVis = Math.max(sVisL, sVisR);
+        var bestHVis = Math.max(hVisL, hVisR);
+
+        if (bestSVis < 0.40 || (bestHVis < 0.30 && bestSVis < 0.55)) {
+            handleLostBuffer();
+            return;
+        }
+
+        // 양측성 최적 관절 동적 융합
         var leftScore = (lm[11].visibility || 0) + (lm[13].visibility || 0) + (lm[23].visibility || 0) + (lm[25].visibility || 0);
         var rightScore = (lm[12].visibility || 0) + (lm[14].visibility || 0) + (lm[24].visibility || 0) + (lm[26].visibility || 0);
         var preferLeft = leftScore >= rightScore;
@@ -1073,8 +1054,8 @@
             var pR = lm[idxR];
             var vL = (pL && pL.visibility != null) ? pL.visibility : 0;
             var vR = (pR && pR.visibility != null) ? pR.visibility : 0;
-            if (preferLeft && vL >= 0.18) return pL;
-            if (!preferLeft && vR >= 0.18) return pR;
+            if (preferLeft && vL >= 0.30) return pL;
+            if (!preferLeft && vR >= 0.30) return pR;
             return (vL >= vR) ? pL : pR;
         }
 
@@ -1088,12 +1069,23 @@
 
         function isPointValid(pt, minVis) {
             if (!pt) return false;
-            return (pt.visibility >= minVis && pt.x >= -0.20 && pt.x <= 1.20 && pt.y >= -0.20 && pt.y <= 1.20);
+            return (pt.visibility >= minVis && pt.x >= -0.05 && pt.x <= 1.05 && pt.y >= -0.05 && pt.y <= 1.05);
         }
 
-        // 골반 해부학적 추정 보정
-        var hipValid = isPointValid(hip, 0.18);
-        if (!hipValid && isPointValid(shoulder, 0.18) && isPointValid(knee, 0.18)) {
+        // [신체 검증 2단계: 신체 크기 비례 검증]
+        if (shoulder && hip) {
+            var dx = shoulder.x - hip.x;
+            var dy = shoulder.y - hip.y;
+            var torsoDist = Math.sqrt(dx * dx + dy * dy);
+            if (torsoDist < 0.08) {
+                handleLostBuffer();
+                return;
+            }
+        }
+
+        // [두꺼운 상의/야상 의복 가림 보정: 골반 해부학적 추정 복원]
+        var hipValid = isPointValid(hip, 0.30);
+        if (!hipValid && isPointValid(shoulder, 0.40) && isPointValid(knee, 0.35)) {
             hip = {
                 x: shoulder.x * 0.48 + knee.x * 0.52,
                 y: shoulder.y * 0.48 + knee.y * 0.52,
@@ -1103,12 +1095,11 @@
             hipValid = true;
         }
 
-        var isCoreComplete = isPointValid(shoulder, 0.18) &&
-                             isPointValid(elbow, 0.18) &&
+        var isCoreComplete = isPointValid(shoulder, 0.35) &&
+                             isPointValid(elbow, 0.30) &&
                              hipValid &&
-                             isPointValid(knee, 0.18);
+                             isPointValid(knee, 0.30);
 
-        // 8프레임 단기 관성 보간
         if (!isCoreComplete) {
             if (jointLostStreak < MAX_LOST_FRAMES && lastValidPoints.s && lastValidPoints.e && lastValidPoints.p && lastValidPoints.k) {
                 jointLostStreak++;
@@ -1137,10 +1128,7 @@
         var ch = canvasElement.height || 720;
 
         function mapX(valX) {
-            if (!isUploadMode && facingMode === "user") {
-                return (1 - valX) * cw;
-            }
-            return valX * cw;
+            return (!isUploadAnalysisMode && facingMode === "user") ? (1 - valX) * cw : valX * cw;
         }
 
         var rawPS = { x: mapX(shoulder.x), y: shoulder.y * ch };
@@ -1151,12 +1139,10 @@
         var rawPN = (nose && nose.visibility > 0.2) ? { x: mapX(nose.x), y: nose.y * ch } : null;
         var rawPA = (ankle && ankle.visibility > 0.18) ? { x: mapX(ankle.x), y: ankle.y * ch } : null;
 
-        // EMA 스무딩
         function smoothVal(prev, curr, alpha) {
             if (prev == null) return curr;
             return prev * (1 - alpha) + curr * alpha;
         }
-
         var a = 0.70;
         if (!smoothedCoords.s) {
             smoothedCoords.s = { x: rawPS.x, y: rawPS.y };
@@ -1191,34 +1177,57 @@
 
         updateHUDData(currentElbowAng, currentCoreAng, currentKneeAng);
 
-        // 골반 처짐(코어) 보수적 엄격 판정 기준: 맨땅 < 162° / 봉 모드 < 155°
-        var coreStrictThreshold = (exerciseMode === "BAR") ? 155 : 162;
         var isPikeRest = (currentElbowAng >= 145 && currentCoreAng > 180);
-        var isCoreSag = !isPikeRest && (currentCoreAng < coreStrictThreshold);
-        var isKneeTouch = (currentKneeAng < 150);
+        var isAngleBroken = (currentCoreAng < (exerciseMode === "BAR" ? 155 : 162));
 
-        var isWaveFault = false;
-        if (state === "DOWN" && currentElbowAng > 100 && currentElbowAng < 155) {
-            if (currentCoreAng < coreStrictThreshold) isWaveFault = true;
+        // ==========================================
+        // [골반 처짐 vs 골반 높음 분기 판정]
+        // 화면 좌표계: y는 아래로 갈수록 커짐
+        // ==========================================
+        var isCoreSag = false;
+        var isHipHigh = false;
+
+        if (isAngleBroken && !isPikeRest) {
+            // 어깨와 무릎을 잇는 기준 직선 상에서 골반 위치의 예상 Y값
+            var tRatio = (pK.x !== pS.x) ? (pP.x - pS.x) / (pK.x - pS.x) : 0.5;
+            var expectedY = pS.y + tRatio * (pK.y - pS.y);
+
+            // 1. 골반이 기준선/어깨보다 위쪽(천장 방향, y가 작음)으로 솟은 경우
+            if (pP.y < expectedY - 8 || pP.y < pS.y - 8) {
+                isHipHigh = true;
+                isCoreSag = false;
+            } 
+            // 2. 골반이 기준선/어깨보다 아래쪽(바닥 방향, y가 큼)으로 처진 경우
+            else {
+                isCoreSag = true;
+                isHipHigh = false;
+            }
         }
 
-        // [요청 반영: 머리쪽 관련 부정자세(isHeadBob) 판정 완전 제외]
-        var isCurrentMotionBad = isCoreSag || isKneeTouch || isWaveFault;
+        var isKneeTouch = (currentKneeAng < 150);
+        var isWaveFault = false;
+        if (state === "DOWN" && currentElbowAng > 100 && currentElbowAng < 155) {
+            if (currentCoreAng < (exerciseMode === "BAR" ? 155 : 162)) isWaveFault = true;
+        }
 
-        // 측정 진행 판정 루프
-        if (isTimerRunning && !isPausedDueToNoBody) {
+        var isCurrentMotionBad = isCoreSag || isHipHigh || isKneeTouch || isWaveFault;
+
+        // 판정 상태 머신 실행
+        if ((isTimerRunning || isUploadAnalysisMode) && !isPausedDueToNoBody) {
             if (isPikeRest) {
                 currentFaultBannerText = "🧘 엉덩이 솟음 휴식 중 (정상 휴식)";
                 isCurrentFaultWarn = false;
             } else if (isWaveFault) {
                 triggerMovementFault("WAVE", "상체 선행 상승 (배치기)", "상체만 먼저 일어납니다", "상승 코어: " + currentCoreAng + "°");
+            } else if (isHipHigh) {
+                triggerMovementFault("HIGH_HIP", "골반 높음 (엉덩이 솟음)", "골반이 높습니다", "코어: " + currentCoreAng + "°");
             } else if (isCoreSag) {
-                triggerMovementFault("SAG", "허리 숙여짐 (골반처짐 엄격감지)", "골반이 처졌습니다", "코어: " + currentCoreAng + "° (기준 ≥" + coreStrictThreshold + "°)");
+                triggerMovementFault("SAG", "허리 숙여짐 (골반 처짐)", "허리가 처졌습니다", "코어: " + currentCoreAng + "°");
             } else if (isKneeTouch) {
                 triggerMovementFault("KNEE", "무릎 닿음 (다리 굽힘)", "무릎이 닿았습니다", "무릎각: " + currentKneeAng + "°");
             }
 
-            // 1. 하강 단계
+            // 1. 하강 단계 (state === "UP")
             if (state === "UP") {
                 if (currentElbowAng >= 150) {
                     minElbowInCurrentRep = 180;
@@ -1238,7 +1247,6 @@
                     minElbowInCurrentRep = currentElbowAng;
                 }
 
-                // 하강 가드 (팔 140도 이상 펴져 있을 시 하강 불가)
                 var isDownTargetReached = false;
                 if (currentElbowAng < 140) {
                     if (exerciseMode === "BAR") {
@@ -1260,7 +1268,7 @@
                     minElbowInCurrentRep = 180;
                 }
             } 
-            // 2. 상승 단계
+            // 2. 상승 단계 (state === "DOWN")
             else if (state === "DOWN") {
                 if (currentElbowAng > maxElbowInCurrentRep) {
                     maxElbowInCurrentRep = currentElbowAng;
@@ -1269,7 +1277,7 @@
                 if (currentElbowAng >= 150) {
                     var isFullRom = (currentElbowAng - minElbowInCurrentRep >= 30);
 
-                    if (isFullRom && !repHasFault && !isCoreSag && !isKneeTouch && !isWaveFault) {
+                    if (isFullRom && !repHasFault && !isCoreSag && !isHipHigh && !isKneeTouch && !isWaveFault) {
                         repCount++;
                         currentFaultBannerText = "정자세 인정 (" + repCount + "회)";
                         isCurrentFaultWarn = false;
@@ -1309,6 +1317,10 @@
         minElbowInCurrentRep = 180;
         maxElbowInCurrentRep = 90;
 
+        smoothedCoords = { s: null, e: null, p: null, k: null, w: null, n: null, a: null };
+        lastValidPoints = { s: null, e: null, p: null, k: null, w: null };
+        jointLostStreak = MAX_LOST_FRAMES;
+
         document.getElementById('txtTimerState').innerText = "⚠️ 핵심 관절 탐색 중 (일시 정지)";
         document.getElementById('txtTimerState').style.color = "#ff4d4d";
 
@@ -1327,8 +1339,8 @@
             wasCoreBodyDetected = true;
             isPausedDueToNoBody = false;
 
-            if (isTimerRunning) {
-                document.getElementById('txtTimerState').innerText = "측정 및 녹화 진행 중";
+            if (isTimerRunning || isUploadAnalysisMode) {
+                document.getElementById('txtTimerState').innerText = isUploadAnalysisMode ? "업로드 영상 정밀 분석 중" : "측정 및 녹화 진행 중";
                 document.getElementById('txtTimerState').style.color = "#39e75f";
             }
         }
@@ -1398,7 +1410,7 @@
         var emptyRow = document.getElementById('emptyRow');
         if (emptyRow) emptyRow.remove();
 
-        var elapsedSec = totalSeconds - remainingSeconds;
+        var elapsedSec = isUploadAnalysisMode ? Math.floor(uploadVideo.currentTime) : (totalSeconds - remainingSeconds);
         var m = Math.floor(elapsedSec / 60);
         var s = elapsedSec % 60;
         var timeStr = (m < 10 ? "0" + m : m) + "분 " + (s < 10 ? "0" + s : s) + "초";
@@ -1440,7 +1452,7 @@
     }
 
     function setTimerPreset(sec) {
-        if (isTimerRunning || isCountingDown) return;
+        if (isTimerRunning || isCountingDown || isUploadAnalysisMode) return;
         totalSeconds = sec;
         remainingSeconds = sec;
         updateTimerDisplay();
@@ -1450,7 +1462,7 @@
     }
 
     function applyCustomTimer() {
-        if (isTimerRunning || isCountingDown) return;
+        if (isTimerRunning || isCountingDown || isUploadAnalysisMode) return;
         var val = parseInt(document.getElementById('inCustomSec').value, 10);
         if (!isNaN(val) && val >= 10 && val <= 600) {
             totalSeconds = val;
@@ -1470,12 +1482,9 @@
         return str;
     }
 
-    // ==========================================
-    // [측정 시작 및 실행 분기]
-    // ==========================================
     function handleStartOrToggle() {
-        if (isUploadMode) {
-            toggleUploadVideoPlayback();
+        if (isUploadAnalysisMode) {
+            showToast("현재 촬영 영상 분석 모드입니다. 카메라 복귀 후 시작하십시오.");
             return;
         }
 
@@ -1506,8 +1515,8 @@
     function updateActionButtons(text, cls) {
         var btn1 = document.getElementById('btnMainAction');
         var btn2 = document.getElementById('btnFsAction');
-        btn1.innerText = text; btn1.className = "action-btn " + cls;
-        btn2.innerText = text; btn2.className = "action-btn " + cls;
+        if (btn1) { btn1.innerText = text; btn1.className = "action-btn " + cls; }
+        if (btn2) { btn2.innerText = text; btn2.className = "action-btn " + cls; }
     }
 
     function runPreCountdown() {
@@ -1558,7 +1567,7 @@
                 speak("측정 종료! 최종 " + repCount + "회입니다");
                 document.getElementById('txtTimerState').innerText = "측정 완료";
                 document.getElementById('txtTimerState').style.color = "#e5a93c";
-                updateActionButtons("📹 측정 시작 (WebM 녹화)", "btn-start");
+                updateActionButtons("📹 측정 시작", "btn-start");
             }
         }, 1000);
     }
@@ -1569,7 +1578,7 @@
     }
 
     // ==========================================
-    // [WebM 기본 녹화 (480p / 720p 지원)]
+    // [WebM 기본 녹화 엔진 & Duration 패처]
     // ==========================================
     function startRecording() {
         if (isRecording) return;
@@ -1578,26 +1587,10 @@
 
         try {
             var stream = canvasElement.captureStream(30);
+            var mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp8") ? "video/webm;codecs=vp8" : "video/webm";
+            var bps = (recordingRes === "480p") ? 1200000 : 2500000;
 
-            var candidateTypes = [
-                "video/webm;codecs=vp9",
-                "video/webm;codecs=vp8",
-                "video/webm",
-                "video/mp4"
-            ];
-
-            var selectedMime = "";
-            for (var i = 0; i < candidateTypes.length; i++) {
-                if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(candidateTypes[i])) {
-                    selectedMime = candidateTypes[i];
-                    break;
-                }
-            }
-            lastRecordedMime = selectedMime || "video/webm";
-
-            var bps = (recordingRes === '480p') ? 1200000 : 2500000;
-            var options = { mimeType: lastRecordedMime, videoBitsPerSecond: bps };
-            mediaRecorder = new MediaRecorder(stream, options);
+            mediaRecorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: bps });
 
             mediaRecorder.ondataavailable = function(e) {
                 if (e.data && e.data.size > 0) {
@@ -1606,20 +1599,19 @@
             };
 
             mediaRecorder.onstop = function() {
-                var rawBlob = new Blob(recordedChunks, { type: lastRecordedMime || "video/webm" });
+                var rawBlob = new Blob(recordedChunks, { type: "video/webm" });
                 var elapsedMs = Math.max(1000, Date.now() - recordingStartTimestamp);
 
                 fixWebmDuration(rawBlob, elapsedMs, function(finalBlob) {
                     lastRecordedBlob = finalBlob;
-                    mp4ConvertSourceBlob = finalBlob;
-                    saveSessionToDB(finalBlob, currentSessionFaultLogs.slice());
+                    saveSessionToDB(finalBlob, currentSessionFaultLogs.slice(), isUploadAnalysisMode ? "업로드분석" : "실시간측정");
                     document.getElementById('saveAlertModal').style.display = 'flex';
                 });
             };
 
             mediaRecorder.start(500);
             isRecording = true;
-            document.getElementById('fsRecStatus').innerText = "🔴 REC (" + recordingRes + " WebM)";
+            document.getElementById('fsRecStatus').innerText = "🔴 REC (WebM " + recordingRes + ")";
         } catch (err) {
             console.warn("녹화 시작 실패: " + err.message);
         }
@@ -1674,9 +1666,7 @@
 
                 var durPos = -1;
                 for (var j = infoDataStart; j < Math.min(infoDataStart + 600, bytes.length - 10); j++) {
-                    if ((bytes[j] === 0x16 && bytes[j+1] === 0x54) || (bytes[j] === 0x1F && bytes[j+1] === 0x43)) {
-                        break;
-                    }
+                    if ((bytes[j] === 0x16 && bytes[j+1] === 0x54) || (bytes[j] === 0x1F && bytes[j+1] === 0x43)) break;
                     if (bytes[j] === 0x44 && bytes[j+1] === 0x89) {
                         durPos = j;
                         break;
@@ -1732,317 +1722,280 @@
     }
 
     // ==========================================
-    // [카카오톡 공유용 WebM ➔ MP4 변환]
+    // [카카오톡 공유용 WebM ➔ MP4 고속 변환 엔진]
     // ==========================================
-    function setMp4ConvertTargetRes(res) {
-        mp4TargetRes = res;
-        if (res === '480p') {
-            document.getElementById('btnMp4Res480p').classList.add('active');
-            document.getElementById('btnMp4Res720p').classList.remove('active');
-        } else {
-            document.getElementById('btnMp4Res720p').classList.add('active');
-            document.getElementById('btnMp4Res480p').classList.remove('active');
-        }
-    }
-
-    function openMp4ConvertFromLastSession() {
+    function startKakaoMp4ConvertFromCurrent() {
         if (!lastRecordedBlob) {
-            showToast("변환할 측정 영상이 없습니다.");
+            showToast("변환할 녹화 영상이 없습니다.");
             return;
         }
-        mp4ConvertSourceBlob = lastRecordedBlob;
-        document.getElementById('mp4ConvertModal').style.display = 'flex';
-        resetMp4ProgressUI();
+        convertWebmToKakaoMp4(lastRecordedBlob);
     }
 
-    function openMp4ConvertFromPlayingVideo() {
+    function startKakaoMp4ConvertFromPlaying() {
         if (!currentPlayingBlob) {
-            showToast("재생 중인 영상 데이터가 없습니다.");
+            showToast("재생 중인 영상이 없습니다.");
             return;
         }
-        mp4ConvertSourceBlob = currentPlayingBlob;
-        document.getElementById('mp4ConvertModal').style.display = 'flex';
-        resetMp4ProgressUI();
+        convertWebmToKakaoMp4(currentPlayingBlob);
     }
 
-    function closeMp4ConvertModal() {
-        document.getElementById('mp4ConvertModal').style.display = 'none';
-        resetMp4ProgressUI();
-    }
+    async function convertWebmToKakaoMp4(webmBlob) {
+        var modal = document.getElementById('mp4ConvertModal');
+        var pBar = document.getElementById('mp4ProgressBar');
+        var pText = document.getElementById('mp4ProgressPercent');
+        var sText = document.getElementById('mp4ConvertStatusText');
+        modal.style.display = 'flex';
+        pBar.style.width = '0%';
+        pText.innerText = '0%';
+        sText.innerText = '카카오톡용 MP4 컨테이너 초기화 중...';
+        isMp4ConversionCancelled = false;
 
-    function resetMp4ProgressUI() {
-        document.getElementById('mp4ProgressArea').style.display = 'none';
-        document.getElementById('mp4ProgressBarFill').style.width = '0%';
-        document.getElementById('mp4ProgressPercentText').innerText = '0%';
-        document.getElementById('mp4ProgressStatusText').innerText = '인코딩 준비 중...';
-        document.getElementById('mp4ActionGroup').style.display = 'flex';
-    }
+        var tempVideo = document.createElement('video');
+        tempVideo.muted = true;
+        tempVideo.playsInline = true;
+        var tempUrl = URL.createObjectURL(webmBlob);
+        tempVideo.src = tempUrl;
 
-    async function executeMp4Conversion() {
-        if (!mp4ConvertSourceBlob) {
-            showToast("변환 대상 영상이 유효하지 않습니다.");
-            return;
-        }
+        await new Promise(function(resolve) {
+            tempVideo.onloadedmetadata = resolve;
+            tempVideo.onerror = resolve;
+        });
 
-        if (!window.VideoEncoder || typeof Mp4Muxer === 'undefined') {
-            showToast("이 브라우저는 WebCodecs를 지원하지 않아 MP4 변환 대신 WebM 원본을 저장합니다.");
-            downloadBlobFile(mp4ConvertSourceBlob, "측정영상_원본.webm");
-            closeMp4ConvertModal();
-            return;
-        }
-
-        document.getElementById('mp4ActionGroup').style.display = 'none';
-        document.getElementById('mp4ProgressArea').style.display = 'block';
-        document.getElementById('mp4ProgressStatusText').innerText = "영상 디코딩 및 MP4 인코딩 중...";
+        var duration = tempVideo.duration || 10;
+        var targetW = canvasElement.width || 854;
+        var targetH = canvasElement.height || 480;
 
         try {
-            var tempVideo = document.createElement('video');
-            tempVideo.playsInline = true;
-            tempVideo.muted = true;
-            tempVideo.src = URL.createObjectURL(mp4ConvertSourceBlob);
+            if (typeof Mp4Muxer !== 'undefined' && window.VideoEncoder) {
+                var muxer = new Mp4Muxer.Muxer({
+                    target: new Mp4Muxer.ArrayBufferTarget(),
+                    video: {
+                        codec: 'avc',
+                        width: targetW,
+                        height: targetH
+                    },
+                    fastStart: 'in-memory'
+                });
 
-            await new Promise(function(resolve, reject) {
-                tempVideo.onloadedmetadata = resolve;
-                tempVideo.onerror = reject;
-            });
+                var videoEncoder = new VideoEncoder({
+                    output: function(chunk, meta) { muxer.addVideoChunk(chunk, meta); },
+                    error: function(e) { console.error("Encoder error:", e); }
+                });
 
-            var duration = tempVideo.duration || 1;
-            var outW = (mp4TargetRes === '480p') ? 854 : 1280;
-            var outH = (mp4TargetRes === '480p') ? 480 : 720;
+                videoEncoder.configure({
+                    codec: 'avc1.42E01E',
+                    width: targetW,
+                    height: targetH,
+                    bitrate: (recordingRes === "480p") ? 1500000 : 2800000
+                });
 
-            var offCanvas = document.createElement('canvas');
-            offCanvas.width = outW;
-            offCanvas.height = outH;
-            var offCtx = offCanvas.getContext('2d');
+                sText.innerText = '초고속 H.264 하드웨어 변환 진행 중...';
+                var offCanvas = document.createElement('canvas');
+                offCanvas.width = targetW;
+                offCanvas.height = targetH;
+                var offCtx = offCanvas.getContext('2d');
 
-            var muxer = new Mp4Muxer.Muxer({
-                target: new Mp4Muxer.ArrayBufferTarget(),
-                video: {
-                    codec: 'avc',
-                    width: outW,
-                    height: outH
-                },
-                fastStart: 'in-memory'
-            });
+                var fps = 30;
+                var totalFrames = Math.ceil(duration * fps);
+                var frameInterval = 1 / fps;
 
-            var videoEncoder = new VideoEncoder({
-                output: function(chunk, meta) {
-                    muxer.addVideoChunk(chunk, meta);
-                },
-                error: function(e) {
-                    console.error("VideoEncoder Error:", e);
+                for (var f = 0; f < totalFrames; f++) {
+                    if (isMp4ConversionCancelled) {
+                        videoEncoder.close();
+                        URL.revokeObjectURL(tempUrl);
+                        modal.style.display = 'none';
+                        return;
+                    }
+
+                    var curTime = f * frameInterval;
+                    tempVideo.currentTime = curTime;
+                    await new Promise(function(r) { tempVideo.onseeked = r; });
+
+                    offCtx.drawImage(tempVideo, 0, 0, targetW, targetH);
+                    var frame = new VideoFrame(offCanvas, { timestamp: Math.round(curTime * 1000000) });
+                    videoEncoder.encode(frame, { keyFrame: (f % 60 === 0) });
+                    frame.close();
+
+                    var pct = Math.round(((f + 1) / totalFrames) * 100);
+                    pBar.style.width = pct + '%';
+                    pText.innerText = pct + '% (' + (f + 1) + '/' + totalFrames + ' 프레임)';
                 }
-            });
 
-            var bps = (mp4TargetRes === '480p') ? 1400000 : 2800000;
-            videoEncoder.configure({
-                codec: 'avc1.42E01E',
-                width: outW,
-                height: outH,
-                bitrate: bps,
-                framerate: 30
-            });
+                await videoEncoder.flush();
+                muxer.finalize();
+                var buffer = muxer.target.buffer;
+                var mp4Blob = new Blob([buffer], { type: 'video/mp4' });
 
-            var fps = 30;
-            var frameInterval = 1 / fps;
-            var totalFrames = Math.floor(duration * fps);
-            var currentFrame = 0;
-
-            for (var t = 0; t < duration; t += frameInterval) {
-                tempVideo.currentTime = t;
-                await new Promise(function(r) { tempVideo.onseeked = r; });
-
-                offCtx.drawImage(tempVideo, 0, 0, outW, outH);
-                var vFrame = new VideoFrame(offCanvas, { timestamp: Math.round(t * 1000000) });
-                var keyFrame = (currentFrame % (fps * 2) === 0);
-                videoEncoder.encode(vFrame, { keyFrame: keyFrame });
-                vFrame.close();
-
-                currentFrame++;
-                var pct = Math.min(99, Math.round((currentFrame / totalFrames) * 100));
-                document.getElementById('mp4ProgressBarFill').style.width = pct + '%';
-                document.getElementById('mp4ProgressPercentText').innerText = pct + '%';
+                URL.revokeObjectURL(tempUrl);
+                modal.style.display = 'none';
+                showToast("🎉 카카오톡 전송용 MP4 변환 완료!");
+                downloadBlobFile(mp4Blob, "카톡공유용_측정영상_" + recordingRes + ".mp4");
+                return;
             }
-
-            await videoEncoder.flush();
-            muxer.finalize();
-
-            var mp4Buffer = muxer.target.buffer;
-            var mp4Blob = new Blob([mp4Buffer], { type: 'video/mp4' });
-
-            document.getElementById('mp4ProgressBarFill').style.width = '100%';
-            document.getElementById('mp4ProgressPercentText').innerText = '100%';
-            document.getElementById('mp4ProgressStatusText').innerText = '변환 완료! 다운로드합니다.';
-
-            var cId = document.getElementById('inCadetId').value.trim() || "000";
-            var cName = document.getElementById('inCadetName').value.trim() || "후보생";
-            var fileName = cId + "_" + cName + "_카톡공유용_" + mp4TargetRes + ".mp4";
-
-            setTimeout(function() {
-                downloadBlobFile(mp4Blob, fileName);
-                closeMp4ConvertModal();
-                showToast("카카오톡 전송용 MP4 파일이 저장되었습니다.");
-            }, 600);
-
         } catch (err) {
-            console.warn("MP4 인코딩 실패:", err);
-            showToast("MP4 변환 중 문제가 발생하여 WebM 파일로 다운로드합니다.");
-            downloadBlobFile(mp4ConvertSourceBlob, "측정영상_WebM.webm");
-            closeMp4ConvertModal();
+            console.warn("Fast-Start 하드웨어 인코더 우회, 실시간 레코더 폴백 사용:", err);
         }
+
+        // 폴백
+        sText.innerText = '표준 캔버스 MP4 재인코딩 진행 중...';
+        var cvCanvas = document.createElement('canvas');
+        cvCanvas.width = targetW;
+        cvCanvas.height = targetH;
+        var cvCtx = cvCanvas.getContext('2d');
+        var cvStream = cvCanvas.captureStream(30);
+
+        var fallbackMime = MediaRecorder.isTypeSupported("video/mp4;codecs=avc1") ? "video/mp4;codecs=avc1" : (MediaRecorder.isTypeSupported("video/mp4") ? "video/mp4" : "video/webm");
+        var fbRecorder = new MediaRecorder(cvStream, { mimeType: fallbackMime, videoBitsPerSecond: 2000000 });
+        var fbChunks = [];
+        fbRecorder.ondataavailable = function(e) { if (e.data && e.data.size > 0) fbChunks.push(e.data); };
+
+        fbRecorder.onstop = function() {
+            URL.revokeObjectURL(tempUrl);
+            modal.style.display = 'none';
+            var finalMp4 = new Blob(fbChunks, { type: fallbackMime });
+            showToast("🎉 MP4 변환 완료!");
+            downloadBlobFile(finalMp4, "카톡공유용_측정영상_" + recordingRes + ".mp4");
+        };
+
+        fbRecorder.start(200);
+        tempVideo.playbackRate = 1.5;
+        tempVideo.play();
+
+        function stepDraw() {
+            if (tempVideo.paused || tempVideo.ended || isMp4ConversionCancelled) {
+                fbRecorder.stop();
+                return;
+            }
+            cvCtx.drawImage(tempVideo, 0, 0, targetW, targetH);
+            var pct = Math.min(99, Math.round((tempVideo.currentTime / duration) * 100));
+            pBar.style.width = pct + '%';
+            pText.innerText = pct + '%';
+            requestAnimationFrame(stepDraw);
+        }
+        stepDraw();
+
+        tempVideo.onended = function() {
+            pBar.style.width = '100%';
+            pText.innerText = '100%';
+            if (fbRecorder.state !== 'inactive') fbRecorder.stop();
+        };
+    }
+
+    function cancelMp4Convert() {
+        isMp4ConversionCancelled = true;
+        document.getElementById('mp4ConvertModal').style.display = 'none';
+        showToast("MP4 변환이 취소되었습니다.");
     }
 
     // ==========================================
-    // [촬영 영상 업로드 AI 분석 엔진]
+    // [촬영 동영상 파일 업로드 AI 사후 측정/분석]
     // ==========================================
-    function triggerVideoFileUpload() {
+    function triggerVideoUpload() {
         if (isTimerRunning || isRecording) {
-            showToast("실시간 측정을 먼저 종료하십시오.");
+            showToast("실시간 측정이 진행 중입니다. 일시정지 또는 리셋 후 업로드하십시오.");
             return;
         }
-        var fileIn = document.getElementById('videoFileInput');
-        if (fileIn) fileIn.click();
+        document.getElementById('videoFileInput').click();
     }
 
-    function handleVideoFileSelected(event) {
-        var file = event.target.files && event.target.files[0];
+    function onVideoFileSelected(e) {
+        var file = e.target.files && e.target.files[0];
         if (!file) return;
+
+        resetAll();
+        isUploadAnalysisMode = true;
+        initPoseModel();
 
         if (camera) {
             camera.stop();
-            camera = null;
+            cameraStarted = false;
         }
-        cameraStarted = false;
-        isUploadMode = true;
 
-        initPoseModel();
+        var url = URL.createObjectURL(file);
+        uploadVideo.src = url;
+        uploadVideo.playbackRate = uploadPlaySpeed;
 
-        var fileUrl = URL.createObjectURL(file);
-        uploadedVideo.src = fileUrl;
-        uploadedVideo.load();
-
-        document.getElementById('uploadAnalysisPanel').style.display = 'flex';
-        document.getElementById('btnMainAction').innerText = "📂 분석 영상 재생/일시정지";
-        document.getElementById('txtTimerState').innerText = "영상 파일 분석 대기";
-        document.getElementById('txtTimerState').style.color = "#39e75f";
-
-        repCount = 0;
-        failCount = 0;
-        state = "UP";
-        minElbowInCurrentRep = 180;
-        maxElbowInCurrentRep = 90;
-        repHasFault = false;
-        faultReasonCurrentRep = "";
-        currentSessionFaultLogs = [];
-        updateHUDData(0, 0, 0);
-
-        uploadedVideo.onloadedmetadata = function() {
-            totalSeconds = Math.round(uploadedVideo.duration || 60);
-            remainingSeconds = totalSeconds;
-            updateTimerDisplay();
+        uploadVideo.onloadedmetadata = function() {
+            document.getElementById('uploadCtrlBar').style.display = 'flex';
+            document.getElementById('txtTimerState').innerText = "업로드 영상 정밀 분석 중";
+            document.getElementById('txtTimerState').style.color = "#39e75f";
+            updateActionButtons("📂 영상 분석 중", "btn-pause");
             startRenderPipeline();
-            showToast("동영상 파일이 로드되었습니다. 분석을 시작합니다.");
-            startUploadVideoAnalysis();
+            uploadVideo.play();
+            startRecording();
+            runUploadAnalysisLoop();
+            showToast("📂 동영상 AI 자세 분석을 시작합니다.");
         };
 
-        uploadedVideo.onended = function() {
+        uploadVideo.onended = function() {
             stopRecording();
-            stopTimer();
-            showToast("업로드 영상 분석이 완료되었습니다!");
-            document.getElementById('btnUploadPlayPause').innerText = "▶️ 다시재생";
-            document.getElementById('txtTimerState').innerText = "분석 완료";
+            document.getElementById('txtTimerState').innerText = "영상 분석 완료 (" + repCount + "회)";
             document.getElementById('txtTimerState').style.color = "#e5a93c";
+            speak("영상 분석 완료! 최종 " + repCount + "회입니다.");
         };
+
+        e.target.value = "";
     }
 
-    function startUploadVideoAnalysis() {
-        uploadedVideo.play();
-        isTimerRunning = true;
-        document.getElementById('btnUploadPlayPause').innerText = "⏸️ 일시정지";
+    function runUploadAnalysisLoop() {
+        if (!isUploadAnalysisMode) return;
 
-        startRecording();
+        if (uploadVideo.readyState >= 2 && !uploadVideo.paused && !uploadVideo.ended) {
+            pose.send({ image: uploadVideo });
 
-        function processUploadFrame() {
-            if (!isUploadMode || uploadedVideo.paused || uploadedVideo.ended) return;
-
-            pose.send({ image: uploadedVideo }).then(function() {
-                var cur = uploadedVideo.currentTime || 0;
-                var dur = uploadedVideo.duration || 1;
-                remainingSeconds = Math.max(0, Math.round(dur - cur));
-                updateTimerDisplay();
-
-                var pct = (cur / dur) * 100;
-                document.getElementById('uploadVideoSeeker').value = pct;
-                document.getElementById('uploadTimeStatus').innerText = formatSec(cur) + " / " + formatSec(dur);
-
-                if (uploadedVideo.requestVideoFrameCallback) {
-                    uploadedVideo.requestVideoFrameCallback(processUploadFrame);
-                } else {
-                    setTimeout(processUploadFrame, 33);
-                }
-            }).catch(function(e){
-                console.warn(e);
-            });
+            var cur = uploadVideo.currentTime || 0;
+            var dur = uploadVideo.duration || 1;
+            var cm = Math.floor(cur / 60);
+            var cs = Math.floor(cur % 60);
+            var dm = Math.floor(dur / 60);
+            var ds = Math.floor(dur % 60);
+            var pStr = (cm < 10 ? "0" + cm : cm) + ":" + (cs < 10 ? "0" + cs : cs) + " / " + (dm < 10 ? "0" + dm : dm) + ":" + (ds < 10 ? "0" + ds : ds);
+            document.getElementById('uploadProgressText').innerText = "분석: " + pStr;
         }
 
-        if (uploadedVideo.requestVideoFrameCallback) {
-            uploadedVideo.requestVideoFrameCallback(processUploadFrame);
+        uploadAnalysisFrameId = requestAnimationFrame(runUploadAnalysisLoop);
+    }
+
+    function toggleUploadPlayPause() {
+        var btn = document.getElementById('btnUploadPlayPause');
+        if (uploadVideo.paused) {
+            uploadVideo.play();
+            btn.innerText = "⏸ 일시정지";
         } else {
-            setTimeout(processUploadFrame, 33);
+            uploadVideo.pause();
+            btn.innerText = "▶ 재생";
         }
     }
 
-    function toggleUploadVideoPlayback() {
-        if (!isUploadMode) return;
-        if (uploadedVideo.paused) {
-            uploadedVideo.play();
-            isTimerRunning = true;
-            document.getElementById('btnUploadPlayPause').innerText = "⏸️ 일시정지";
+    function toggleUploadSpeed() {
+        var btn = document.getElementById('btnUploadSpeed');
+        if (uploadPlaySpeed === 1.0) {
+            uploadPlaySpeed = 1.5;
+            btn.innerText = "1.5x";
         } else {
-            uploadedVideo.pause();
-            isTimerRunning = false;
-            document.getElementById('btnUploadPlayPause').innerText = "▶️ 재생";
+            uploadPlaySpeed = 1.0;
+            btn.innerText = "1.0x";
         }
+        uploadVideo.playbackRate = uploadPlaySpeed;
     }
 
-    function seekUploadVideo(val) {
-        if (!isUploadMode || !uploadedVideo.duration) return;
-        var t = (val / 100) * uploadedVideo.duration;
-        uploadedVideo.currentTime = t;
-    }
-
-    function setUploadVideoRate(rate) {
-        if (!isUploadMode) return;
-        uploadedVideo.playbackRate = rate;
-        showToast("재생 속도: " + rate + "x");
-    }
-
-    function exitUploadAnalysisMode() {
-        if (!isUploadMode) return;
-        uploadedVideo.pause();
-        uploadedVideo.src = "";
-        isUploadMode = false;
-        stopRecording();
-        stopTimer();
-
-        document.getElementById('uploadAnalysisPanel').style.display = 'none';
-        document.getElementById('btnMainAction').innerText = "📹 실시간 측정 시작 (WebM 녹화)";
+    function exitUploadAnalysis() {
+        isUploadAnalysisMode = false;
+        cancelAnimationFrame(uploadAnalysisFrameId);
+        uploadVideo.pause();
+        uploadVideo.src = "";
+        document.getElementById('uploadCtrlBar').style.display = 'none';
         resetAll();
-        showToast("영상 파일 분석을 종료하고 카메라 모드로 복귀합니다.");
-    }
-
-    function formatSec(sec) {
-        var m = Math.floor(sec / 60);
-        var s = Math.floor(sec % 60);
-        return (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+        showToast("카메라 모드로 복귀했습니다.");
     }
 
     // ==========================================
-    // [IndexedDB & 다시보기 플레이어 (PiP 연동)]
+    // [IndexedDB & 다시보기 플레이어]
     // ==========================================
     var db = null;
     function initIndexedDB() {
-        var req = indexedDB.open("ArmyPushupDB_Final_V5_Muxer", 1);
+        var req = indexedDB.open("ArmyPushupDB_Final_4Joints_V3", 1);
         req.onupgradeneeded = function(e) {
             var database = e.target.result;
             if (!database.objectStoreNames.contains("sessions")) {
@@ -2055,13 +2008,14 @@
         };
     }
 
-    function saveSessionToDB(videoBlob, faultLogs) {
+    function saveSessionToDB(videoBlob, faultLogs, sessionType) {
         if (!db) return;
         var now = new Date();
         var dateFormatted = now.getFullYear() + "." + (now.getMonth() + 1 < 10 ? "0" : "") + (now.getMonth() + 1) + "." + (now.getDate() < 10 ? "0" : "") + now.getDate() + " " + (now.getHours() < 10 ? "0" : "") + now.getHours() + ":" + (now.getMinutes() < 10 ? "0" : "") + now.getMinutes();
 
         var cId = document.getElementById('inCadetId').value.trim() || "000";
         var cName = document.getElementById('inCadetName').value.trim() || "후보생";
+        var elSec = isUploadAnalysisMode ? Math.floor(uploadVideo.duration || 0) : (totalSeconds - remainingSeconds);
 
         var sessionData = {
             timestamp: Date.now(),
@@ -2071,11 +2025,11 @@
             repCount: repCount,
             failCount: failCount,
             totalSeconds: totalSeconds,
-            elapsedSeconds: totalSeconds - remainingSeconds,
+            elapsedSeconds: elSec,
+            sessionType: sessionType || "실시간",
+            recordingRes: recordingRes,
             faultLogs: faultLogs,
-            videoBlob: videoBlob,
-            resolution: recordingRes,
-            modeTag: (exerciseMode === "BAR" ? "봉(엄격)" : "맨땅(엄격)") + (isUploadMode ? " [파일]" : "")
+            videoBlob: videoBlob
         };
 
         var tx = db.transaction(["sessions"], "readwrite");
@@ -2105,16 +2059,17 @@
             var html = "";
             for (var i = 0; i < list.length; i++) {
                 var item = list[i];
+                var badgeType = item.sessionType === "업로드분석" ? '<span style="color:#2ecc71;">[📂영상분석]</span> ' : '<span style="color:#39e75f;">[📹실시간]</span> ';
                 html += '<div class="history-item">';
                 html += '  <div class="history-header">';
-                html += '    <span class="history-date">📅 ' + item.dateStr + ' [' + (item.resolution || "480p") + ']</span>';
-                html += '    <span class="history-stats">' + item.cadetId + '번 ' + item.cadetName + ' | 정자세 <b>' + item.repCount + '회</b> (부정 ' + item.failCount + '건)</span>';
+                html += '    <span class="history-date">📅 ' + item.dateStr + '</span>';
+                html += '    <span class="history-stats">' + badgeType + item.cadetId + '번 ' + item.cadetName + ' | 정자세 <b>' + item.repCount + '회</b> (부정 ' + item.failCount + '건)</span>';
                 html += '  </div>';
                 html += '  <div class="history-btns">';
-                html += '    <button type="button" class="btn-mini" onclick="playHistoryVideo(' + item.id + ')">▶️ 재생</button>';
-                html += '    <button type="button" class="btn-mini" onclick="downloadHistoryVideo(' + item.id + ')">💾 WebM</button>';
-                html += '    <button type="button" class="btn-mini btn-mini-mp4" onclick="openMp4ConvertFromHistory(' + item.id + ')">💬 카톡용 MP4</button>';
-                html += '    <button type="button" class="btn-mini" onclick="downloadHistoryCSV(' + item.id + ')">📊 엑셀</button>';
+                html += '    <button type="button" class="btn-mini" onclick="playHistoryVideo(' + item.id + ')">▶️ 영상 재생</button>';
+                html += '    <button type="button" class="btn-mini" onclick="downloadHistoryWebM(' + item.id + ')">💾 WebM 다운</button>';
+                html += '    <button type="button" class="btn-mini btn-mini-kakaomp4" onclick="convertHistoryItemToMp4(' + item.id + ')">💬 카톡용 MP4 변환</button>';
+                html += '    <button type="button" class="btn-mini" onclick="downloadHistoryCSV(' + item.id + ')">📊 엑셀 성적표</button>';
                 html += '    <button type="button" class="btn-mini" style="color:#ff6b6b;" onclick="askDeleteHistoryItem(' + item.id + ')">🗑️ 삭제</button>';
                 html += '  </div>';
                 html += '</div>';
@@ -2141,14 +2096,14 @@
             var url = URL.createObjectURL(item.videoBlob);
             player.src = url;
             player.playbackRate = 1.0;
-            player.play().catch(function(){});
+            player.play();
 
-            document.getElementById('playerModalTitle').querySelector('span').innerText = "📹 " + item.dateStr + " - " + item.cadetName + " (" + (item.modeTag || "") + ")";
+            document.getElementById('playerModalTitle').querySelector('span').innerText = "📹 " + item.dateStr + " - " + item.cadetName + " (" + (item.recordingRes || "480p") + ")";
 
             var tbody = document.getElementById('playerModalFaultBody');
             var fLogs = item.faultLogs || [];
             if (fLogs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#8b9b8e;">부정자세 기록 없음</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#8b9b8e;">부정자세 기록 없음 (완전 정자세)</td></tr>';
             } else {
                 var trs = "";
                 for (var j = 0; j < fLogs.length; j++) {
@@ -2166,7 +2121,38 @@
         };
     }
 
-    function openMp4ConvertFromHistory(id) {
+    function togglePiP() {
+        var player = document.getElementById('historyVideoPlayer');
+        if (player) {
+            if (document.pictureInPictureElement) {
+                document.exitPictureInPicture().catch(function(){});
+            } else if (player.requestPictureInPicture) {
+                player.requestPictureInPicture().catch(function(err){
+                    showToast("이 브라우저에서는 PiP 모드를 지원하지 않습니다: " + err.message);
+                });
+            }
+        }
+    }
+
+    function downloadPlayingVideo() {
+        if (!currentPlayingBlob) return;
+        downloadBlobFile(currentPlayingBlob, "측정다시보기영상_" + recordingRes + ".webm");
+    }
+
+    function downloadHistoryWebM(id) {
+        if (!db) return;
+        var tx = db.transaction(["sessions"], "readonly");
+        var store = tx.objectStore("sessions");
+        var req = store.get(id);
+        req.onsuccess = function() {
+            var item = req.result;
+            if (!item || !item.videoBlob) return;
+            var fileName = item.dateStr.replace(/[^0-9]/g, "_") + "_" + item.cadetId + "_" + item.cadetName + "_측정영상.webm";
+            downloadBlobFile(item.videoBlob, fileName);
+        };
+    }
+
+    function convertHistoryItemToMp4(id) {
         if (!db) return;
         var tx = db.transaction(["sessions"], "readonly");
         var store = tx.objectStore("sessions");
@@ -2177,28 +2163,8 @@
                 showToast("변환할 영상 데이터가 없습니다.");
                 return;
             }
-            mp4ConvertSourceBlob = item.videoBlob;
-            document.getElementById('mp4ConvertModal').style.display = 'flex';
-            resetMp4ProgressUI();
+            convertWebmToKakaoMp4(item.videoBlob);
         };
-    }
-
-    function togglePiP() {
-        var player = document.getElementById('historyVideoPlayer');
-        if (player) {
-            if (document.pictureInPictureElement) {
-                document.exitPictureInPicture().catch(function(){});
-            } else if (player.requestPictureInPicture) {
-                player.requestPictureInPicture().catch(function(err){
-                    showToast("이 브라우저에서는 PiP 모드를 지원하지 않습니다.");
-                });
-            }
-        }
-    }
-
-    function downloadPlayingVideo() {
-        if (!currentPlayingBlob) return;
-        downloadBlobFile(currentPlayingBlob, "측정다시보기_영상.webm");
     }
 
     function seekModalVideo(sec) {
@@ -2223,19 +2189,6 @@
         document.getElementById('videoPlayerModal').style.display = 'none';
     }
 
-    function downloadHistoryVideo(id) {
-        if (!db) return;
-        var tx = db.transaction(["sessions"], "readonly");
-        var store = tx.objectStore("sessions");
-        var req = store.get(id);
-        req.onsuccess = function() {
-            var item = req.result;
-            if (!item || !item.videoBlob) return;
-            var fileName = item.dateStr.replace(/[^0-9]/g, "_") + "_" + item.cadetId + "_" + item.cadetName + "_측정영상.webm";
-            downloadBlobFile(item.videoBlob, fileName);
-        };
-    }
-
     function downloadHistoryCSV(id) {
         if (!db) return;
         var tx = db.transaction(["sessions"], "readonly");
@@ -2244,50 +2197,61 @@
         req.onsuccess = function() {
             var item = req.result;
             if (!item) return;
-            generateAndDownloadCSV(item.cadetId, item.cadetName, item.dateStr, item.repCount, item.failCount, item.totalSeconds, item.elapsedSeconds, item.faultLogs, item.modeTag);
+            generateAndDownloadCSV(item.cadetId, item.cadetName, item.dateStr, item.repCount, item.failCount, item.totalSeconds, item.elapsedSeconds, item.faultLogs);
         };
     }
 
     function askDeleteHistoryItem(id) {
-        showConfirmModal("해당 측정 기록과 영상을 삭제하시겠습니까?", function() {
+        showConfirmModal("해당 측정 기록과 영상을 영구 삭제하시겠습니까?", function() {
             var tx = db.transaction(["sessions"], "readwrite");
             var store = tx.objectStore("sessions");
             store.delete(id);
             tx.oncomplete = function() {
                 renderHistoryList();
-                showToast("측정 기록이 삭제되었습니다.");
+                showToast("기록이 삭제되었습니다.");
             };
         });
     }
 
-    function askClearAllHistoryDB() {
-        showConfirmModal("모든 측정 이력과 영상을 영구 삭제하시겠습니까?", function() {
+    function askClearAllHistory() {
+        showConfirmModal("모든 날짜별 측정 이력과 영상을 영구 삭제하시겠습니까?", function() {
             var tx = db.transaction(["sessions"], "readwrite");
             var store = tx.objectStore("sessions");
             store.clear();
             tx.oncomplete = function() {
                 renderHistoryList();
-                showToast("모든 기록이 삭제되었습니다.");
+                showToast("전체 기록이 초기화되었습니다.");
             };
         });
     }
 
+    function showConfirmModal(msg, onOk) {
+        var modal = document.getElementById('confirmModal');
+        document.getElementById('confirmModalMsg').innerText = msg;
+        var btnOk = document.getElementById('btnConfirmOk');
+        btnOk.onclick = function() {
+            modal.style.display = 'none';
+            if (onOk) onOk();
+        };
+        modal.style.display = 'flex';
+    }
+
     // ==========================================
-    // [CSV 엑셀 내보내기 (줄바꿈 문법 오류 방지)]
+    // [CSV 엑셀 내보내기]
     // ==========================================
     function exportCurrentSessionCSV() {
         var cId = document.getElementById('inCadetId').value.trim() || "000";
         var cName = document.getElementById('inCadetName').value.trim() || "후보생";
         var dateFormatted = new Date().toLocaleString();
-        var tag = (exerciseMode === "BAR" ? "봉(엄격)" : "맨땅(엄격)") + (isUploadMode ? " [파일분석]" : "");
-        generateAndDownloadCSV(cId, cName, dateFormatted, repCount, failCount, totalSeconds, totalSeconds - remainingSeconds, currentSessionFaultLogs, tag);
+        var elSec = isUploadAnalysisMode ? Math.floor(uploadVideo.duration || 0) : (totalSeconds - remainingSeconds);
+        generateAndDownloadCSV(cId, cName, dateFormatted, repCount, failCount, totalSeconds, elSec, currentSessionFaultLogs);
     }
 
-    function generateAndDownloadCSV(cId, cName, dateStr, rCount, fCount, tSec, elSec, logs, modeTag) {
+    function generateAndDownloadCSV(cId, cName, dateStr, rCount, fCount, tSec, elSec, logs) {
         var lines = [];
         lines.push("\uFEFF=== 육군 팔굽혀펴기 정밀측정 종합결과표 ===");
         lines.push("측정일시," + dateStr);
-        lines.push("교번," + cId + ",성명," + cName + ",환경," + (modeTag || (exerciseMode === "BAR" ? "30cm봉" : "맨땅")));
+        lines.push("교번," + cId + ",성명," + cName + ",환경," + (exerciseMode === "BAR" ? "30cm봉" : "맨땅"));
         lines.push("설정시간," + tSec + "초,실제측정시간," + elSec + "초");
         lines.push("정자세 인정횟수," + rCount + "회,부정자세 누적건수," + fCount + "건");
         lines.push("");
@@ -2322,9 +2286,6 @@
         }, 150);
     }
 
-    // ==========================================
-    // [초기화 및 카메라 제어]
-    // ==========================================
     function resetAll() {
         stopTimer();
         stopRecording();
@@ -2350,6 +2311,10 @@
         isCurrentFaultWarn = false;
         currentSessionFaultLogs = [];
 
+        smoothedCoords = { s: null, e: null, p: null, k: null, w: null, n: null, a: null };
+        lastValidPoints = { s: null, e: null, p: null, k: null, w: null };
+        jointLostStreak = MAX_LOST_FRAMES;
+
         document.getElementById('cardCountWin').classList.remove('fault-active');
         document.getElementById('lblCountWin').innerText = "정자세";
         document.getElementById('repCountWin').innerText = "0";
@@ -2360,7 +2325,7 @@
         document.getElementById('logTableBody').innerHTML = '<tr id="emptyRow"><td colspan="3" style="text-align:center; color:#8b9b8e; padding:12px;">부정자세 기록이 없습니다.</td></tr>';
         document.getElementById('txtTimerState').innerText = "대기 중";
         document.getElementById('txtTimerState').style.color = "#8b9b8e";
-        updateActionButtons("📹 실시간 측정 시작 (WebM 녹화)", "btn-start");
+        updateActionButtons("📹 측정 시작 (녹화 ON)", "btn-start");
     }
 
     function initPoseModel() {
@@ -2374,19 +2339,22 @@
         pose.setOptions({
             modelComplexity: 1,
             smoothLandmarks: true,
-            minDetectionConfidence: 0.45,
-            minTrackingConfidence: 0.45
+            minDetectionConfidence: 0.60,
+            minTrackingConfidence: 0.55
         });
 
         pose.onResults(onPoseResults);
     }
 
+    // ==========================================
+    // [전면/후면 카메라 스트림 전환]
+    // ==========================================
     function startCameraStream() {
         if (camera) camera.stop();
 
         camera = new Camera(videoElement, {
             onFrame: async function() {
-                if (cameraStarted && !isUploadMode) {
+                if (cameraStarted && !isUploadAnalysisMode) {
                     await pose.send({ image: videoElement });
                 }
             },
@@ -2398,12 +2366,13 @@
     }
 
     function switchCamera() {
-        if (isUploadMode) {
-            showToast("영상 파일 분석 중에는 카메라를 전환할 수 없습니다.");
+        if (isUploadAnalysisMode) {
+            showToast("영상 분석 모드에서는 카메라 전환을 지원하지 않습니다.");
             return;
         }
         facingMode = (facingMode === "user") ? "environment" : "user";
         startCameraStream();
+        showToast((facingMode === "user" ? "전면(셀카)" : "후면") + " 카메라로 전환되었습니다.");
     }
 
     function updateHUDData(elbow, core, knee) {
@@ -2455,43 +2424,6 @@
             ctx.fillText(label, p.x + 8, p.y - 4);
         }
     }
-
-    // 전역 안전 바인딩
-    window.openHelpModal = openHelpModal;
-    window.closeHelpModal = closeHelpModal;
-    window.setExerciseMode = setExerciseMode;
-    window.setRecordingResolution = setRecordingResolution;
-    window.updateCadetDisplay = updateCadetDisplay;
-    window.setTimerPreset = setTimerPreset;
-    window.applyCustomTimer = applyCustomTimer;
-    window.handleStartOrToggle = handleStartOrToggle;
-    window.switchCamera = switchCamera;
-    window.triggerVideoFileUpload = triggerVideoFileUpload;
-    window.handleVideoFileSelected = handleVideoFileSelected;
-    window.toggleUploadVideoPlayback = toggleUploadVideoPlayback;
-    window.seekUploadVideo = seekUploadVideo;
-    window.setUploadVideoRate = setUploadVideoRate;
-    window.exitUploadAnalysisMode = exitUploadAnalysisMode;
-    window.resetAll = resetAll;
-    window.downloadLastRecordedVideo = downloadLastRecordedVideo;
-    window.exportCurrentSessionCSV = exportCurrentSessionCSV;
-    window.openMp4ConvertFromLastSession = openMp4ConvertFromLastSession;
-    window.openMp4ConvertFromPlayingVideo = openMp4ConvertFromPlayingVideo;
-    window.closeMp4ConvertModal = closeMp4ConvertModal;
-    window.setMp4ConvertTargetRes = setMp4ConvertTargetRes;
-    window.executeMp4Conversion = executeMp4Conversion;
-    window.playHistoryVideo = playHistoryVideo;
-    window.openMp4ConvertFromHistory = openMp4ConvertFromHistory;
-    window.downloadHistoryVideo = downloadHistoryVideo;
-    window.downloadHistoryCSV = downloadHistoryCSV;
-    window.askDeleteHistoryItem = askDeleteHistoryItem;
-    window.askClearAllHistoryDB = askClearAllHistoryDB;
-    window.togglePiP = togglePiP;
-    window.downloadPlayingVideo = downloadPlayingVideo;
-    window.seekModalVideo = seekModalVideo;
-    window.setPlaySpeed = setPlaySpeed;
-    window.closeVideoPlayerModal = closeVideoPlayerModal;
-    window.closeConfirmModal = closeConfirmModal;
 
     window.onload = function() {
         initIndexedDB();
