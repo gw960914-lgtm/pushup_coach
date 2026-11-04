@@ -7,7 +7,7 @@
     <!-- MediaPipe Pose CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-    <!-- mp4-muxer (카카오톡 Fast-Start MP4 변환 지원) -->
+    <!-- mp4-muxer (카카오톡 Fast-Start MP4 고속 변환) -->
     <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.4/build/mp4-muxer.min.js" crossorigin="anonymous"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -70,7 +70,6 @@
             border: none; background: #000;
         }
 
-        /* 비율 왜곡 없는 카메라 캔버스 렌더링 */
         canvas#outputCanvas {
             width: 100%;
             height: auto;
@@ -85,7 +84,6 @@
             object-fit: contain;
         }
         
-        /* 모바일 브라우저 프레임 디코딩 차단 방지 */
         video#inputVideo, video#uploadAnalysisVideo {
             position: absolute;
             top: -9999px;
@@ -397,7 +395,7 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">통합 최종본 v6.1</div>
+        <div class="badge">정밀판정 엔진 v6.2</div>
     </div>
 </header>
 
@@ -520,7 +518,7 @@
 
     <div class="card">
         <div class="card-title">
-            <span>⚠️ 실시간 부정자세 감지 이력 (3초 쿨다운 / 신규 즉각)</span>
+            <span>⚠️ 실시간 부정자세 감지 이력 (중복방지 및 정밀판정)</span>
             <span id="failCount" style="color:#ff6b6b; font-size:11px;">0건</span>
         </div>
         <div class="log-table-wrap">
@@ -553,10 +551,10 @@
             </div>
             <div class="guide-desc">
                 1. <b>4대 필수 정렬</b>: 어깨-팔꿈치-골반-무릎 4대 관절을 바르게 정렬합니다.<br>
-                2. <b>골반 보수적 엄격 관리</b>: 맨땅은 162° 이상, 봉 모드는 155° 이상으로 허리 처짐 및 엉덩이 솟음을 엄격히 방지합니다.<br>
-                3. <b>하강 깊이(심부선 완화)</b>: 맨땅은 100° 이하, 봉 모드는 105° 이하(또는 심부선)로 내려가면 충분 하강으로 인정됩니다.<br>
-                4. <b>완전 신전 및 가동범위</b>: 팔꿈치를 150° 이상 펴고, 최저점 대비 최소 30° 이상 가동범위가 확보되면 인정됩니다.<br>
-                5. <b>유일한 휴식(Pike Rest)</b>: 팔을 펴고 엉덩이를 천장으로 치켜올리는 자세만 감점 없이 휴식으로 인정됩니다.
+                2. <b>골반 엄격 정렬</b>: 맨땅은 162° 이상, 봉 모드는 155° 이상으로 허리 처짐 및 엉덩이 솟음을 방지합니다.<br>
+                3. <b>하강 깊이</b>: 맨땅 100° 이하, 봉 모드 105° 이하(또는 심부선)로 충분히 내려갑니다.<br>
+                4. <b>완전 신전 및 가동범위</b>: 팔꿈치를 150° 이상 펴고, 최저점 대비 최소 30° 이상 신전되어야 1회로 인정됩니다.<br>
+                5. <b>유일한 휴식(Pike Rest)</b>: 팔을 편 상태에서 엉덩이를 치켜올리는 휴식은 감점 없이 유지됩니다.
             </div>
         </div>
 
@@ -565,12 +563,12 @@
                 <span class="guide-tag-bad">❌ 대표 부정자세 6종 (경고 및 노카운트)</span>
             </div>
             <div class="guide-desc">
-                • <b>허리 숙여짐 (골반 처짐)</b>: 골반이 어깨선보다 바닥 쪽으로 푹 꺼지는 자세 ("허리가 처졌습니다")<br>
-                • <b>골반 높음 (엉덩이 솟음)</b>: 골반이 어깨선보다 천장 쪽으로 높게 치솟은 자세 ("골반이 높습니다")<br>
-                • <b>무릎 닿음</b>: 하강 또는 상승 시 무릎이 지면에 닿거나 굽혀지는 행위 (&lt; 150°)<br>
-                • <b>상체 선행 상승 (웨이브)</b>: 골반을 바닥에 남겨두고 가슴만 젖혀 일어나는 배치기<br>
-                • <b>덜 내려감 (심도 미도달)</b>: 팔꿈치를 기준선까지 굽히지 않고 튕겨 올라오는 행위<br>
-                • <b>팔꿈치 안 펴짐 (미신전)</b>: 올라왔을 때 팔을 끝까지 펴지 않고 다시 내려가는 행위
+                • <b>허리 숙여짐 (골반 처짐)</b>: 골반이 어깨선보다 바닥 쪽으로 처지는 자세 ("허리가 처졌습니다. 허리를 올리십시오")<br>
+                • <b>골반 높음 (엉덩이 솟음)</b>: 동작 중 골반이 위로 과도하게 치솟은 자세 ("골반이 높습니다. 골반을 낮추십시오")<br>
+                • <b>상체 선행 상승 (배치기)</b>: 골반을 바닥에 남겨두고 가슴만 젖혀 일어나는 행위 ("배치기 금지입니다")<br>
+                • <b>무릎 닿음</b>: 하강 또는 상승 시 무릎이 닿거나 굽혀지는 행위 ("무릎이 닿았습니다")<br>
+                • <b>덜 내려감 (심도 미도달)</b>: 팔꿈치를 기준선까지 굽히지 않고 올라오는 행위 ("덜 내려갔습니다")<br>
+                • <b>팔꿈치 안 펴짐 (미신전)</b>: 올라왔을 때 팔을 끝까지 펴지 않고 다시 내려가는 행위 ("팔을 끝까지 펴십시오")
             </div>
         </div>
     </div>
@@ -597,28 +595,28 @@
             <div class="help-step">
                 <div class="help-step-title">1. 스마트폰 카메라 세팅 (4대 필수 관절)</div>
                 <div class="help-step-desc">
-                    스마트폰을 신체 <b>측면 1.5m ~ 2.0m 거리</b> 바닥에 세워둡니다. <b>어깨, 팔꿈치, 골반, 무릎</b> 4대 필수 관절만 화면에 들어오면 머리, 손목, 발끝은 잘려도 정상 측정됩니다. (화각 비율이 찌그러지지 않고 원본 비율 그대로 출력됩니다)
+                    스마트폰을 신체 <b>측면 1.5m ~ 2.0m 거리</b> 바닥에 세워둡니다. <b>어깨, 팔꿈치, 골반, 무릎</b> 4대 필수 관절만 화면에 들어오면 머리, 손목, 발끝은 잘려도 정상 측정됩니다. (카메라 원본 화각 1:1 비율 보존)
                 </div>
             </div>
 
             <div class="help-step">
-                <div class="help-step-title">2. 허리 처짐 vs 골반 높음 정밀 구분</div>
+                <div class="help-step-title">2. 허리 처짐 vs 골반 높음 세분화 코칭</div>
                 <div class="help-step-desc">
-                    골반이 어깨보다 낮게 꺼지면 <b>"허리가 처졌습니다"</b>, 골반이 어깨보다 높게 치솟으면 <b>"골반이 높습니다"</b>로 세분화하여 정밀 음성 피드백을 제공합니다.
+                    골반이 바닥 쪽으로 꺼지면 <b>"허리가 처졌습니다. 허리를 올리십시오"</b>, 골반이 위로 솟으면 <b>"골반이 높습니다. 골반을 낮추십시오"</b>로 정확하게 지적하며 구체적인 교정 방향을 안내합니다.
                 </div>
             </div>
 
             <div class="help-step">
                 <div class="help-step-title">3. 촬영 영상 업로드 AI 분석 기능</div>
                 <div class="help-step-desc">
-                    기기에 미리 촬영해 둔 팔굽혀펴기 동영상을 <b>[📂 촬영 영상 업로드 분석]</b>으로 올리면, AI 스켈레톤을 입혀 횟수와 부정자세를 자동 측정하고 성적표를 생성합니다.
+                    미리 촬영해 둔 팔굽혀펴기 동영상을 <b>[📂 촬영 영상 업로드 분석]</b>으로 올리면, AI 스켈레톤을 입혀 횟수와 부정자세를 자동 측정하고 엑셀 성적표를 생성합니다.
                 </div>
             </div>
 
             <div class="help-step">
                 <div class="help-step-title">4. WebM 녹화 및 카카오톡용 MP4 변환</div>
                 <div class="help-step-desc">
-                    기본 녹화는 용량이 최적화된 WebM으로 저장되며, 카카오톡 전송 시 인앱 재생이 가능하도록 <b>원클릭 카톡용 MP4 변환(480p/720p)</b>을 지원합니다.
+                    기본 녹화는 용량이 최적화된 WebM으로 저장되며, 카카오톡 전송 시 인앱 재생이 가능하도록 <b>원클릭 카톡용 Fast-Start MP4 변환</b>을 지원합니다.
                 </div>
             </div>
         </div>
@@ -758,9 +756,19 @@
     var currentCoreAng = 0;
     var currentKneeAng = 0;
 
-    // 부정자세 피드백
+    // [부정자세 판정 정확도 향상: 지속성 검증 및 절대 쿨다운]
+    var faultSustainedCounts = {
+        "SAG": 0,
+        "HIGH_HIP": 0,
+        "WAVE": 0,
+        "KNEE": 0,
+        "SHALLOW": 0,
+        "INCOMPLETE": 0
+    };
+    var lastAnyFaultTime = 0;
+    var FAULT_COOLDOWN_MS = 2500; // 2.5초 절대 쿨다운 (말 끊김 및 음성 겹침 원천 차단)
     var lastFaultKey = "";
-    var lastFaultTime = 0;
+
     var repHasFault = false;
     var faultReasonCurrentRep = "";
     var currentFaultBannerText = "준비 자세 유지 중";
@@ -917,7 +925,8 @@
         var pN = smoothedCoords.n;
         var pA = smoothedCoords.a;
 
-        var isPikeRest = (currentElbowAng >= 145 && currentCoreAng > 180);
+        var hipDev = getHipDeviation(pS, pP, pK);
+        var isPikeRest = (currentElbowAng >= 140 && hipDev < -15);
         var isAngleBroken = currentCoreAng < (exerciseMode === "BAR" ? 155 : 162);
         var isBad = (isAngleBroken && !isPikeRest) || (currentKneeAng < 150) || repHasFault;
         var boneColor = isBad ? "#ff3333" : (isPikeRest ? "#5dade2" : (state === "DOWN" ? "#e5a93c" : "#39e75f"));
@@ -1017,10 +1026,27 @@
     }
 
     // ==========================================
+    // [해부학적 골반 수직 편차 계산 함수]
+    // 어깨(S)와 무릎(K)을 잇는 직선 상에서 골반(P)의 수직 이탈 거리 측정
+    // 화면 좌표계(Y축 아래가 양수):
+    // 반환값 > 0: 골반이 바닥 쪽으로 처짐 (Sagging)
+    // 반환값 < 0: 골반이 천장 쪽으로 솟음 (High Hip / Pike)
+    // ==========================================
+    function getHipDeviation(pS, pP, pK) {
+        if (!pS || !pP || !pK) return 0;
+        var dx = pK.x - pS.x;
+        if (Math.abs(dx) < 15) return 0; // 극단적인 수직 각도 방어
+        var t = (pP.x - pS.x) / dx;
+        var expectedY = pS.y + t * (pK.y - pS.y);
+        return pP.y - expectedY;
+    }
+
+    // ==========================================
     // [MediaPipe AI 자세 판정 엔진]
     // 1. 머리 움직임 완전 제외
     // 2. 허공/배경 오인식 원천 차단
     // 3. 골반 처짐(SAG) vs 골반 높음(HIGH_HIP) 해부학적 완벽 분리 판정
+    // 4. Pike 정상 휴식 판정 버그 해결
     // ==========================================
     function onPoseResults(results) {
         if (!results.poseLandmarks) {
@@ -1177,38 +1203,43 @@
 
         updateHUDData(currentElbowAng, currentCoreAng, currentKneeAng);
 
-        var isPikeRest = (currentElbowAng >= 145 && currentCoreAng > 180);
-        var isAngleBroken = (currentCoreAng < (exerciseMode === "BAR" ? 155 : 162));
+        // ==========================================
+        // [골반 수직 편차 기반 명확한 분기 판정]
+        // ==========================================
+        var hipDev = getHipDeviation(pS, pP, pK);
+        var coreThreshold = (exerciseMode === "BAR" ? 155 : 162);
+        var isAngleBroken = (currentCoreAng < coreThreshold);
 
-        // ==========================================
-        // [골반 처짐 vs 골반 높음 분기 판정]
-        // 화면 좌표계: y는 아래로 갈수록 커짐
-        // ==========================================
+        // 1. 정상 휴식 (Pike Rest): 양팔을 곧게 펴고(>=140°), 엉덩이가 천장 쪽으로 솟은 자세(hipDev < -15)
+        var isPikeRest = (currentElbowAng >= 140 && hipDev < -15);
+
+        // 2. 골반 처짐 vs 골반 높음 명확한 분기 (각도가 깨지고 정상 휴식이 아닐 때)
         var isCoreSag = false;
         var isHipHigh = false;
 
         if (isAngleBroken && !isPikeRest) {
-            // 어깨와 무릎을 잇는 기준 직선 상에서 골반 위치의 예상 Y값
-            var tRatio = (pK.x !== pS.x) ? (pP.x - pS.x) / (pK.x - pS.x) : 0.5;
-            var expectedY = pS.y + tRatio * (pK.y - pS.y);
-
-            // 1. 골반이 기준선/어깨보다 위쪽(천장 방향, y가 작음)으로 솟은 경우
-            if (pP.y < expectedY - 8 || pP.y < pS.y - 8) {
-                isHipHigh = true;
-                isCoreSag = false;
-            } 
-            // 2. 골반이 기준선/어깨보다 아래쪽(바닥 방향, y가 큼)으로 처진 경우
-            else {
+            // 골반이 기준선보다 바닥 쪽(Y축 양수)으로 10px 이상 처진 경우에만 확실한 허리 처짐
+            if (hipDev > 10) {
                 isCoreSag = true;
                 isHipHigh = false;
             }
+            // 골반이 기준선보다 천장 쪽(Y축 음수)으로 10px 이상 솟은 상태에서 팔을 굽히고 운동할 때
+            else if (hipDev < -10 && currentElbowAng < 140) {
+                isHipHigh = true;
+                isCoreSag = false;
+            }
         }
 
-        var isKneeTouch = (currentKneeAng < 150);
+        // 3. 상체 선행 상승 (배치기): 상승 구간에서 상체는 올라오는데 골반이 바닥에 처져 있을 때
         var isWaveFault = false;
-        if (state === "DOWN" && currentElbowAng > 100 && currentElbowAng < 155) {
-            if (currentCoreAng < (exerciseMode === "BAR" ? 155 : 162)) isWaveFault = true;
+        if (state === "DOWN" && currentElbowAng > 105 && currentElbowAng < 150) {
+            if (hipDev > 12 && isAngleBroken) {
+                isWaveFault = true;
+            }
         }
+
+        // 4. 무릎 닿음
+        var isKneeTouch = (currentKneeAng < 150);
 
         var isCurrentMotionBad = isCoreSag || isHipHigh || isKneeTouch || isWaveFault;
 
@@ -1217,14 +1248,46 @@
             if (isPikeRest) {
                 currentFaultBannerText = "🧘 엉덩이 솟음 휴식 중 (정상 휴식)";
                 isCurrentFaultWarn = false;
-            } else if (isWaveFault) {
-                triggerMovementFault("WAVE", "상체 선행 상승 (배치기)", "상체만 먼저 일어납니다", "상승 코어: " + currentCoreAng + "°");
-            } else if (isHipHigh) {
-                triggerMovementFault("HIGH_HIP", "골반 높음 (엉덩이 솟음)", "골반이 높습니다", "코어: " + currentCoreAng + "°");
-            } else if (isCoreSag) {
-                triggerMovementFault("SAG", "허리 숙여짐 (골반 처짐)", "허리가 처졌습니다", "코어: " + currentCoreAng + "°");
-            } else if (isKneeTouch) {
-                triggerMovementFault("KNEE", "무릎 닿음 (다리 굽힘)", "무릎이 닿았습니다", "무릎각: " + currentKneeAng + "°");
+                // 휴식 중에는 지속 카운터 초기화
+                faultSustainedCounts["HIGH_HIP"] = 0;
+                faultSustainedCounts["SAG"] = 0;
+            } else {
+                // 지속성 검증(3프레임 디바운스)을 통한 오인식 완전 차단
+                if (isWaveFault) {
+                    faultSustainedCounts["WAVE"]++;
+                    if (faultSustainedCounts["WAVE"] >= 3) {
+                        triggerMovementFault("WAVE", "상체 선행 상승 (배치기)", "배치기 금지입니다. 몸통을 함께 올리십시오.", "상승 코어: " + currentCoreAng + "°");
+                    }
+                } else {
+                    faultSustainedCounts["WAVE"] = 0;
+                }
+
+                if (isCoreSag) {
+                    faultSustainedCounts["SAG"]++;
+                    if (faultSustainedCounts["SAG"] >= 3) {
+                        triggerMovementFault("SAG", "허리 숙여짐 (골반 처짐)", "허리가 처졌습니다. 허리를 올리십시오.", "코어: " + currentCoreAng + "°");
+                    }
+                } else {
+                    faultSustainedCounts["SAG"] = 0;
+                }
+
+                if (isHipHigh) {
+                    faultSustainedCounts["HIGH_HIP"]++;
+                    if (faultSustainedCounts["HIGH_HIP"] >= 3) {
+                        triggerMovementFault("HIGH_HIP", "골반 높음 (엉덩이 솟음)", "골반이 높습니다. 골반을 낮추십시오.", "코어: " + currentCoreAng + "°");
+                    }
+                } else {
+                    faultSustainedCounts["HIGH_HIP"] = 0;
+                }
+
+                if (isKneeTouch) {
+                    faultSustainedCounts["KNEE"]++;
+                    if (faultSustainedCounts["KNEE"] >= 3) {
+                        triggerMovementFault("KNEE", "무릎 닿음 (다리 굽힘)", "무릎이 닿았습니다. 다리를 곧게 펴십시오.", "무릎각: " + currentKneeAng + "°");
+                    }
+                } else {
+                    faultSustainedCounts["KNEE"] = 0;
+                }
             }
 
             // 1. 하강 단계 (state === "UP")
@@ -1264,7 +1327,7 @@
                     currentFaultBannerText = "✅ 충분 하강! 팔을 밀어 올리십시오";
                     isCurrentFaultWarn = false;
                 } else if (minElbowInCurrentRep <= 135 && (currentElbowAng - minElbowInCurrentRep > 15) && currentElbowAng > 110) {
-                    triggerMovementFault("SHALLOW", "덜 내려감 (심도 미도달)", "덜 내려갔습니다", "최저: " + minElbowInCurrentRep + "°");
+                    triggerMovementFault("SHALLOW", "덜 내려감 (심도 미도달)", "덜 내려갔습니다. 가슴을 더 내리십시오.", "최저: " + minElbowInCurrentRep + "°");
                     minElbowInCurrentRep = 180;
                 }
             } 
@@ -1293,7 +1356,7 @@
                     repHasFault = false;
                     faultReasonCurrentRep = "";
                 } else if (maxElbowInCurrentRep >= 120 && (maxElbowInCurrentRep - currentElbowAng > 15) && currentElbowAng < 145) {
-                    triggerMovementFault("INCOMPLETE", "팔꿈치 안 펴짐 (미신전)", "팔꿈치가 안 펴집니다", "최대: " + maxElbowInCurrentRep + "°");
+                    triggerMovementFault("INCOMPLETE", "팔꿈치 안 펴짐 (미신전)", "팔을 끝까지 펴십시오.", "최대: " + maxElbowInCurrentRep + "°");
                     maxElbowInCurrentRep = 90;
                 }
             }
@@ -1328,7 +1391,7 @@
             wasCoreBodyDetected = false;
             if (!hasSpokenCoreLossThisSession) {
                 hasSpokenCoreLossThisSession = true;
-                speak("핵심 관절이 인식되지 않았습니다");
+                speak("핵심 관절이 인식되지 않았습니다.");
             }
         }
     }
@@ -1346,44 +1409,45 @@
         }
     }
 
+    // ==========================================
+    // [부정자세 트리거 및 육군 표준 음성 피드백 엔진]
+    // 1. 회차 무효화(repHasFault) 즉각 적용
+    // 2. 2.5초 절대 쿨다운으로 음성 겹침 및 급상승 방지
+    // 3. 지적 멘트 + 교정 지시어 + 경고 차수 일치화
+    // ==========================================
     function triggerMovementFault(typeKey, reason, ttsSpeech, detail) {
         var now = Date.now();
-        var isNewFault = (typeKey !== lastFaultKey);
-        var isCooldownPassed = (now - lastFaultTime >= 3000);
+        repHasFault = true;
+        faultReasonCurrentRep = reason;
+        isCurrentFaultWarn = true;
 
-        if (isNewFault || isCooldownPassed) {
-            lastFaultKey = typeKey;
-            lastFaultTime = now;
-
-            totalFaultWarningCount++;
-            faultReasonCurrentRep = reason;
-
-            var warnText = "";
-            var ttsSuffix = "";
-
-            if (totalFaultWarningCount === 1) {
-                warnText = "1차 경고";
-                ttsSuffix = "부정자세 1차경고입니다.";
-            } else if (totalFaultWarningCount === 2) {
-                warnText = "2차 경고";
-                ttsSuffix = "부정자세 2차경고입니다.";
-            } else {
-                warnText = "노카운트";
-                ttsSuffix = "부정자세 노카운트입니다.";
-                repHasFault = true;
-            }
-
-            var fullTTS = ttsSpeech + ". " + ttsSuffix;
-            currentFaultBannerText = "⚠️ " + reason + " [" + warnText + "]";
-            isCurrentFaultWarn = true;
-            speak(fullTTS);
-            logInvalidRep(reason + " (" + warnText + ")", detail);
-        } else {
-            if (totalFaultWarningCount >= 3) {
-                repHasFault = true;
-                faultReasonCurrentRep = reason;
-            }
+        // 2.5초 절대 쿨다운 미도달 시 화면 배너만 갱신하고 음성 중복 차단
+        if (now - lastAnyFaultTime < FAULT_COOLDOWN_MS) {
+            currentFaultBannerText = "⚠️ " + reason;
+            return;
         }
+
+        lastAnyFaultTime = now;
+        lastFaultKey = typeKey;
+        totalFaultWarningCount++;
+
+        var warnText = "";
+        var ttsSuffix = "";
+        if (totalFaultWarningCount === 1) {
+            warnText = "1차 경고";
+            ttsSuffix = "1차 경고입니다.";
+        } else if (totalFaultWarningCount === 2) {
+            warnText = "2차 경고";
+            ttsSuffix = "2차 경고입니다.";
+        } else {
+            warnText = "노카운트";
+            ttsSuffix = "노카운트입니다.";
+        }
+
+        currentFaultBannerText = "⚠️ " + reason + " [" + warnText + "]";
+        var fullTTS = ttsSpeech + " " + ttsSuffix;
+        speak(fullTTS);
+        logInvalidRep(reason + " (" + warnText + ")", detail);
     }
 
     function speak(text) {
@@ -1837,7 +1901,7 @@
             console.warn("Fast-Start 하드웨어 인코더 우회, 실시간 레코더 폴백 사용:", err);
         }
 
-        // 폴백
+        // 브라우저 캔버스 캡처 폴백
         sText.innerText = '표준 캔버스 MP4 재인코딩 진행 중...';
         var cvCanvas = document.createElement('canvas');
         cvCanvas.width = targetW;
@@ -2295,7 +2359,12 @@
         wasCoreBodyDetected = true;
         hasSpokenCoreLossThisSession = false;
         lastFaultKey = "";
-        lastFaultTime = 0;
+        lastAnyFaultTime = 0;
+
+        // 부정자세 지속 프레임 카운터 전체 초기화
+        for (var k in faultSustainedCounts) {
+            faultSustainedCounts[k] = 0;
+        }
 
         remainingSeconds = totalSeconds;
         updateTimerDisplay();
