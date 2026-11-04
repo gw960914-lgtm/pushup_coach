@@ -395,7 +395,7 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">검정 표준체계</div>
+        <div class="badge">검정 표준체계 v5.6</div>
     </div>
 </header>
 
@@ -518,7 +518,7 @@
 
     <div class="card">
         <div class="card-title">
-            <span>⚠️ 실시간 부정자세 감지 이력 (양방향 머리 자동보정)</span>
+            <span>⚠️ 실시간 부정자세 감지 이력 (양방향 무결점 판정)</span>
             <span id="failCount" style="color:#ff6b6b; font-size:11px;">0건</span>
         </div>
         <div class="log-table-wrap">
@@ -550,11 +550,11 @@
                 <span class="guide-tag-good">✅ 정자세 인정 기준 (Count 인정)</span>
             </div>
             <div class="guide-desc">
-                1. <b>양방향 머리 완벽 인식</b>: 머리가 좌측이든 우측이든 시스템이 스스로 감지하여 처짐과 솟음을 100% 동일하게 판정합니다.<br>
-                2. <b>골반 엄격 정렬</b>: 맨땅은 162° 이상, 봉 모드는 155° 이상으로 허리 처짐 및 엉덩이 솟음을 방지합니다.<br>
+                1. <b>양방향 머리 무결점 판정</b>: 머리가 좌측이든 우측이든 중력(Y축) 수직 편차를 기반으로 처짐과 들림을 100% 동일하게 판정합니다.<br>
+                2. <b>골반 엄격 정렬</b>: 맨땅은 162° 이상, 봉 모드는 155° 이상으로 허리 처짐 및 골반 들림을 방지합니다.<br>
                 3. <b>하강 깊이</b>: 맨땅 100° 이하, 봉 모드 105° 이하(또는 심부선)로 충분히 내려갑니다.<br>
                 4. <b>완전 신전 및 가동범위</b>: 팔꿈치를 150° 이상 펴고, 최저점 대비 최소 30° 이상 신전되어야 1회로 인정됩니다.<br>
-                5. <b>유일한 휴식(Pike Rest)</b>: 팔을 편 상태에서 엉덩이를 치켜올리는 휴식은 감점 없이 인정됩니다.
+                5. <b>유일한 휴식(Pike Rest)</b>: 팔을 곧게 펴고(≥145°) 골반을 산 모양으로 <b>확실하고 크게 치켜올렸을 때만</b>(비율 10% 이상 & 코어각 ≤150°) 정상 휴식으로 인정됩니다. 어설프게 살짝 든 자세는 골반 들림 부정자세로 지적됩니다.
             </div>
         </div>
 
@@ -563,8 +563,8 @@
                 <span class="guide-tag-bad">❌ 대표 부정자세 6종 (경고 및 노카운트)</span>
             </div>
             <div class="guide-desc">
-                • <b>허리 숙여짐 (골반 처짐)</b>: 골반이 신체 중심선보다 바닥 쪽으로 처지는 자세 ("허리가 처졌습니다. 허리를 올리십시오")<br>
-                • <b>골반 높음 (엉덩이 솟음)</b>: 동작 중 골반이 위로 과도하게 치솟은 자세 ("골반이 높습니다. 골반을 낮추십시오")<br>
+                • <b>허리 숙여짐 (골반 처짐)</b>: 골반이 어깨-무릎 기준선보다 바닥 쪽으로 처지는 자세 ("허리가 처졌습니다. 허리를 올리십시오")<br>
+                • <b>골반 높음 (엉덩이 솟음)</b>: 골반이 기준선보다 천장 쪽으로 솟은 자세 ("골반이 높습니다. 골반을 낮추십시오")<br>
                 • <b>상체 선행 상승 (배치기)</b>: 골반을 바닥에 남겨두고 가슴만 젖혀 일어나는 행위 ("배치기 금지입니다. 몸통을 함께 올리십시오")<br>
                 • <b>무릎 닿음</b>: 하강 또는 상승 시 무릎이 닿거나 굽혀지는 행위 ("무릎이 닿았습니다. 다리를 곧게 펴십시오")<br>
                 • <b>덜 내려감 (심도 미도달)</b>: 팔꿈치를 기준선까지 굽히지 않고 올라오는 행위 ("덜 내려갔습니다. 가슴을 더 내리십시오")<br>
@@ -597,7 +597,7 @@
                 <div class="help-step-desc">
                     • 스마트폰을 피측정자의 <b>측면 1.5m ~ 2.0m 거리</b> 바닥이나 낮은 받침대에 세워둡니다.<br>
                     • 준비자세를 취했을 때 <b>어깨, 팔꿈치, 골반, 무릎</b> 4대 관절이 화면 안에 모두 들어와야 합니다.<br>
-                    • 머리가 <b>화면 왼쪽이나 오른쪽</b> 어느 방향을 향해 누워도 시스템이 자동으로 감지하므로 자유롭게 자세를 취하십시오.
+                    • 머리가 <b>화면 왼쪽이나 오른쪽</b> 어느 방향을 향해 누워도 중력 수직 편차 알고리즘이 100% 동일하게 판정합니다.
                 </div>
             </div>
 
@@ -616,8 +616,8 @@
                     • <b>[📹 측정 시작]</b>을 누르면 5초 음성 카운트다운 후 자동으로 시간 계측과 녹화가 시작됩니다.<br>
                     • <b>하강</b>: 팔꿈치를 기준선까지 충분히 굽혀 가슴을 바닥(또는 봉) 깊숙이 내립니다.<br>
                     • <b>상승</b>: 팔꿈치를 150° 이상 완전히 곧게 펴야 횟수가 카운트됩니다.<br>
-                    • <b>자세 유지</b>: 머리부터 발끝까지 일직선을 유지하십시오. 허리가 처지거나 엉덩이를 과하게 들면 경고음과 함께 노카운트 처리됩니다.<br>
-                    • <b>유일한 휴식</b>: 팔을 곧게 펴고 엉덩이를 위로 솟구치는 자세만 감점 없이 휴식으로 인정됩니다.
+                    • <b>자세 유지</b>: 머리부터 발끝까지 일직선을 유지하십시오. 허리가 처지면 "허리가 처졌습니다", 엉덩이를 들면 "골반이 높습니다" 경고가 명확히 분리 송출됩니다.<br>
+                    • <b>유일한 휴식</b>: 팔을 곧게 펴고 엉덩이를 산 모양으로 확실하고 크게 솟구친 상태만 감점 없이 휴식으로 인정됩니다.
                 </div>
             </div>
 
@@ -755,8 +755,8 @@
     var isPausedDueToNoBody = false;
     var hasSpokenCoreLossThisSession = false;
 
-    // 머리 좌우 방향 감지 상태 (기본값: 자동 감지)
-    var currentHeadDirection = "UNKNOWN"; // "HEAD_LEFT" or "HEAD_RIGHT"
+    // 머리 좌우 방향 감지 상태 (OSD 표시용)
+    var currentHeadDirection = "UNKNOWN";
 
     var jointLostStreak = 0;
     var MAX_LOST_FRAMES = 8;
@@ -770,7 +770,7 @@
     var currentCoreAng = 0;
     var currentKneeAng = 0;
 
-    // 부정자세 지속성 검증 및 절대 쿨다운
+    // 부정자세 지속성 검증(3프레임 디바운스) 및 2.5초 절대 쿨다운
     var faultSustainedCounts = {
         "SAG": 0,
         "HIGH_HIP": 0,
@@ -933,8 +933,11 @@
         var pN = smoothedCoords.n;
         var pA = smoothedCoords.a;
 
-        var vDrop = getNormalizedVerticalDrop(pS, pP, pK);
-        var isPikeRest = (currentElbowAng >= 140 && vDrop < -15);
+        var vDropMetrics = calculateVerticalDropMetrics(pS, pP, pK);
+        var normDrop = vDropMetrics.normDrop;
+
+        // 확실하고 큰 값으로 골반이 들렸을 때만 휴식(Pike Rest)으로 인정
+        var isPikeRest = (currentElbowAng >= 145 && normDrop < -0.10 && currentCoreAng <= 150);
         var isAngleBroken = currentCoreAng < (exerciseMode === "BAR" ? 155 : 162);
         var isBad = (isAngleBroken && !isPikeRest) || (currentKneeAng < 150) || repHasFault;
         var boneColor = isBad ? "#ff3333" : (isPikeRest ? "#5dade2" : (state === "DOWN" ? "#e5a93c" : "#39e75f"));
@@ -1031,25 +1034,32 @@
     }
 
     // ==========================================
-    // [양방향 머리 완벽 대응: 절대 수직 높이 편차 엔진]
+    // [무결점 수직 편차 기하 모델 (중력 Y축 기반, 머리 좌우 100% 무관)]
     // ==========================================
-    // 어깨(pS)와 무릎(pK)을 잇는 직선 상에서 골반(pP)이 바닥 쪽으로 처지면 양수(+),
-    // 천장 쪽으로 솟으면 음수(-)를 반환 (머리가 좌측이든 우측이든 절대적인 캔버스 Y 기준 일치)
-    function getNormalizedVerticalDrop(pS, pP, pK) {
-        if (!pS || !pP || !pK) return 0;
+    // 어깨(pS)와 무릎(pK)을 잇는 가상 직선 상에서 골반(pP)의 수직 편차를 계산:
+    // - 골반이 바닥(아래) 쪽으로 처지면 pP.y > expectedY  --> normDrop > 0 (처짐)
+    // - 골반이 하늘(위) 쪽으로 솟으면 pP.y < expectedY  --> normDrop < 0 (들림)
+    // 머리가 좌측이든 우측이든 중력 방향(+y)에만 종속되므로 100% 동일하게 판정됩니다.
+    function calculateVerticalDropMetrics(pS, pP, pK) {
+        if (!pS || !pP || !pK) return { dropPx: 0, normDrop: 0 };
         
         var dx = pK.x - pS.x;
+        var dy = pK.y - pS.y;
+        var torsoDist = Math.sqrt(dx * dx + dy * dy);
+        if (torsoDist < 10) return { dropPx: 0, normDrop: 0 };
+
+        var expectedY;
         if (Math.abs(dx) < 15) {
-            return pP.y - ((pS.y + pK.y) / 2);
+            expectedY = (pS.y + pK.y) / 2;
+        } else {
+            var t = (pP.x - pS.x) / dx;
+            expectedY = pS.y + t * dy;
         }
 
-        var t = (pP.x - pS.x) / dx;
-        var expectedY = pS.y + t * (pK.y - pS.y);
+        var dropPx = pP.y - expectedY;
+        var normDrop = dropPx / torsoDist; // 어깨-무릎 거리 대비 정규화 편차 비율
 
-        // 캔버스 Y좌표는 아래로 갈수록 커지므로:
-        // 골반이 바닥 쪽으로 처지면 pP.y > expectedY -> (+) 양수
-        // 골반이 천장 쪽으로 솟으면 pP.y < expectedY -> (-) 음수
-        return (pP.y - expectedY);
+        return { dropPx: dropPx, normDrop: normDrop };
     }
 
     // ==========================================
@@ -1220,9 +1230,7 @@
         var pK = smoothedCoords.k;
         var pW = smoothedCoords.w;
 
-        // ==========================================
-        // [핵심 해결] 머리 방향 동적 판별 및 외적 정규화
-        // ==========================================
+        // OSD용 머리 방향 표시 (판정에는 전혀 관여하지 않음)
         var isHeadRight = (pS.x >= pK.x);
         if (isHeadRight) {
             currentHeadDirection = "HEAD_RIGHT";
@@ -1240,43 +1248,41 @@
 
         updateHUDData(currentElbowAng, currentCoreAng, currentKneeAng);
 
-        // 1. 실제 절대 수직 드롭 (어깨-무릎 선 대비 골반의 수직 위치)
-        // (+)이면 무조건 바닥 쪽, (-)이면 무조건 하늘 쪽
-        var vDrop = getNormalizedVerticalDrop(pS, pP, pK);
-
-        // 2. 2D 벡터 외적(Cross Product)을 통한 기하학적 척추 굴곡 방향
-        // 골반->어깨 벡터와 골반->무릎 벡터의 외적
-        var crossProd = (pS.x - pP.x) * (pK.y - pP.y) - (pS.y - pP.y) * (pK.x - pP.x);
-        // 머리가 우측일 때는 -crossProd, 머리가 좌측일 때는 +crossProd가 바닥 처짐(+)
-        var spineCurvature = isHeadRight ? -crossProd : crossProd;
+        // ==========================================
+        // [중력 Y축 절대 편차 기반 정밀 판정 로직]
+        // ==========================================
+        var vDropMetrics = calculateVerticalDropMetrics(pS, pP, pK);
+        var normDrop = vDropMetrics.normDrop;
 
         var coreThreshold = (exerciseMode === "BAR" ? 155 : 162);
         var isAngleBroken = (currentCoreAng < coreThreshold);
 
-        // 3. 기하학적 2중 교차 판정:
-        // 골반이 하늘로 솟아있음: vDrop < -12 또는 spineCurvature < 0
-        // 골반이 바닥으로 처져있음: vDrop > 10 또는 spineCurvature > 0
-        var isHipAscended = (vDrop < -10 && spineCurvature < 0);
-        var isHipSagged = (vDrop > 8 && spineCurvature > 0);
+        // 1. [요청 반영] 정식 휴식(Pike Rest) 인정 기준:
+        // 골반이 "확연히 큰 값으로 들렸을 때만"(normDrop < -0.10) AND 팔을 곧게 펴고(>=145도) AND 코어가 V자로 접혔을 때(<=150도)만 인정!
+        var isPikeRest = (currentElbowAng >= 145 && normDrop < -0.10 && currentCoreAng <= 150);
 
-        // 정식 휴식(Pike Rest): 팔을 곧게 펴고(>=140도) 엉덩이를 하늘로 치켜올린 자세
-        var isPikeRest = (currentElbowAng >= 140 && isHipAscended);
+        // 2. 허리 처짐 vs 골반 들림의 명확한 물리적 분기:
         var isCoreSag = false;
         var isHipHigh = false;
 
         if (isAngleBroken && !isPikeRest) {
-            if (isHipSagged) {
+            // normDrop > 0.035 이면 골반이 기준선보다 바닥 쪽으로 처짐
+            if (normDrop > 0.035) {
                 isCoreSag = true;
                 isHipHigh = false;
-            } else if (isHipAscended && currentElbowAng < 140) {
+            } 
+            // normDrop < -0.035 이면 골반이 기준선보다 하늘 쪽으로 들림
+            // (휴식 기준인 -0.10에 미달하거나 팔을 굽힌 상태에서 엉덩이만 든 것은 전부 부정자세!)
+            else if (normDrop < -0.035) {
                 isHipHigh = true;
                 isCoreSag = false;
             }
         }
 
+        // 3. 상체 선행 상승 (배치기): 상승 단계에서 골반이 바닥에 처져 일어나는 동작
         var isWaveFault = false;
         if (state === "DOWN" && currentElbowAng > 105 && currentElbowAng < 150) {
-            if (isHipSagged && isAngleBroken) {
+            if (isCoreSag && isAngleBroken) {
                 isWaveFault = true;
             }
         }
