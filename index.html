@@ -151,7 +151,7 @@
 
         .fs-hud-right { text-align: right; }
         .fs-count-highlight {
-            font-size: 26px; font-weight: 900; font-family: monospace; color: #39e75f; line-height: 1;
+            font-size: 18px; font-weight: 900; font-family: monospace; color: #39e75f; line-height: 1;
         }
         .fs-count-highlight.warn { color: #ff5252; }
 
@@ -211,6 +211,10 @@
             z-index: 30; gap: 6px;
         }
         .camera-container.is-fullscreen .fullscreen-controls { display: flex; }
+        .fullscreen-controls .action-btn { min-width: 0; padding: 10px 4px; font-size: 11px; }
+        /* [v6.0] OSD가 회전된 상태에서는 화면 위에 고정된 HTML HUD를 숨김 (회전된 캔버스 OSD가 같은 정보 표시) */
+        .camera-container.osd-rotated .window-hud,
+        .camera-container.osd-rotated .fs-hud-container { display: none !important; }
         .camera-container.is-fullscreen .btn-fullscreen-toggle { display: none; }
 
         .main-panel {
@@ -327,6 +331,11 @@
         .guide-tag-good { color: #39e75f; font-weight: bold; font-size: 11px; }
         .guide-tag-bad { color: #ff6b6b; font-weight: bold; font-size: 11px; }
         .guide-desc { font-size: 10.5px; color: #a3b8a6; line-height: 1.45; }
+        .btn-guide-open { width: 100%; padding: 12px; font-size: 12.5px; }
+        .guide-modal { max-width: 560px; }
+        .guide-modal .guide-box { padding: 12px 14px; margin-bottom: 0; }
+        .guide-modal .guide-tag-good, .guide-modal .guide-tag-bad { font-size: 14px; }
+        .guide-modal .guide-desc { font-size: 13.5px; line-height: 1.7; color: #d4e0d6; }
 
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -396,7 +405,7 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">검정 표준체계 v5.7</div>
+        <div class="badge">검정 표준체계 v6.0</div>
     </div>
 </header>
 
@@ -454,8 +463,10 @@
     </div>
 
     <div class="countdown-overlay" id="countdownOverlay">
-        <div class="countdown-num" id="countdownText">5</div>
-        <div class="countdown-sub">자세를 취하십시오 (준비 카운트)</div>
+        <div id="countdownInner" style="display:flex; flex-direction:column; align-items:center; transition: transform 0.2s;">
+            <div class="countdown-num" id="countdownText">5</div>
+            <div class="countdown-sub">자세를 취하십시오 (준비 카운트)</div>
+        </div>
     </div>
 
     <button type="button" class="btn-fullscreen-toggle" id="btnFullscreen" onclick="toggleFullscreen()">⛶ 전체화면</button>
@@ -463,6 +474,7 @@
     <div class="fullscreen-controls" id="fsControls">
         <button type="button" class="action-btn btn-start" id="btnFsAction" onclick="handleStartOrToggle()">📹 측정 시작</button>
         <button type="button" class="action-btn btn-sub" onclick="switchCamera()">🔄 전/후면</button>
+        <button type="button" class="action-btn btn-sub" id="btnFsOsd" onclick="cycleOsdMode()">🧭 자동</button>
         <button type="button" class="action-btn btn-reset" onclick="resetAll()">0회 초기화</button>
         <button type="button" class="action-btn btn-sub" onclick="toggleFullscreen()">✖ 창모드</button>
     </div>
@@ -482,6 +494,10 @@
         <div class="mode-toggle-group" style="margin-top: 4px;">
             <button type="button" class="btn-mode active" id="btnRes480" onclick="setRecordingRes('480p')">📱 480p (용량 최적화 WebM)</button>
             <button type="button" class="btn-mode" id="btnRes720" onclick="setRecordingRes('720p')">🖥️ 720p (선명한 HD WebM)</button>
+        </div>
+        <div class="mode-toggle-group" style="margin-top: 4px; margin-bottom: 0;">
+            <button type="button" class="btn-mode" id="btnDiag" onclick="toggleDiag()">🔍 진단 표시 (기준선·골반 편차값)</button>
+            <button type="button" class="btn-mode" id="btnOsdMode" onclick="cycleOsdMode()">🧭 화면 방향: 자동 (현재 0°)</button>
         </div>
     </div>
 
@@ -540,40 +556,8 @@
         </div>
     </div>
 
-    <!-- 정자세 및 부정자세 가이드 -->
-    <div class="card">
-        <div class="card-title">
-            <span>📖 육군 표준 팔굽혀펴기 정자세 및 부정자세 판정 가이드</span>
-        </div>
-        
-        <div class="guide-box">
-            <div class="guide-title-row">
-                <span class="guide-tag-good">✅ 정자세 인정 기준 (Count 인정)</span>
-            </div>
-            <div class="guide-desc">
-                1. <b>양방향 머리 무결점 판정</b>: 머리가 좌측이든 우측이든 중력(Y축) 수직 편차를 기반으로 처짐과 들림을 100% 동일하게 판정합니다.<br>
-                2. <b>골반 엄격 정렬</b>: 맨땅은 162° 이상, 봉 모드는 155° 이상으로 허리 처짐 및 골반 들림을 방지합니다.<br>
-                3. <b>하강 깊이</b>: 맨땅 100° 이하, 봉 모드 105° 이하(또는 심부선)로 충분히 내려갑니다.<br>
-                4. <b>완전 신전 및 가동범위</b>: 팔꿈치를 150° 이상 펴고, 최저점 대비 최소 30° 이상 신전되어야 1회로 인정됩니다.<br>
-                5. <b>유일한 휴식(Pike Rest)</b>: 팔을 곧게 펴고(≥145°) 골반을 산 모양으로 <b>확실하고 크게 치켜올렸을 때만</b>(비율 10% 이상 & 코어각 ≤150°) 정상 휴식으로 인정됩니다. 어설프게 살짝 든 자세는 골반 들림 부정자세로 지적됩니다.<br>
-                6. <b>판정 보류</b>: 손목·골반이 화면에서 인식되지 않으면 해당 구간은 카운트하지 않고 판정을 보류합니다. 관절이 인식되지 않아도 측정 시간은 계속 흐릅니다.
-            </div>
-        </div>
-
-        <div class="guide-box">
-            <div class="guide-title-row">
-                <span class="guide-tag-bad">❌ 대표 부정자세 6종 (경고 및 노카운트)</span>
-            </div>
-            <div class="guide-desc">
-                • <b>허리 숙여짐 (골반 처짐)</b>: 골반이 어깨-무릎 기준선보다 바닥 쪽으로 처지는 자세 ("허리가 처졌습니다. 허리를 올리십시오")<br>
-                • <b>골반 높음 (엉덩이 솟음)</b>: 골반이 기준선보다 천장 쪽으로 솟은 자세 ("골반이 높습니다. 골반을 낮추십시오")<br>
-                • <b>상체 선행 상승 (배치기)</b>: 골반을 바닥에 남겨두고 가슴만 젖혀 일어나는 행위 ("배치기 금지입니다. 몸통을 함께 올리십시오")<br>
-                • <b>무릎 닿음</b>: 하강 또는 상승 시 무릎이 닿거나 굽혀지는 행위 ("무릎이 닿았습니다. 다리를 곧게 펴십시오")<br>
-                • <b>덜 내려감 (심도 미도달)</b>: 팔꿈치를 기준선까지 굽히지 않고 올라오는 행위 ("덜 내려갔습니다. 가슴을 더 내리십시오")<br>
-                • <b>팔꿈치 안 펴짐 (미신전)</b>: 올라왔을 때 팔을 끝까지 펴지 않고 다시 내려가는 행위 ("팔을 끝까지 펴십시오")
-            </div>
-        </div>
-    </div>
+    <!-- 정자세 및 부정자세 가이드 (버튼 → 모달) -->
+    <button type="button" class="action-btn btn-sub btn-guide-open" onclick="openGuideModal()">📖 정자세·부정자세 판정 가이드 보기</button>
 
     <div class="card">
         <div class="card-title">
@@ -636,6 +620,44 @@
             </div>
         </div>
         <button type="button" class="action-btn btn-start" style="width: 100%; margin-top: 6px; cursor: pointer;" onclick="this.closest('.modal-overlay').style.display='none';">✅ 사용법 확인 및 측정 시작하기</button>
+    </div>
+</div>
+
+<!-- 모달 1-2: 판정 가이드 크게 보기 -->
+<div class="modal-overlay" id="guideModal" onclick="if(event.target===this) this.style.display='none';">
+    <div class="modal-card guide-modal">
+        <div class="modal-title">
+            <span>📖 육군 표준 팔굽혀펴기 정자세 및 부정자세 판정 가이드</span>
+            <button type="button" class="btn-mini" style="font-size: 15px; padding: 4px 12px;" onclick="document.getElementById('guideModal').style.display='none';">✖</button>
+        </div>
+        <div class="guide-box">
+            <div class="guide-title-row">
+                <span class="guide-tag-good">✅ 정자세 인정 기준 (Count 인정)</span>
+            </div>
+            <div class="guide-desc">
+                1. <b>양방향 머리 무결점 판정</b>: 머리가 좌측이든 우측이든 중력(Y축) 수직 편차를 기반으로 처짐과 들림을 100% 동일하게 판정합니다.<br>
+                2. <b>골반 엄격 정렬</b>: 맨땅은 162° 이상, 봉 모드는 155° 이상으로 허리 처짐 및 골반 들림을 방지합니다.<br>
+                3. <b>하강 깊이</b>: 맨땅 100° 이하, 봉 모드 105° 이하(또는 심부선)로 충분히 내려갑니다.<br>
+                4. <b>완전 신전 및 가동범위</b>: 팔꿈치를 150° 이상 펴고, 최저점 대비 최소 30° 이상 신전되어야 1회로 인정됩니다.<br>
+                5. <b>유일한 휴식(Pike Rest)</b>: 팔을 곧게 펴고(≥145°) 골반을 산 모양으로 <b>확실하고 크게 치켜올렸을 때만</b>(비율 10% 이상 & 코어각 ≤150°) 정상 휴식으로 인정됩니다. 어설프게 살짝 든 자세는 골반 들림 부정자세로 지적됩니다.<br>
+                6. <b>판정 보류</b>: 손목·골반이 화면에서 인식되지 않으면 해당 구간은 카운트하지 않고 판정을 보류합니다. 관절이 인식되지 않아도 측정 시간은 계속 흐릅니다.
+            </div>
+        </div>
+
+        <div class="guide-box">
+            <div class="guide-title-row">
+                <span class="guide-tag-bad">❌ 대표 부정자세 6종 (경고 및 노카운트)</span>
+            </div>
+            <div class="guide-desc">
+                • <b>허리 숙여짐 (골반 처짐)</b>: 골반이 어깨-무릎 기준선보다 바닥 쪽으로 처지는 자세 ("허리가 처졌습니다. 허리를 올리십시오")<br>
+                • <b>골반 높음 (엉덩이 솟음)</b>: 골반이 기준선보다 천장 쪽으로 솟은 자세 ("골반이 높습니다. 골반을 낮추십시오")<br>
+                • <b>상체 선행 상승 (배치기)</b>: 골반을 바닥에 남겨두고 가슴만 젖혀 일어나는 행위 ("배치기 금지입니다. 몸통을 함께 올리십시오")<br>
+                • <b>무릎 닿음</b>: 하강 또는 상승 시 무릎이 닿거나 굽혀지는 행위 ("무릎이 닿았습니다. 다리를 곧게 펴십시오")<br>
+                • <b>덜 내려감 (심도 미도달)</b>: 팔꿈치를 기준선까지 굽히지 않고 올라오는 행위 ("덜 내려갔습니다. 가슴을 더 내리십시오")<br>
+                • <b>팔꿈치 안 펴짐 (미신전)</b>: 올라왔을 때 팔을 끝까지 펴지 않고 다시 내려가는 행위 ("팔을 끝까지 펴십시오")
+            </div>
+        </div>
+        <button type="button" class="action-btn btn-sub" style="width:100%;" onclick="document.getElementById('guideModal').style.display='none';">닫기</button>
     </div>
 </div>
 
@@ -814,6 +836,29 @@
 
     var currentSessionFaultLogs = [];
 
+    // [v5.8] 영상 우측 카운트 박스 크기 배율 (1.0 = 기존, 0.7 = 30% 축소)
+    var OSD_COUNT_SCALE = 0.7;
+
+    // [v5.8] 한쪽 측면 관절만 일관되게 사용 (좌/우 관절 혼용 방지)
+    var SIDE_IDX = {
+        L: { s: 11, e: 13, w: 15, h: 23, k: 25, a: 27 },
+        R: { s: 12, e: 14, w: 16, h: 24, k: 26, a: 28 }
+    };
+    var currentSide = null;      // "L" | "R"
+    var SIDE_SWITCH_MARGIN = 0.4; // 반대쪽이 이만큼 더 잘 보여야 측면 전환 (깜빡임 방지)
+
+    // [v5.8] 진단 표시 (기준선·편차값·사용 측면)
+    var showDiag = false;
+
+    // [v6.0] 화면 인터페이스(OSD) 회전: 실제 '위쪽'에 맞춰 0/90/180/270° 회전
+    // osdMode: "AUTO"(자세로 바닥 방향 자동 감지) 또는 0/90/180/270 수동 고정
+    var osdMode = "AUTO";
+    var osdRotation = 0;            // 현재 적용 중인 회전각
+    var osdCandidate = 0;           // 자동 감지 후보 각도
+    var osdCandidateFrames = 0;     // 후보가 연속으로 유지된 프레임 수
+    var OSD_SWITCH_FRAMES = 20;     // 이만큼 연속 유지되어야 회전 전환 (깜빡임 방지)
+    var downSignReliable = false;   // 손목으로 바닥 방향을 확인했는지
+
     // MP4 변환 작업 취소 플래그
     var isMp4ConversionCancelled = false;
 
@@ -834,6 +879,9 @@
         document.getElementById('helpModal').style.display = 'none';
     }
     window.openHelpModal = openHelpModal;
+    function openGuideModal() {
+        document.getElementById('guideModal').style.display = 'flex';
+    }
     window.closeHelpModal = closeHelpModal;
 
     function setExerciseMode(mode) {
@@ -939,7 +987,7 @@
                 drawSkeletonOverlay(canvasCtx, cw, ch);
             }
 
-            drawDirectOSD(canvasCtx, cw, ch);
+            drawRotatedOSD(canvasCtx, cw, ch);
         }
         renderLoopId = requestAnimationFrame(loop);
     }
@@ -953,7 +1001,7 @@
         var pN = smoothedCoords.n;
         var pA = smoothedCoords.a;
 
-        var vDropMetrics = calculateVerticalDropMetrics(pS, pP, pK);
+        var vDropMetrics = calculateVerticalDropMetrics(pS, pP, pK, pW);
         var normDrop = vDropMetrics.normDrop;
 
         // 확실하고 큰 값으로 골반이 들렸을 때만 휴식(Pike Rest)으로 인정
@@ -981,6 +1029,145 @@
             drawJoint(ctx, pP, isPikeRest ? "#5dade2" : "#f4d03f", "골반 " + currentCoreAng + "°");
         }
         drawJoint(ctx, pK, (currentKneeAng < 150) ? "#ff3333" : "#39e75f", "무릎 " + currentKneeAng + "°");
+
+        if (showDiag) drawDiagOverlay(ctx, pS, pP, pK, normDrop);
+    }
+
+    // [v5.8] 진단 표시: 어깨-무릎 기준선(점선)과 골반 편차값.
+    // 편차 + = 골반이 기준선보다 아래(처짐), - = 위(들림). 머리 방향과 무관하게 부호가 같아야 정상.
+    function drawDiagOverlay(ctx, pS, pP, pK, normDrop) {
+        ctx.save();
+        ctx.setLineDash([6, 5]);
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(pS.x, pS.y);
+        ctx.lineTo(pK.x, pK.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 바닥 방향 화살표 (골반에서 손 쪽으로)
+        var dv = getDownVector(pS, pK);
+        var ax = pP.x + dv.x * 45, ay = pP.y + dv.y * 45;
+        ctx.strokeStyle = "#5dade2";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(pP.x, pP.y); ctx.lineTo(ax, ay); ctx.stroke();
+        ctx.fillStyle = "#5dade2";
+        ctx.font = "bold 11px sans-serif";
+        fillTextUpright(ctx, "바닥", ax, ay, 4, 4);
+
+        var pct = (normDrop * 100).toFixed(1);
+        var verdict = normDrop > 0.035 ? "처짐 쪽" : (normDrop < -0.035 ? "들림 쪽" : "일직선");
+        var sideTxt = currentSide === "L" ? "좌측 관절" : (currentSide === "R" ? "우측 관절" : "-");
+        var line1 = "골반 편차 " + (normDrop > 0 ? "+" : "") + pct + "% (" + verdict + ")";
+        var line2 = "사용: " + sideTxt + " | 코어 " + currentCoreAng + "°";
+
+        ctx.font = "bold 11px sans-serif";
+        var tw = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width) + 12;
+        // 골반 기준으로 회전된 좌표계에서 정보 박스를 그림 (OSD 방향과 동일)
+        ctx.translate(pP.x, pP.y);
+        ctx.rotate(osdRotation * Math.PI / 180);
+        var bx = -tw / 2;
+        var by = 14;
+        ctx.fillStyle = "rgba(0,0,0,0.75)";
+        ctx.fillRect(bx, by, tw, 32);
+        ctx.fillStyle = "#f4d03f";
+        ctx.fillText(line1, bx + 6, by + 13);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(line2, bx + 6, by + 27);
+        ctx.restore();
+    }
+
+    function toggleDiag() {
+        showDiag = !showDiag;
+        document.getElementById('btnDiag').classList.toggle('active', showDiag);
+        showToast(showDiag ? "진단 표시 켜짐 (녹화 영상에도 표시됩니다)" : "진단 표시 꺼짐");
+    }
+
+    // ==========================================
+    // [v6.0] OSD 회전 엔진
+    // ==========================================
+    // 캔버스를 θ만큼 돌린 가상 화면에 기존 OSD를 그대로 그림.
+    // θ=90 → OSD 위쪽이 화면 오른쪽, θ=180 → 아래쪽, θ=270 → 왼쪽
+    function drawRotatedOSD(ctx, cw, ch) {
+        var r = osdRotation;
+        if (r === 0) {
+            drawDirectOSD(ctx, cw, ch);
+            return;
+        }
+        ctx.save();
+        if (r === 90) { ctx.translate(cw, 0); ctx.rotate(Math.PI / 2); drawDirectOSD(ctx, ch, cw); }
+        else if (r === 180) { ctx.translate(cw, ch); ctx.rotate(Math.PI); drawDirectOSD(ctx, cw, ch); }
+        else if (r === 270) { ctx.translate(0, ch); ctx.rotate(Math.PI * 1.5); drawDirectOSD(ctx, ch, cw); }
+        ctx.restore();
+    }
+
+    // 실제 위쪽(바닥 반대) 방향을 90° 단위로 반올림해 OSD 각도 결정
+    function updateAutoOsdRotation(pS, pK) {
+        var dv = getDownVector(pS, pK);
+        var ux = -dv.x, uy = -dv.y;                              // 위쪽 벡터
+        var deg = Math.atan2(ux, -uy) * 180 / Math.PI;           // 0=화면 위, 90=오른쪽, 180=아래, 270=왼쪽
+        var cand = ((Math.round(deg / 90) * 90) % 360 + 360) % 360;
+
+        if (cand === osdRotation) {
+            osdCandidateFrames = 0;
+            return;
+        }
+        if (cand === osdCandidate) {
+            osdCandidateFrames++;
+        } else {
+            osdCandidate = cand;
+            osdCandidateFrames = 1;
+        }
+        if (osdCandidateFrames >= OSD_SWITCH_FRAMES) {
+            applyOsdRotation(cand);
+            osdCandidateFrames = 0;
+        }
+    }
+
+    function applyOsdRotation(deg) {
+        osdRotation = deg;
+        // 회전 상태에서는 화면 위쪽에 고정된 HTML HUD가 옆으로 보이므로 숨기고,
+        // 같은 정보를 담은 캔버스 OSD(회전됨)만 표시
+        cameraBox.classList.toggle('osd-rotated', deg !== 0);
+        var cd = document.getElementById('countdownInner');
+        if (cd) cd.style.transform = 'rotate(' + deg + 'deg)';
+        updateOsdButtonLabel();
+    }
+
+    function cycleOsdMode() {
+        var order = ["AUTO", 0, 90, 180, 270];
+        var idx = order.indexOf(osdMode);
+        osdMode = order[(idx + 1) % order.length];
+        osdCandidateFrames = 0;
+        if (osdMode === "AUTO") {
+            showToast("화면 방향: 자동 (자세의 바닥 방향 기준)");
+        } else {
+            applyOsdRotation(osdMode);
+            showToast("화면 방향: " + osdMode + "° 고정");
+        }
+        updateOsdButtonLabel();
+    }
+
+    function updateOsdButtonLabel() {
+        var txt = (osdMode === "AUTO") ? ("🧭 화면 방향: 자동 (현재 " + osdRotation + "°)") : ("🧭 화면 방향: " + osdMode + "° 고정");
+        var b1 = document.getElementById('btnOsdMode');
+        var b2 = document.getElementById('btnFsOsd');
+        if (b1) { b1.innerText = txt; b1.classList.toggle('active', osdMode !== "AUTO"); }
+        if (b2) b2.innerText = "🧭 " + (osdMode === "AUTO" ? "자동" : osdMode + "°");
+    }
+
+    // 회전된 글자(관절 라벨 등)를 기준점 주변에 그리는 도우미
+    function fillTextUpright(ctx, text, px, py, offX, offY) {
+        if (osdRotation === 0) {
+            ctx.fillText(text, px + offX, py + offY);
+            return;
+        }
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(osdRotation * Math.PI / 180);
+        ctx.fillText(text, offX, offY);
+        ctx.restore();
     }
 
     function drawDirectOSD(ctx, cw, ch) {
@@ -1018,26 +1205,31 @@
         var orientTxt = currentHeadDirection === "HEAD_RIGHT" ? " [머리:우 ▶]" : (currentHeadDirection === "HEAD_LEFT" ? " [◀ 머리:좌]" : "");
         ctx.fillText("교번 " + cId + " " + cName + orientTxt, 18, 55);
 
-        var rightW = Math.min(270, cw * 0.48);
+        // [v5.8] 우측 카운트 박스: 기존 대비 30% 축소 (OSD_COUNT_SCALE로 조절)
+        var S = OSD_COUNT_SCALE;
+        var rightW = Math.round(Math.min(270, cw * 0.48) * S);
+        var rightH = Math.round(54 * S);
         var rightX = cw - rightW - 8;
         ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
-        ctx.fillRect(rightX, 8, rightW, 54);
+        ctx.fillRect(rightX, 8, rightW, rightH);
         ctx.strokeStyle = repHasFault ? "#ff4444" : "#233827";
-        ctx.strokeRect(rightX, 8, rightW, 54);
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(rightX, 8, rightW, rightH);
 
         ctx.fillStyle = "#e5a93c";
-        ctx.font = "bold 14px monospace";
-        ctx.fillText("⏱ " + timeStr, rightX + 8, 28);
+        ctx.font = "bold " + (14 * S).toFixed(1) + "px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText("⏱ " + timeStr, rightX + Math.round(8 * S), 8 + Math.round(20 * S));
 
         ctx.fillStyle = repHasFault ? "#ff4444" : "#39e75f";
-        ctx.font = "bold 18px monospace";
+        ctx.font = "bold " + (18 * S).toFixed(1) + "px monospace";
         ctx.textAlign = "right";
-        ctx.fillText((repHasFault ? "❌ " : "") + repCount + " 회", cw - 16, 29);
+        ctx.fillText((repHasFault ? "❌ " : "") + repCount + " 회", cw - 8 - Math.round(8 * S), 8 + Math.round(21 * S));
         ctx.textAlign = "left";
 
         ctx.fillStyle = "#a3b8a6";
-        ctx.font = "10px sans-serif";
-        ctx.fillText("팔 " + currentElbowAng + "° | 코어 " + (hipIsEstimatedNow ? "-" : currentCoreAng + "°") + " | 무릎 " + currentKneeAng + "°", rightX + 8, 51);
+        ctx.font = (10 * S).toFixed(1) + "px sans-serif";
+        ctx.fillText("팔 " + currentElbowAng + "° | 코어 " + (hipIsEstimatedNow ? "-" : currentCoreAng + "°") + " | 무릎 " + currentKneeAng + "°", rightX + Math.round(8 * S), 8 + Math.round(43 * S));
 
         var bannerBg = isCurrentFaultWarn ? "rgba(90, 15, 15, 0.92)" : (isPausedDueToNoBody ? "rgba(50, 35, 10, 0.92)" : "rgba(10, 30, 15, 0.88)");
         var bannerBorder = isCurrentFaultWarn ? "#ff4444" : (isPausedDueToNoBody ? "#e5a93c" : "#39e75f");
@@ -1059,28 +1251,52 @@
     }
 
     // ==========================================
-    // [무결점 수직 편차 기하 모델 (중력 Y축 기반, 머리 좌우 100% 무관)]
+    // [v5.9] 카메라 회전 무관 골반 편차 모델 (손 방향 = 바닥 방향)
     // ==========================================
-    function calculateVerticalDropMetrics(pS, pP, pK) {
-        if (!pS || !pP || !pK) return { dropPx: 0, normDrop: 0 };
-        
+    // 기존 v5.8까지는 "화면 아래(+y) = 바닥"으로 가정했음.
+    // 휴대폰을 세로 고정 상태로 눕혀 촬영하면 화면이 90° 돌아가서
+    // 머리 방향(화면 위/아래)에 따라 처짐·들림이 반대로 판정되는 문제가 있었음.
+    // → 팔굽혀펴기에서 손(손목)은 항상 어깨-무릎 기준선의 "바닥 쪽"에 있으므로
+    //   손목이 놓인 쪽을 바닥 방향으로 삼아 판정. 카메라 회전·머리 방향과 무관.
+    //   normDrop > 0 : 골반이 기준선보다 바닥(손) 쪽 = 처짐
+    //   normDrop < 0 : 골반이 기준선보다 반대쪽 = 들림
+    var lastDownSign = 0;
+
+    function calculateVerticalDropMetrics(pS, pP, pK, pW) {
+        if (!pS || !pP || !pK) return { dropPx: 0, normDrop: 0, downSign: lastDownSign };
+
         var dx = pK.x - pS.x;
         var dy = pK.y - pS.y;
         var torsoDist = Math.sqrt(dx * dx + dy * dy);
-        if (torsoDist < 10) return { dropPx: 0, normDrop: 0 };
+        if (torsoDist < 10) return { dropPx: 0, normDrop: 0, downSign: lastDownSign };
 
-        var expectedY;
-        if (Math.abs(dx) < 15) {
-            expectedY = (pS.y + pK.y) / 2;
-        } else {
-            var t = (pP.x - pS.x) / dx;
-            expectedY = pS.y + t * dy;
+        // 기준선에 대한 골반의 부호 있는 수직 거리 (외적)
+        var hipPerp = (dx * (pP.y - pS.y) - dy * (pP.x - pS.x)) / torsoDist;
+
+        // 바닥 방향 부호: 손목이 기준선에서 충분히 떨어져 있을 때만 갱신
+        var sign = lastDownSign;
+        if (pW) {
+            var wPerp = (dx * (pW.y - pS.y) - dy * (pW.x - pS.x)) / torsoDist;
+            if (Math.abs(wPerp) > torsoDist * 0.15) { sign = (wPerp > 0) ? 1 : -1; downSignReliable = true; }
         }
+        if (sign === 0) {
+            // 손목 정보가 아직 없으면 화면 아래(+y)를 바닥으로 임시 사용
+            sign = (dx >= 0) ? 1 : -1;
+            downSignReliable = false;
+        }
+        lastDownSign = sign;
 
-        var dropPx = pP.y - expectedY;
-        var normDrop = dropPx / torsoDist;
+        var dropPx = hipPerp * sign;
+        return { dropPx: dropPx, normDrop: dropPx / torsoDist, downSign: sign };
+    }
 
-        return { dropPx: dropPx, normDrop: normDrop };
+    // [v5.9] 바닥 방향 단위벡터 (기준선에 수직, 손 쪽)
+    function getDownVector(pS, pK) {
+        var dx = pK.x - pS.x;
+        var dy = pK.y - pS.y;
+        var L = Math.sqrt(dx * dx + dy * dy) || 1;
+        var sgn = lastDownSign || ((dx >= 0) ? 1 : -1);
+        return { x: sgn * (-dy / L), y: sgn * (dx / L) };
     }
 
     // ==========================================
@@ -1127,26 +1343,33 @@
             return;
         }
 
-        var leftScore = (lm[11].visibility || 0) + (lm[13].visibility || 0) + (lm[23].visibility || 0) + (lm[25].visibility || 0);
-        var rightScore = (lm[12].visibility || 0) + (lm[14].visibility || 0) + (lm[24].visibility || 0) + (lm[26].visibility || 0);
-        var preferLeft = leftScore >= rightScore;
-
-        function pickJoint(idxL, idxR) {
-            var pL = lm[idxL];
-            var pR = lm[idxR];
-            var vL = (pL && pL.visibility != null) ? pL.visibility : 0;
-            var vR = (pR && pR.visibility != null) ? pR.visibility : 0;
-            if (preferLeft && vL >= 0.30) return pL;
-            if (!preferLeft && vR >= 0.30) return pR;
-            return (vL >= vR) ? pL : pR;
+        // [v5.8] 관절마다 좌/우를 따로 고르면 앞쪽 몸과 뒤쪽(가려진) 몸의 관절이 섞여
+        // 기준선이 틀어질 수 있음 → 한쪽 측면 세트만 일관되게 사용
+        function v(i) { return (lm[i] && lm[i].visibility) ? lm[i].visibility : 0; }
+        function sideScore(ix) { return v(ix.s) + v(ix.e) + v(ix.w) + v(ix.h) + v(ix.k); }
+        var scoreL = sideScore(SIDE_IDX.L);
+        var scoreR = sideScore(SIDE_IDX.R);
+        var newSide = currentSide;
+        if (!currentSide) {
+            newSide = (scoreL >= scoreR) ? "L" : "R";
+        } else if (currentSide === "L" && scoreR > scoreL + SIDE_SWITCH_MARGIN) {
+            newSide = "R";
+        } else if (currentSide === "R" && scoreL > scoreR + SIDE_SWITCH_MARGIN) {
+            newSide = "L";
         }
+        if (newSide !== currentSide) {
+            // 측면이 바뀌면 이전 측면 좌표와 섞이지 않도록 평활값 초기화
+            smoothedCoords = { s: null, e: null, p: null, k: null, w: null, n: null, a: null };
+            currentSide = newSide;
+        }
+        var ix = SIDE_IDX[currentSide];
 
-        var shoulder = pickJoint(11, 12);
-        var elbow = pickJoint(13, 14);
-        var wrist = pickJoint(15, 16);
-        var hip = pickJoint(23, 24);
-        var knee = pickJoint(25, 26);
-        var ankle = pickJoint(27, 28);
+        var shoulder = lm[ix.s];
+        var elbow = lm[ix.e];
+        var wrist = lm[ix.w];
+        var hip = lm[ix.h];
+        var knee = lm[ix.k];
+        var ankle = lm[ix.a];
         var nose = lm[0];
 
         function isPointValid(pt, minVis) {
@@ -1257,6 +1480,12 @@
         var pW = smoothedCoords.w;
 
         // OSD용 머리 방향 표시 (판정에는 전혀 관여하지 않음)
+        // [v6.0] 바닥 방향으로 화면 '위쪽' 자동 감지 → OSD 회전
+        if (osdMode === "AUTO" && !hipIsEstimatedNow) {
+            calculateVerticalDropMetrics(pS, pP, pK, pW); // 바닥 방향 부호 갱신
+            if (downSignReliable) updateAutoOsdRotation(pS, pK);
+        }
+
         var isHeadRight = (pS.x >= pK.x);
         if (isHeadRight) {
             currentHeadDirection = "HEAD_RIGHT";
@@ -1298,7 +1527,7 @@
         // ==========================================
         // [중력 Y축 절대 편차 기반 정밀 판정 로직]
         // ==========================================
-        var vDropMetrics = calculateVerticalDropMetrics(pS, pP, pK);
+        var vDropMetrics = calculateVerticalDropMetrics(pS, pP, pK, pW);
         var normDrop = vDropMetrics.normDrop;
 
         var coreThreshold = (exerciseMode === "BAR" ? 155 : 162);
@@ -1398,7 +1627,9 @@
                 if (currentElbowAng < 140) {
                     if (exerciseMode === "BAR") {
                         var isArmBent = (currentElbowAng <= 120);
-                        var isDepthReached = (pS.y >= pE.y - 10);
+                        // [v5.9] 어깨가 팔꿈치 높이까지 내려왔는지 (바닥 방향 기준, 카메라 회전 무관)
+                        var dv = getDownVector(pS, pK);
+                        var isDepthReached = (((pE.x - pS.x) * dv.x + (pE.y - pS.y) * dv.y) <= 10);
                         isDownTargetReached = (currentElbowAng <= 105) || (isArmBent && isDepthReached);
                     } else {
                         isDownTargetReached = (currentElbowAng <= 100);
@@ -1468,6 +1699,10 @@
         smoothedCoords = { s: null, e: null, p: null, k: null, w: null, n: null, a: null };
         lastValidPoints = { s: null, e: null, p: null, k: null, w: null };
         jointLostStreak = MAX_LOST_FRAMES;
+        currentSide = null;
+        lastDownSign = 0;
+        downSignReliable = false;
+        osdCandidateFrames = 0;
         hipIsEstimatedNow = false;
         wasHipEstimated = false;
 
@@ -2532,6 +2767,10 @@
         bodyLossStartSec = null;
         hipIsEstimatedNow = false;
         wasHipEstimated = false;
+        currentSide = null;
+        lastDownSign = 0;
+        downSignReliable = false;
+        osdCandidateFrames = 0;
         lastFaultKey = "";
         lastAnyFaultTime = 0;
         currentHeadDirection = "UNKNOWN";
@@ -2666,7 +2905,7 @@
         if (label) {
             ctx.font = "bold 11px sans-serif";
             ctx.fillStyle = "#ffffff";
-            ctx.fillText(label, p.x + 8, p.y - 4);
+            fillTextUpright(ctx, label, p.x, p.y, 8, -4);
         }
     }
 
