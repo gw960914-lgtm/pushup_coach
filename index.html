@@ -197,6 +197,7 @@
         }
         .setup-panel.ok { border-color: #39e75f; }
         .setup-title { font-size: 14px; font-weight: 900; color: #e2eae3; text-align: center; }
+        .setup-orient { display: none; font-size: 12px; font-weight: bold; color: #5dade2; text-align: center; }
         .setup-msg { font-size: 13px; font-weight: bold; color: #ffd166; text-align: center; margin: 2px 0 4px; }
         .setup-items { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; }
         .setup-item { font-size: 11.5px; color: #c9d6cb; white-space: nowrap; }
@@ -429,7 +430,7 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">검정 표준체계 v6.2</div>
+        <div class="badge">검정 표준체계 v6.3</div>
     </div>
 </header>
 
@@ -490,6 +491,7 @@
         <div id="countdownInner" style="display:flex; flex-direction:column; align-items:center; transition: transform 0.2s;">
             <div class="setup-panel" id="setupPanel">
                 <div class="setup-title">📋 준비 확인 (자동 시작)</div>
+                <div class="setup-orient" id="setupOrient">📱 휴대폰을 가로로 돌려 주십시오 (가로 화면 권장)</div>
                 <div class="setup-msg" id="setupMsg">카메라에 몸 옆면 전체가 보이게 하십시오</div>
                 <div class="setup-items">
                     <div class="setup-item" id="setupItemBody">⬜ 몸 인식</div>
@@ -639,7 +641,8 @@
             <div class="help-step">
                 <div class="help-step-title">3단계: 측정 시작 및 정자세 실시 요령</div>
                 <div class="help-step-desc">
-                    • <b>[📹 측정 시작]</b>을 누르면 <b>준비 확인</b>이 시작됩니다. 몸 인식·화면 안·거리·옆모습·팔 펴기와 몸 일직선·정지 여부를 자동으로 확인하고 문제를 음성으로 안내합니다.<br>
+                    • <b>[📹 측정 시작]</b>을 누르면 자동으로 <b>전체 화면(가로)</b>으로 전환되고 <b>준비 확인</b>이 시작됩니다. 휴대폰은 가로로 세워 사용하십시오. (가로 자동 고정이 안 되는 기기는 화면에 안내가 표시됩니다)<br>
+                    • 준비 확인에서는 몸 인식·화면 안·거리·옆모습·팔 펴기와 몸 일직선·정지 여부를 자동으로 확인하고 문제를 음성으로 안내합니다.<br>
                     • 모든 항목을 통과한 채 2초간 유지하면 5초 음성 카운트다운 후 자동으로 시간 계측과 녹화가 시작됩니다. 준비 확인 중 버튼을 다시 누르면 <b>바로 시작</b>합니다.<br>
                     • <b>카운트다운 중</b>: 팔을 곧게 편 엎드려뻗쳐 자세로 정지해 있으면 마지막 4초 동안 기준 자세(팔 길이·몸 일직선)를 자동 측정합니다.<br>
                     • <b>하강</b>: 팔꿈치를 기준선까지 충분히 굽혀 가슴을 바닥(또는 봉) 깊숙이 내립니다.<br>
@@ -2074,19 +2077,46 @@
         addLogRow(reason, detail, true);
     }
 
+    // [v6.3] 가로·전체 화면 기본 사용
+    function tryLockLandscape() {
+        try {
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(function(){});
+            }
+        } catch (e) {}
+    }
+    function isPortraitScreen() {
+        return window.innerHeight > window.innerWidth;
+    }
+    // 측정 시작 시 자동으로 전체 화면 + 가로 고정 (이미 전체 화면이면 그대로)
+    function enterLandscapeFullscreen() {
+        if (!cameraBox.classList.contains('is-fullscreen')) {
+            toggleFullscreen();
+        } else {
+            tryLockLandscape();
+        }
+    }
+    function updateOrientationNotice() {
+        var el = document.getElementById('setupOrient');
+        if (el) el.style.display = (isSetupChecking && isPortraitScreen()) ? 'block' : 'none';
+    }
+    window.addEventListener('resize', updateOrientationNotice);
+
     function toggleFullscreen() {
         var btn = document.getElementById('btnFullscreen');
         if (!cameraBox.classList.contains('is-fullscreen')) {
             cameraBox.classList.add('is-fullscreen');
             btn.innerText = "✖ 창모드";
             if (cameraBox.requestFullscreen) {
-                cameraBox.requestFullscreen().catch(function(){});
+                // [v6.3] 전체 화면 진입 후 가로 방향 고정 시도 (안드로이드 크롬 등 지원 기기)
+                cameraBox.requestFullscreen().then(tryLockLandscape).catch(function(){});
             } else if (cameraBox.webkitRequestFullscreen) {
                 cameraBox.webkitRequestFullscreen();
             }
         } else {
             cameraBox.classList.remove('is-fullscreen');
             btn.innerText = "⛶ 전체화면";
+            try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
             if (document.exitFullscreen) {
                 document.exitFullscreen().catch(function(){});
             } else if (document.webkitExitFullscreen) {
@@ -2323,8 +2353,17 @@
         updateActionButtons("⏩ 바로 시작 (준비 확인 건너뛰기)", "btn-pause");
         document.getElementById('txtTimerState').innerText = "준비 확인 중";
         document.getElementById('txtTimerState').style.color = "#e5a93c";
+        // 가로 고정이 안 되는 기기(아이폰 등)에서 세로로 들고 있으면 먼저 안내
+        // (전체 화면·가로 고정은 비동기라 잠시 뒤 방향을 확인)
         speak("준비 확인을 시작합니다. 엎드려뻗쳐 자세를 취하십시오");
         setupLastSpeakAt = Date.now();
+        setTimeout(function() {
+            updateOrientationNotice();
+            if (isSetupChecking && isPortraitScreen()) {
+                speak("휴대폰을 가로로 돌려 주십시오");
+                setupLastSpeakAt = Date.now();
+            }
+        }, 800);
 
         clearInterval(setupTimerId);
         setupTimerId = setInterval(setupTick, SETUP_TICK_MS);
@@ -2338,6 +2377,7 @@
         var overlay = document.getElementById('countdownOverlay');
         overlay.style.background = "";
         document.getElementById('setupPanel').style.display = 'none';
+        updateOrientationNotice();
         document.getElementById('countdownText').style.display = '';
         document.getElementById('countdownSub').style.display = '';
         document.getElementById('countdownCalib').style.display = '';
@@ -2379,6 +2419,7 @@
             startCameraStream();
             startRenderPipeline();
             cameraStarted = true;
+            enterLandscapeFullscreen();
             startSetupCheck();
         } else {
             if (isTimerRunning) {
@@ -2390,6 +2431,7 @@
                 document.getElementById('txtTimerState').style.color = "#e67e22";
             } else {
                 if (remainingSeconds === totalSeconds && !isRecording) {
+                    enterLandscapeFullscreen();
                     startSetupCheck();
                 } else if (remainingSeconds <= 0) {
                     showToast("측정이 종료되었습니다. 0회 초기화 후 다시 시작하십시오.");
