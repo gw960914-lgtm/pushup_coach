@@ -171,7 +171,7 @@
         }
         .upload-ctrl-bar .progress-text { font-size: 11px; font-family: monospace; color: #e5a93c; }
 
-        /* 10초 카운트다운 레이어 (준비 중 카메라·관절 표시가 보이도록 반투명) */
+        /* [v6.2] 준비 확인 + 5초 카운트다운 레이어 (카메라·관절 표시가 보이도록 반투명) */
         .countdown-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -189,6 +189,30 @@
             font-family: monospace; animation: pulse 1s infinite;
         }
         .countdown-sub { font-size: 14px; color: #e2eae3; font-weight: bold; margin-top: 10px; }
+        /* [v6.2] 준비 확인 패널 (카운트다운 레이어 안에 있어 화면 회전을 함께 따름) */
+        .setup-panel {
+            display: none; flex-direction: column; align-items: stretch; gap: 4px;
+            background: rgba(10, 18, 12, 0.72); border: 2px solid #ff4d4d; border-radius: 10px;
+            padding: 8px 12px; min-width: 240px; max-width: 92%;
+        }
+        .setup-panel.ok { border-color: #39e75f; }
+        .setup-title { font-size: 14px; font-weight: 900; color: #e2eae3; text-align: center; }
+        .setup-msg { font-size: 13px; font-weight: bold; color: #ffd166; text-align: center; margin: 2px 0 4px; }
+        .setup-items { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; }
+        .setup-item { font-size: 11.5px; color: #c9d6cb; white-space: nowrap; }
+        .setup-item.pass { color: #39e75f; }
+        .setup-item.fail { color: #ff6b6b; }
+        .setup-item.warn { color: #e5a93c; }
+        .setup-hold { height: 6px; background: #2a352c; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+        .setup-hold-bar { height: 100%; width: 0%; background: #39e75f; transition: width 0.15s; }
+        .setup-foot { font-size: 10.5px; color: #8b9b8e; text-align: center; margin-top: 4px; }
+        @media (max-width: 480px) {
+            .setup-panel { padding: 6px 8px; min-width: 0; }
+            .setup-title { font-size: 12px; }
+            .setup-msg { font-size: 12px; }
+            .setup-item { font-size: 10.5px; }
+            .setup-foot { display: none; }
+        }
         @keyframes pulse {
             0% { transform: scale(0.9); opacity: 0.8; }
             50% { transform: scale(1.1); opacity: 1; }
@@ -405,7 +429,7 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">검정 표준체계 v6.1</div>
+        <div class="badge">검정 표준체계 v6.2</div>
     </div>
 </header>
 
@@ -464,8 +488,22 @@
 
     <div class="countdown-overlay" id="countdownOverlay">
         <div id="countdownInner" style="display:flex; flex-direction:column; align-items:center; transition: transform 0.2s;">
-            <div class="countdown-num" id="countdownText">10</div>
-            <div class="countdown-sub">자세를 취하십시오 (준비 카운트)</div>
+            <div class="setup-panel" id="setupPanel">
+                <div class="setup-title">📋 준비 확인 (자동 시작)</div>
+                <div class="setup-msg" id="setupMsg">카메라에 몸 옆면 전체가 보이게 하십시오</div>
+                <div class="setup-items">
+                    <div class="setup-item" id="setupItemBody">⬜ 몸 인식</div>
+                    <div class="setup-item" id="setupItemFrame">⬜ 머리~발끝 화면 안</div>
+                    <div class="setup-item" id="setupItemSide">⬜ 옆모습 촬영</div>
+                    <div class="setup-item" id="setupItemDist">⬜ 카메라 거리</div>
+                    <div class="setup-item" id="setupItemPose">⬜ 팔 펴기 · 몸 일직선</div>
+                    <div class="setup-item" id="setupItemStill">⬜ 정지 유지</div>
+                </div>
+                <div class="setup-hold"><div class="setup-hold-bar" id="setupHoldBar"></div></div>
+                <div class="setup-foot">모두 통과 후 2초 유지 → 5초 카운트다운 자동 시작 · [⏩ 바로 시작]으로 건너뛰기</div>
+            </div>
+            <div class="countdown-num" id="countdownText">5</div>
+            <div class="countdown-sub" id="countdownSub">자세를 취하십시오 (준비 카운트)</div>
             <div class="countdown-sub" id="countdownCalib" style="font-size:12px; color:#e5a93c; margin-top:6px;">팔을 곧게 편 엎드려뻗쳐 자세를 유지하십시오</div>
         </div>
     </div>
@@ -601,7 +639,8 @@
             <div class="help-step">
                 <div class="help-step-title">3단계: 측정 시작 및 정자세 실시 요령</div>
                 <div class="help-step-desc">
-                    • <b>[📹 측정 시작]</b>을 누르면 10초 음성 카운트다운 후 자동으로 시간 계측과 녹화가 시작됩니다.<br>
+                    • <b>[📹 측정 시작]</b>을 누르면 <b>준비 확인</b>이 시작됩니다. 몸 인식·화면 안·거리·옆모습·팔 펴기와 몸 일직선·정지 여부를 자동으로 확인하고 문제를 음성으로 안내합니다.<br>
+                    • 모든 항목을 통과한 채 2초간 유지하면 5초 음성 카운트다운 후 자동으로 시간 계측과 녹화가 시작됩니다. 준비 확인 중 버튼을 다시 누르면 <b>바로 시작</b>합니다.<br>
                     • <b>카운트다운 중</b>: 팔을 곧게 편 엎드려뻗쳐 자세로 정지해 있으면 마지막 4초 동안 기준 자세(팔 길이·몸 일직선)를 자동 측정합니다.<br>
                     • <b>하강</b>: 팔꿈치를 기준선까지 충분히 굽혀 가슴을 바닥(또는 봉) 깊숙이 내립니다.<br>
                     • <b>상승</b>: 팔꿈치를 155° 이상, 기준 자세 팔 길이의 96% 이상까지 완전히 곧게 펴야 횟수가 카운트됩니다.<br>
@@ -854,8 +893,35 @@
     // ==========================================
     // [v6.1] 판정 로직 보강 상수
     // ==========================================
-    var PRE_COUNTDOWN_SEC = 10;   // 측정 시작 전 준비 카운트다운(초)
-    var CALIB_LAST_SEC = 4;       // 카운트다운 마지막 N초 동안 기준 자세 측정
+    var PRE_COUNTDOWN_SEC = 5;    // [v6.2] 준비 확인 통과 후 카운트다운(초)
+    var CALIB_LAST_SEC = 4;       // 카운트다운 마지막 N초 동안 기준 자세 측정 (5초 중 1초 경과 후 시작)
+
+    // ==========================================
+    // [v6.2] 준비 확인(자동 확인 + 음성 안내) 상수·상태
+    // ==========================================
+    var SETUP_TICK_MS = 200;          // 확인 주기
+    var SETUP_HOLD_MS = 2000;         // 모든 항목 통과 상태를 이만큼 유지하면 카운트다운 시작
+    var SETUP_STALE_MS = 700;         // 이 시간 동안 관절 결과가 없으면 '몸 미인식'
+    var SETUP_SPEAK_GAP_MS = 4000;    // 같은 안내 음성 반복 간격
+    var SETUP_SLOW_NOTICE_MS = 30000; // 준비가 이만큼 지연되면 '바로 시작' 안내 (자동 시작은 하지 않음)
+    var SETUP_EDGE = 0.01;            // 화면 가장자리 여유 (정규화 좌표)
+    var SETUP_MIN_BODY_FRAC = 0.28;   // 몸 길이(어깨-발목)/몸 방향 화면 크기 최소값 (≈ 4m 이내)
+    var SETUP_MAX_SHOULDER_SEP = 0.9; // 양 어깨 간격/몸통 길이 최대값 (≈ 카메라가 옆면에서 55° 이상 돌면 초과)
+    var SETUP_MIN_ELBOW = 150;        // 팔 편 자세
+    var SETUP_MAX_LINE_DEV = 0.07;    // 몸 일직선 허용 (판정 기준보다 넉넉하게)
+    var SETUP_STILL_FRAC = 0.03;      // 1초간 어깨 이동 허용 (몸 길이 대비, 좌표 흔들림 ≈ 2% 고려)
+    var SETUP_STILL_ELBOW = 15;       // 1초간 팔꿈치 각도 변화 허용(°) (편 팔은 흔들림만으로 ±6° 변동)
+
+    var isSetupChecking = false;
+    var setupTimerId = null;
+    var setupStartAt = 0;
+    var setupPassSince = 0;
+    var setupLastMsg = "";
+    var setupLastSpeakAt = 0;
+    var setupSlowNoticed = false;
+    var setupFrameOk = false;         // 화면 테두리 색 표시용
+    var setupInfo = null;             // 최신 프레임의 준비 확인용 측정값
+    var setupStillBuf = [];           // 정지 확인용 최근 1초 샘플
     var CALIB_MIN_SAMPLES = 15;   // 기준 자세로 인정할 최소 프레임 수
     var CALIB_MAX_LINE_DEV = 0.03;// 기준 자세의 몸 일직선 편차 허용 한계 (이보다 크면 0으로 간주)
 
@@ -1033,6 +1099,8 @@
             if (isCoreBodyDetected && latestPoseLandmarks && smoothedCoords.s && smoothedCoords.e && smoothedCoords.p && smoothedCoords.k) {
                 drawSkeletonOverlay(canvasCtx, cw, ch);
             }
+
+            if (isSetupChecking) drawSetupFrame(canvasCtx, cw, ch);
 
             drawRotatedOSD(canvasCtx, cw, ch);
         }
@@ -1594,6 +1662,9 @@
         var swDistMed = medianOf(swDistHistory);
         currentDepthRatio = swTopDist ? (swDistMed / swTopDist) : null;
 
+        // [v6.2] 준비 확인용 측정값 (준비 확인 중에만 계산)
+        if (isSetupChecking) captureSetupInfo(lm, ix, isCoreComplete, pS, pP, pK, pW, rawPA, cw, ch);
+
         updateHUDData(currentElbowAng, currentCoreAng, currentKneeAng);
 
         var isJudging = (isTimerRunning || isUploadAnalysisMode) && !isPausedDueToNoBody;
@@ -1877,8 +1948,10 @@
         hipIsEstimatedNow = false;
         wasHipEstimated = false;
 
-        document.getElementById('txtTimerState').innerText = "⚠️ 핵심 관절 미인식 (시간은 계속 진행)";
-        document.getElementById('txtTimerState').style.color = "#ff4d4d";
+        if (!isSetupChecking) {
+            document.getElementById('txtTimerState').innerText = "⚠️ 핵심 관절 미인식 (시간은 계속 진행)";
+            document.getElementById('txtTimerState').style.color = "#ff4d4d";
+        }
 
         if (wasCoreBodyDetected) {
             wasCoreBodyDetected = false;
@@ -1886,7 +1959,8 @@
                 bodyLossStartSec = getElapsedSec();
                 addLogRow("핵심 관절 미인식 (판정 중단)", "시간 계속 진행", false);
             }
-            if (!hasSpokenCoreLossThisSession) {
+            // [v6.2] 준비 확인 중에는 준비 확인 음성 안내가 대신 안내함
+            if (!hasSpokenCoreLossThisSession && !isSetupChecking) {
                 hasSpokenCoreLossThisSession = true;
                 speak("핵심 관절이 인식되지 않았습니다.");
             }
@@ -1908,6 +1982,9 @@
             if (isTimerRunning || isUploadAnalysisMode) {
                 document.getElementById('txtTimerState').innerText = isUploadAnalysisMode ? "업로드 영상 정밀 분석 중" : "측정 및 녹화 진행 중";
                 document.getElementById('txtTimerState').style.color = "#39e75f";
+            } else if (isSetupChecking) {
+                document.getElementById('txtTimerState').innerText = "준비 확인 중";
+                document.getElementById('txtTimerState').style.color = "#e5a93c";
             } else {
                 document.getElementById('txtTimerState').innerText = "대기 중";
                 document.getElementById('txtTimerState').style.color = "#8b9b8e";
@@ -2049,19 +2126,260 @@
         return str;
     }
 
+    // ==========================================
+    // [v6.2] 준비 확인: 자동 확인 + 음성 안내
+    //   측정 시작 → 준비 확인(항목 통과 2초 유지) → 5초 카운트다운 → 측정
+    //   엎드린 사람은 화면을 보기 어려우므로 음성 안내가 핵심. 한 번에 가장 중요한 문제 하나만 안내.
+    // ==========================================
+    function captureSetupInfo(lm, ix, isCoreComplete, pS, pP, pK, pW, rawPA, cw, ch) {
+        function inFrame(pt) {
+            return pt && pt.x >= SETUP_EDGE && pt.x <= 1 - SETUP_EDGE && pt.y >= SETUP_EDGE && pt.y <= 1 - SETUP_EDGE;
+        }
+        var raw = { s: lm[ix.s], e: lm[ix.e], w: lm[ix.w], h: lm[ix.h], k: lm[ix.k] };
+        var upperInFrame = inFrame(raw.s) && inFrame(raw.e) && inFrame(raw.w) && inFrame(raw.h) && inFrame(raw.k);
+        var ankleRaw = lm[ix.a];
+        var ankleInFrame = inFrame(ankleRaw);
+        var ankleVisible = !!(ankleRaw && (ankleRaw.visibility || 0) >= 0.3 && ankleInFrame);
+
+        // 몸 길이: 어깨-발목 (발목 없으면 어깨-무릎 × 1.44). 몸이 놓인 방향의 화면 크기 대비 (세로 화면 대응)
+        var endPt = rawPA || pK;
+        var dx = endPt.x - pS.x, dy = endPt.y - pS.y;
+        var lenScale = rawPA ? 1 : 1.44;
+        var bodyFrac = Math.max(Math.abs(dx) / cw, Math.abs(dy) / ch) * lenScale;
+        var bodyLenPx = Math.sqrt(dx * dx + dy * dy) * lenScale;
+
+        // 옆모습: 양 어깨 화면 간격 / 몸통(어깨-골반) 길이. 정측면이면 작고 정면에 가까울수록 커짐
+        var shoulderSep = null;
+        var sL = lm[11], sR = lm[12];
+        if (sL && sR && (sL.visibility || 0) > 0.3 && (sR.visibility || 0) > 0.3) {
+            var sdx = (sL.x - sR.x) * cw, sdy = (sL.y - sR.y) * ch;
+            var tdx = pS.x - pP.x, tdy = pS.y - pP.y;
+            var torso = Math.sqrt(tdx * tdx + tdy * tdy) || 1;
+            shoulderSep = Math.sqrt(sdx * sdx + sdy * sdy) / torso;
+        }
+
+        var lineEnd = rawPA || pK;
+        var lineDev = calculateVerticalDropMetrics(pS, pP, lineEnd, pW).normDrop;
+
+        setupInfo = {
+            t: Date.now(),
+            complete: isCoreComplete && !hipIsEstimatedNow,
+            hipEstimated: hipIsEstimatedNow,
+            upperInFrame: upperInFrame,
+            ankleInFrame: ankleInFrame,
+            ankleVisible: ankleVisible,
+            bodyFrac: bodyFrac,
+            bodyLenPx: bodyLenPx,
+            shoulderSep: shoulderSep,
+            elbow: currentElbowAng,
+            lineDev: lineDev,
+            sx: pS.x, sy: pS.y
+        };
+    }
+
+    // 항목별 결과와 '가장 먼저 고쳐야 할' 안내 문구를 만듦
+    function evaluateSetup(now) {
+        var r = { body: false, frame: false, dist: false, side: false, sideWarn: false, pose: false, still: false, msg: "", tts: "" };
+        var info = setupInfo;
+        function fail(msg, tts) { if (!r.msg) { r.msg = msg; r.tts = tts || msg; } }
+
+        if (!info || now - info.t > SETUP_STALE_MS || !isCoreBodyDetected) {
+            fail("몸이 인식되지 않습니다. 카메라에 몸 옆면 전체가 보이게 하십시오");
+            setupStillBuf = [];
+            return r;
+        }
+        if (info.hipEstimated) {
+            fail("골반이 보이지 않습니다. 골반이 가려지지 않게 하십시오");
+        } else if (!info.complete) {
+            fail("어깨·팔·골반·무릎이 모두 보이게 하십시오");
+        } else {
+            r.body = true;
+        }
+
+        if (!info.upperInFrame || !info.ankleInFrame) {
+            fail("몸 일부가 화면 밖에 있습니다. 카메라를 뒤로 옮기십시오");
+        } else if (!info.ankleVisible) {
+            fail("발목이 보이지 않습니다. 발끝까지 보이게 하십시오");
+        } else {
+            r.frame = true;
+        }
+
+        if (info.shoulderSep !== null && info.shoulderSep > SETUP_MAX_SHOULDER_SEP) {
+            fail("몸의 옆면이 보이도록 카메라를 몸 옆쪽으로 옮기십시오");
+        } else {
+            r.side = true;
+            // 반대쪽 어깨 좌표는 부정확할 수 있어 차단하지 않고 경고 표시만
+            r.sideWarn = (info.shoulderSep !== null && info.shoulderSep > SETUP_MAX_SHOULDER_SEP * 0.6);
+        }
+
+        // 옆모습을 먼저 확인: 비스듬하면 몸이 짧게 보여 '가까이' 안내가 잘못 나갈 수 있음
+        if (info.bodyFrac < SETUP_MIN_BODY_FRAC) {
+            fail("몸이 너무 작게 보입니다. 카메라를 조금 더 가까이 두십시오");
+        } else {
+            r.dist = true;
+        }
+
+        if (info.elbow < SETUP_MIN_ELBOW) {
+            fail("팔을 곧게 펴고 엎드려뻗쳐 자세를 취하십시오");
+        } else if (info.lineDev > SETUP_MAX_LINE_DEV) {
+            fail("허리가 처졌습니다. 몸을 일직선으로 하십시오");
+        } else if (info.lineDev < -SETUP_MAX_LINE_DEV) {
+            fail("엉덩이를 낮춰 몸을 일직선으로 하십시오");
+        } else {
+            r.pose = true;
+        }
+
+        // 정지: 최근 1초 동안 어깨 이동과 팔꿈치 각도 변화가 작아야 함
+        setupStillBuf.push({ t: now, x: info.sx, y: info.sy, e: info.elbow });
+        while (setupStillBuf.length && now - setupStillBuf[0].t > 1000) setupStillBuf.shift();
+        if (setupStillBuf.length >= 4) {
+            var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minE = 999, maxE = -999;
+            for (var i = 0; i < setupStillBuf.length; i++) {
+                var b = setupStillBuf[i];
+                minX = Math.min(minX, b.x); maxX = Math.max(maxX, b.x);
+                minY = Math.min(minY, b.y); maxY = Math.max(maxY, b.y);
+                minE = Math.min(minE, b.e); maxE = Math.max(maxE, b.e);
+            }
+            var tol = (info.bodyLenPx || 1) * SETUP_STILL_FRAC;
+            r.still = (maxX - minX <= tol) && (maxY - minY <= tol) && (maxE - minE <= SETUP_STILL_ELBOW);
+        }
+        if (!r.still) fail("움직이지 말고 자세를 유지하십시오");
+
+        return r;
+    }
+
+    function setSetupItem(id, state, text) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.className = "setup-item " + state;
+        el.innerText = (state === "pass" ? "✅ " : (state === "warn" ? "⚠️ " : "❌ ")) + text;
+    }
+
+    function setupTick() {
+        if (!isSetupChecking) return;
+        var now = Date.now();
+        var r = evaluateSetup(now);
+        var allOk = r.body && r.frame && r.dist && r.side && r.pose && r.still;
+        setupFrameOk = r.body && r.frame && r.dist && r.side;
+
+        setSetupItem('setupItemBody', r.body ? "pass" : "fail", "몸 인식");
+        setSetupItem('setupItemFrame', r.frame ? "pass" : "fail", "머리~발끝 화면 안");
+        setSetupItem('setupItemDist', r.dist ? "pass" : "fail", "카메라 거리");
+        setSetupItem('setupItemSide', r.side ? (r.sideWarn ? "warn" : "pass") : "fail", r.sideWarn ? "옆모습 촬영 (조금 비스듬함)" : "옆모습 촬영");
+        setSetupItem('setupItemPose', r.pose ? "pass" : "fail", "팔 펴기 · 몸 일직선");
+        setSetupItem('setupItemStill', r.still ? "pass" : "fail", "정지 유지");
+        document.getElementById('setupPanel').classList.toggle('ok', allOk);
+
+        if (allOk) {
+            if (!setupPassSince) setupPassSince = now;
+            var held = now - setupPassSince;
+            document.getElementById('setupMsg').innerText = "✅ 준비 완료 - 그대로 유지하십시오";
+            document.getElementById('setupHoldBar').style.width = Math.min(100, held / SETUP_HOLD_MS * 100) + "%";
+            if (held >= SETUP_HOLD_MS) {
+                finishSetupCheck("준비 확인 통과");
+                return;
+            }
+            setupLastMsg = "";
+        } else {
+            setupPassSince = 0;
+            document.getElementById('setupHoldBar').style.width = "0%";
+            document.getElementById('setupMsg').innerText = r.msg;
+            // 안내가 바뀌었거나 같은 문제가 계속되면 일정 간격으로 다시 안내
+            if (r.tts !== setupLastMsg || now - setupLastSpeakAt >= SETUP_SPEAK_GAP_MS) {
+                speak(r.tts);
+                setupLastMsg = r.tts;
+                setupLastSpeakAt = now;
+            }
+        }
+
+        if (!setupSlowNoticed && now - setupStartAt >= SETUP_SLOW_NOTICE_MS) {
+            setupSlowNoticed = true;
+            setupLastSpeakAt = now;
+            speak("준비 확인이 지연되고 있습니다. 측정 시작 버튼을 다시 누르면 바로 시작합니다");
+        }
+    }
+
+    function startSetupCheck() {
+        isSetupChecking = true;
+        setupStartAt = Date.now();
+        setupPassSince = 0;
+        setupLastMsg = "";
+        setupLastSpeakAt = 0;
+        setupSlowNoticed = false;
+        setupFrameOk = false;
+        setupInfo = null;
+        setupStillBuf = [];
+        hasSpokenCoreLossThisSession = false;
+
+        var overlay = document.getElementById('countdownOverlay');
+        overlay.style.background = "rgba(0, 0, 0, 0.15)";
+        overlay.style.display = 'flex';
+        document.getElementById('setupPanel').style.display = 'flex';
+        document.getElementById('countdownText').style.display = 'none';
+        document.getElementById('countdownSub').style.display = 'none';
+        document.getElementById('countdownCalib').style.display = 'none';
+        document.getElementById('setupHoldBar').style.width = "0%";
+
+        updateActionButtons("⏩ 바로 시작 (준비 확인 건너뛰기)", "btn-pause");
+        document.getElementById('txtTimerState').innerText = "준비 확인 중";
+        document.getElementById('txtTimerState').style.color = "#e5a93c";
+        speak("준비 확인을 시작합니다. 엎드려뻗쳐 자세를 취하십시오");
+        setupLastSpeakAt = Date.now();
+
+        clearInterval(setupTimerId);
+        setupTimerId = setInterval(setupTick, SETUP_TICK_MS);
+    }
+
+    function stopSetupCheck() {
+        isSetupChecking = false;
+        clearInterval(setupTimerId);
+        setupTimerId = null;
+        setupFrameOk = false;
+        var overlay = document.getElementById('countdownOverlay');
+        overlay.style.background = "";
+        document.getElementById('setupPanel').style.display = 'none';
+        document.getElementById('countdownText').style.display = '';
+        document.getElementById('countdownSub').style.display = '';
+        document.getElementById('countdownCalib').style.display = '';
+    }
+
+    // 준비 확인 종료 → 5초 카운트다운
+    function finishSetupCheck(reason) {
+        var waitedSec = Math.round((Date.now() - setupStartAt) / 1000);
+        stopSetupCheck();
+        addLogRow(reason, "준비 소요 " + waitedSec + "초", false);
+        runPreCountdown();
+    }
+
+    // [v6.2] 준비 확인 중 화면 테두리: 몸이 들어와야 할 영역 표시 (위치 조건 통과 시 초록)
+    function drawSetupFrame(ctx, cw, ch) {
+        var m = Math.round(Math.min(cw, ch) * SETUP_EDGE) + 2;
+        ctx.save();
+        ctx.setLineDash([14, 10]);
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = setupFrameOk ? "rgba(57, 231, 95, 0.9)" : "rgba(255, 77, 77, 0.9)";
+        ctx.strokeRect(m, m, cw - m * 2, ch - m * 2);
+        ctx.restore();
+    }
+
     function handleStartOrToggle() {
         if (isUploadAnalysisMode) {
             showToast("현재 촬영 영상 분석 모드입니다. 카메라 복귀 후 시작하십시오.");
             return;
         }
         if (isCountingDown) return;
+        // [v6.2] 준비 확인 중 버튼 → 건너뛰고 바로 5초 카운트다운
+        if (isSetupChecking) {
+            finishSetupCheck("준비 확인 생략 (바로 시작)");
+            return;
+        }
 
         if (!cameraStarted) {
             initPoseModel();
             startCameraStream();
             startRenderPipeline();
             cameraStarted = true;
-            runPreCountdown();
+            startSetupCheck();
         } else {
             if (isTimerRunning) {
                 // [v5.7] 녹화를 종료하지 않고 일시정지 → 재개 시 같은 영상에 이어서 기록
@@ -2072,7 +2390,7 @@
                 document.getElementById('txtTimerState').style.color = "#e67e22";
             } else {
                 if (remainingSeconds === totalSeconds && !isRecording) {
-                    runPreCountdown();
+                    startSetupCheck();
                 } else if (remainingSeconds <= 0) {
                     showToast("측정이 종료되었습니다. 0회 초기화 후 다시 시작하십시오.");
                 } else {
@@ -2103,7 +2421,8 @@
         countText.innerText = count;
         calibText.innerText = "팔을 곧게 편 엎드려뻗쳐 자세를 유지하십시오";
         calibText.style.color = "#e5a93c";
-        speak(count + "초 후 측정을 시작합니다. 엎드려뻗쳐 자세를 취하십시오");
+        updateActionButtons("⏳ 카운트다운 중", "btn-pause");
+        speak("시작 " + count + "초 전");
 
         var cdInterval = setInterval(function() {
             if (!isCountingDown) {
@@ -2113,8 +2432,7 @@
             count--;
             if (count > 0) {
                 countText.innerText = count;
-                // 첫 안내 음성이 끊기지 않도록 5초 이하부터 숫자 음성
-                if (count <= 5) speak(count + "");
+                speak(count + "");
                 if (count === CALIB_LAST_SEC) {
                     isCalibCollecting = true;
                     calibSamples = [];
@@ -2975,6 +3293,7 @@
     }
 
     function resetAll() {
+        stopSetupCheck();
         stopTimer();
         stopRecording();
         isCountingDown = false;
