@@ -430,7 +430,7 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">검정 표준체계 v6.3</div>
+        <div class="badge">검정 표준체계 v6.4</div>
     </div>
 </header>
 
@@ -851,7 +851,7 @@
     var currentCoreAng = 0;
     var currentKneeAng = 0;
 
-    // 부정자세 지속성 검증(3프레임 디바운스) 및 2.5초 절대 쿨다운
+    // 부정자세 지속성 검증 [v6.4] 값 = 조건 최초 성립 시각(ms), 0 = 미성립 (FAULT_HOLD_MS 유지 시 확정) 및 2.5초 절대 쿨다운
     var faultSustainedCounts = {
         "SAG": 0,
         "HIGH_HIP": 0,
@@ -860,7 +860,7 @@
         "SHALLOW": 0,
         "INCOMPLETE": 0
     };
-    var lastAnyFaultTime = 0;
+    var lastAnyFaultTime = -1e12; // [v6.4] 업로드 영상(0초부터 시작하는 시계)에서도 첫 경고가 쿨다운에 걸리지 않도록 충분히 과거로
     var FAULT_COOLDOWN_MS = 2500;
     var lastFaultKey = "";
 
@@ -936,10 +936,14 @@
     // 완전 신전: 팔꿈치 각도 + 팔 길이 비율을 함께 만족해야 카운트 (0.96 ≈ 실제 팔꿈치 146°)
     var TOP_ELBOW_ANG = 155;
     var TOP_RATIO = 0.96;
+    var TOP_RATIO_RELAXED = 0.94; // [v6.4] 팔꿈치가 TOP_RELAX_ELBOW 이상일 때 허용하는 비율 (≈ 실제 팔꿈치 140°)
+    var TOP_RELAX_ELBOW = 165;    // 160이면 팔 크게 벌리고 140°만 편 반복이 일부 인정돼 165로 설정
     var TOP_UPDATE_ANG = 165;     // 기준 팔 길이 자동 갱신은 이 각도 이상(확실히 편 자세)에서만
-    // 단일 프레임 노이즈로 상태가 바뀌지 않도록 연속 프레임 확인
-    var DOWN_CONFIRM_FRAMES = 2;
-    var TOP_CONFIRM_FRAMES = 2;
+    // [v6.4] 단일 프레임 노이즈로 상태가 바뀌지 않도록 '시간' 기준으로 연속 확인
+    //   (기존 프레임 수 기준은 15fps 기기에서 30fps의 2배 시간이 걸려 짧은 배치기 등을 놓침)
+    //   30fps 기준 기존 동작과 같도록 설정: 상태 전환 2프레임(33ms), 부정자세 3프레임(66ms)
+    var CONFIRM_HOLD_MS = 25;     // '충분 하강'·'완전 신전' 확정에 필요한 유지 시간
+    var FAULT_HOLD_MS = 55;       // 부정자세 확정에 필요한 유지 시간
     var ELBOW_MEDIAN_WIN = 3;     // 팔꿈치 각도 중앙값 필터 크기(프레임)
 
     // 몸 일직선: 어깨-발목(없으면 어깨-무릎) 선에서 골반이 벗어난 거리 / 선 길이
@@ -947,16 +951,19 @@
     var SAG_T_BAR = 0.055,   PIKE_T_BAR = 0.065;
 
     var swTopDist = null;         // 기준 자세 어깨-손목 거리(몸통 길이 대비). null이면 비율 판정 비활성
+    var calibSwTopDist = null;    // [v6.4] 카운트다운에서 측정한 기준값 (자동 갱신의 하한)
+    var topSwSamples = [];        // [v6.4] 팔 편 자세 최근 샘플 (중앙값으로 기준 갱신)
+    var TOP_SW_SAMPLES_MIN = 6;
+    var TOP_SW_SAMPLES_MAX = 45;
     var lineDevBaseline = 0;      // 기준 자세의 몸 일직선 편차(개인차 보정)
     var calibSamples = [];        // 카운트다운 중 수집한 {sw, dev}
     var isCalibrated = false;     // 카운트다운 기준 자세 측정 성공 여부
     var isCalibCollecting = false;// 현재 기준 자세 수집 구간인지
     var elbowAngHistory = [];     // 중앙값 필터용
     var swDistHistory = [];       // 어깨-손목 거리 중앙값 필터용
-    var bodyScaleEma = null;      // 몸통 길이(px) 느린 평균 (카메라 거리 보정용)
-    var BODY_SCALE_ALPHA = 0.05;  // 프레임당 반영 비율 (30fps 기준 약 1초 시정수)
-    var downConfirmCount = 0;
-    var topConfirmCount = 0;
+    var bodyScaleEma = null;      // 몸통 길이(px) 대표값 (카메라 거리 보정용) [v6.4] 최근 1초 중앙값
+    var bodyScaleBuf = [];        // [v6.4] {t, v} 최근 샘플
+    var BODY_SCALE_WIN_MS = 1000;
     var minRatioInCurrentRep = 9;
     var currentDepthRatio = null; // 표시·진단용
     var currentLineDev = 0;       // 표시·진단용 (기준 보정 후)
@@ -1444,6 +1451,24 @@
         return Math.round(Math.acos(cosTheta) * (180.0 / Math.PI));
     }
 
+    // [v6.4] 판정용 시계: 실시간 측정은 실제 시각, 업로드 영상은 영상 재생 시각
+    //   (업로드 영상은 재생 속도·분석 지연과 무관하게 영상 속 실제 시간으로 판정)
+    function judgeNowMs() {
+        if (isUploadAnalysisMode && uploadVideo && isFinite(uploadVideo.currentTime)) {
+            return uploadVideo.currentTime * 1000;
+        }
+        return Date.now();
+    }
+
+    // [v6.4] 조건이 since 시각부터 계속 성립해 holdMs 이상 지났는지
+    //   sinceObj[key]에 최초 성립 시각 저장 (0 = 미성립). 영상 되감기 등으로 시간이 거꾸로 가면 다시 시작
+    function holdSatisfied(sinceObj, key, cond, now, holdMs) {
+        if (!cond) { sinceObj[key] = 0; return false; }
+        if (!sinceObj[key] || now < sinceObj[key]) sinceObj[key] = now || 1;
+        return (now - sinceObj[key]) >= holdMs;
+    }
+    var confirmSince = { DOWN: 0, TOP: 0 };
+
     // ==========================================
     // [MediaPipe AI 자세 판정 엔진]
     // ==========================================
@@ -1499,11 +1524,15 @@
             elbowAngHistory = [];
         swDistHistory = [];
         bodyScaleEma = null;
+        bodyScaleBuf = [];
             swDistHistory = [];
         bodyScaleEma = null;
+        bodyScaleBuf = [];
             bodyScaleEma = null;
-            downConfirmCount = 0;
-            topConfirmCount = 0;
+        bodyScaleBuf = [];
+            bodyScaleBuf = [];
+            confirmSince.DOWN = 0;
+            confirmSince.TOP = 0;
             currentSide = newSide;
         }
         var ix = SIDE_IDX[currentSide];
@@ -1654,10 +1683,16 @@
         // [v6.1] 하강 깊이 비율: 어깨-손목 거리 / 기준 자세 거리 (팔꿈치 벌림에 강함)
         // 화면상 크기(카메라 거리) 변화를 상쇄하기 위해 몸통 마디 길이 합(어깨-골반 + 골반-무릎)으로 나눔
         //  - 마디 길이의 '합'이라 허리가 처지거나 들려도 값이 변하지 않음
-        //  - 카메라 거리는 천천히 변하므로 느린 평균(EMA)으로 골반·무릎 좌표 흔들림을 걸러 사용
+        //  - [v6.4] 최근 1초 구간의 중앙값 사용 (프레임률과 무관, 튀는 값에 끌려가지 않음)
+        //    기존 EMA는 첫 프레임 하나의 노이즈 값에서 출발해 수렴이 느려(15fps에서 더 느림)
+        //    기준 자세 측정값이 3~5% 어긋나는 문제가 있었음
         var bodyScaleNow = Math.sqrt((pS.x - pP.x) * (pS.x - pP.x) + (pS.y - pP.y) * (pS.y - pP.y)) +
                            Math.sqrt((pP.x - pK.x) * (pP.x - pK.x) + (pP.y - pK.y) * (pP.y - pK.y));
-        bodyScaleEma = (bodyScaleEma === null) ? bodyScaleNow : (bodyScaleEma * (1 - BODY_SCALE_ALPHA) + bodyScaleNow * BODY_SCALE_ALPHA);
+        var bsNow = judgeNowMs();
+        if (bodyScaleBuf.length && bsNow < bodyScaleBuf[bodyScaleBuf.length - 1].t) bodyScaleBuf = []; // 영상 되감기
+        bodyScaleBuf.push({ t: bsNow, v: bodyScaleNow });
+        while (bodyScaleBuf.length > 1 && bsNow - bodyScaleBuf[0].t > BODY_SCALE_WIN_MS) bodyScaleBuf.shift();
+        bodyScaleEma = medianOf(bodyScaleBuf.map(function(b) { return b.v; }));
         var swDist = Math.sqrt((pS.x - pW.x) * (pS.x - pW.x) + (pS.y - pW.y) * (pS.y - pW.y)) / (bodyScaleEma || 1);
         // 팔꿈치 각도와 같은 3프레임 중앙값 필터 (손목 오인식 1~2프레임 무시)
         swDistHistory.push(swDist);
@@ -1671,6 +1706,7 @@
         updateHUDData(currentElbowAng, currentCoreAng, currentKneeAng);
 
         var isJudging = (isTimerRunning || isUploadAnalysisMode) && !isPausedDueToNoBody;
+        var nowMs = judgeNowMs();
 
         // [v5.7] 골반이 추정값이면 판정 보류: 카운트·부정자세 모두 이번 프레임은 건너뜀
         // (상태(state)는 유지하므로 골반이 다시 보이면 이어서 판정)
@@ -1739,23 +1775,31 @@
         // [v6.1] 깊이·신전 조건
         var r = currentDepthRatio;
         var depthRatioT = isBar ? DEPTH_RATIO_BAR : DEPTH_RATIO_FLOOR;
-        var isTopNow = (currentElbowAng >= TOP_ELBOW_ANG) && (r === null || r >= TOP_RATIO);
+        // [v6.4] 팔꿈치가 화면상 확실히 펴졌으면(≥165°) 비율 기준을 TOP_RATIO_RELAXED까지 완화
+        //  (팔 길이 비율은 노이즈로 ±2% 흔들려, 완전히 편 팔도 0.96을 놓치는 경우가 있었음)
+        var isTopRatioOk = (r === null) || (r >= TOP_RATIO) ||
+                           (r >= TOP_RATIO_RELAXED && currentElbowAng >= TOP_RELAX_ELBOW);
+        var isTopNow = (currentElbowAng >= TOP_ELBOW_ANG) && isTopRatioOk;
 
         // [v6.1] 기준 자세 미측정(업로드 분석·카운트다운 중 자세 미유지) 시 팔 편 자세에서 자동 보정
-        // 측정 중에도 확실히 편 자세(≥165°)에서만 천천히 갱신 → 카메라와의 거리 변화는 따라가되,
-        // 팔을 덜 편 자세를 '기준'으로 학습하지 않도록 함
-        //  - 카운트다운에서 기준을 측정했으면 기준은 늘어나기만 함(카메라 쪽으로 다가온 경우 대응).
-        //    줄어들게 두면 팔을 벌린 사람은 덜 편 자세(140°)도 화면 각도가 165° 이상으로 보여 기준이 점점 짧아짐
-        //  - 미측정(업로드 분석 등)이면 천천히 줄어드는 것도 허용
+        // [v6.4] 확실히 편 자세(≥165°)의 최근 샘플 '중앙값'으로 갱신
+        //  - 기존 '늘어나기만 하는' 방식은 노이즈로 길게 잡힌 값만 누적돼 기준이 부풀고,
+        //    완전히 편 팔도 기준 미달(신전 실패)로 판정되는 문제가 있었음 (15fps에서 두드러짐)
+        //  - 기준 자세를 측정했다면 그 값보다 짧아지지 않음 (덜 편 자세를 기준으로 학습 방지)
         //  - 카메라 거리 변화는 몸통 길이 정규화로 이미 상쇄됨
-        //  - 손목 오인식 같은 튐 값(+15% 초과)은 무시
         if (!isCountingDown && state === "UP" && currentElbowAng >= TOP_UPDATE_ANG && !isCoreSag && !isHipHigh) {
-            if (!swTopDist) {
+            topSwSamples.push(swDist);
+            if (topSwSamples.length > TOP_SW_SAMPLES_MAX) topSwSamples.shift();
+            if (topSwSamples.length >= TOP_SW_SAMPLES_MIN) {
+                if (isCalibrated && calibSwTopDist) {
+                    swTopDist = Math.max(calibSwTopDist, medianOf(topSwSamples));
+                } else {
+                    // 미측정 시: 상위 80% 지점 값 (노이즈에 강하면서, 팔을 벌린 사람의 하강 초반 프레임이
+                    // '편 자세'로 섞여 기준이 짧아지는 것을 방지)
+                    swTopDist = percentileOf(topSwSamples, 0.8);
+                }
+            } else if (!swTopDist) {
                 swTopDist = swDist;
-            } else if (swDist > swTopDist) {
-                if (swDist < swTopDist * 1.15) swTopDist = swTopDist * 0.8 + swDist * 0.2;
-            } else if (!isCalibrated) {
-                swTopDist = swTopDist * 0.99 + swDist * 0.01;
             }
         }
 
@@ -1768,8 +1812,7 @@
                 faultSustainedCounts["WAVE"] = 0;
             } else {
                 if (isWaveFault) {
-                    faultSustainedCounts["WAVE"]++;
-                    if (faultSustainedCounts["WAVE"] >= 3) {
+                    if (holdSatisfied(faultSustainedCounts, "WAVE", true, nowMs, FAULT_HOLD_MS)) {
                         triggerMovementFault("WAVE", "상체 선행 상승 (배치기)", "배치기 금지입니다. 몸통을 함께 올리십시오.", "상승 골반편차: " + (currentLineDev * 100).toFixed(1) + "%");
                     }
                 } else {
@@ -1778,8 +1821,7 @@
 
                 // 배치기로 이미 판정된 프레임은 처짐 중복 경고하지 않음
                 if (isCoreSag && !isWaveFault) {
-                    faultSustainedCounts["SAG"]++;
-                    if (faultSustainedCounts["SAG"] >= 3) {
+                    if (holdSatisfied(faultSustainedCounts, "SAG", true, nowMs, FAULT_HOLD_MS)) {
                         triggerMovementFault("SAG", "허리 숙여짐 (골반 처짐)", "허리가 처졌습니다. 허리를 올리십시오.", "골반편차: +" + (currentLineDev * 100).toFixed(1) + "% / 코어: " + currentCoreAng + "°");
                     }
                 } else if (!isCoreSag) {
@@ -1787,8 +1829,7 @@
                 }
 
                 if (isHipHigh) {
-                    faultSustainedCounts["HIGH_HIP"]++;
-                    if (faultSustainedCounts["HIGH_HIP"] >= 3) {
+                    if (holdSatisfied(faultSustainedCounts, "HIGH_HIP", true, nowMs, FAULT_HOLD_MS)) {
                         triggerMovementFault("HIGH_HIP", "골반 높음 (엉덩이 솟음)", "골반이 높습니다. 골반을 낮추십시오.", "골반편차: " + (currentLineDev * 100).toFixed(1) + "% / 코어: " + currentCoreAng + "°");
                     }
                 } else {
@@ -1796,8 +1837,7 @@
                 }
 
                 if (isKneeTouch) {
-                    faultSustainedCounts["KNEE"]++;
-                    if (faultSustainedCounts["KNEE"] >= 3) {
+                    if (holdSatisfied(faultSustainedCounts, "KNEE", true, nowMs, FAULT_HOLD_MS)) {
                         triggerMovementFault("KNEE", "무릎 닿음 (다리 굽힘)", "무릎이 닿았습니다. 다리를 곧게 펴십시오.", "무릎각: " + currentKneeAng + "°");
                     }
                 } else {
@@ -1846,22 +1886,27 @@
                         isDownTargetReached = (currentElbowAng <= 100) || isRatioDeep;
                     }
                 }
-                // [v6.1] 연속 프레임 확인 (단일 프레임 노이즈로 '충분 하강' 처리 방지)
-                downConfirmCount = isDownTargetReached ? (downConfirmCount + 1) : 0;
+                // [v6.4] 시간 기준 연속 확인 (단일 프레임 노이즈로 '충분 하강' 처리 방지)
+                var isDownConfirmed = holdSatisfied(confirmSince, "DOWN", isDownTargetReached, nowMs, CONFIRM_HOLD_MS);
 
                 // 덜 내려감: 각도 기준 또는 비율 기준으로 '내려갔다가 다시 올라옴'을 감지
                 var shallowByAng = (minElbowInCurrentRep <= 135 && (currentElbowAng - minElbowInCurrentRep > 15) && currentElbowAng > 110);
                 var shallowByRatio = (r !== null && minRatioInCurrentRep <= 0.93 && (r - minRatioInCurrentRep > 0.06) && r > 0.85);
 
-                if (downConfirmCount >= DOWN_CONFIRM_FRAMES) {
+                // [v6.4] 덜 내려감도 노이즈 한 프레임으로 경고하지 않도록 유지 시간 확인
+                var isShallowConfirmed = holdSatisfied(faultSustainedCounts, "SHALLOW", !isDownTargetReached && (shallowByAng || shallowByRatio), nowMs, FAULT_HOLD_MS);
+
+                if (isDownConfirmed) {
                     state = "DOWN";
-                    downConfirmCount = 0;
-                    topConfirmCount = 0;
+                    confirmSince.DOWN = 0;
+                    confirmSince.TOP = 0;
+                    faultSustainedCounts["SHALLOW"] = 0;
                     // [v6.1] 최고 각도는 실제 상승이 시작된 뒤부터 기록 (아래 상승 단계 참고)
                     maxElbowInCurrentRep = 90;
                     currentFaultBannerText = "✅ 충분 하강! 팔을 밀어 올리십시오";
                     isCurrentFaultWarn = false;
-                } else if (!isDownTargetReached && (shallowByAng || shallowByRatio)) {
+                } else if (isShallowConfirmed) {
+                    faultSustainedCounts["SHALLOW"] = 0;
                     var shallowDetail = "최저: " + minElbowInCurrentRep + "°" + (minRatioInCurrentRep < 9 ? " / 팔길이 " + Math.round(minRatioInCurrentRep * 100) + "%" : "");
                     triggerMovementFault("SHALLOW", "덜 내려감 (심도 미도달)", "덜 내려갔습니다. 가슴을 더 내리십시오.", shallowDetail);
                     minElbowInCurrentRep = 180;
@@ -1882,10 +1927,13 @@
                     maxElbowInCurrentRep = currentElbowAng;
                 }
 
-                // [v6.1] 완전 신전: 팔꿈치 각도 + 팔 길이 비율, 연속 프레임 확인
-                topConfirmCount = isTopNow ? (topConfirmCount + 1) : 0;
+                // [v6.1] 완전 신전: 팔꿈치 각도 + 팔 길이 비율, [v6.4] 시간 기준 연속 확인
+                var isTopConfirmed = holdSatisfied(confirmSince, "TOP", isTopNow, nowMs, CONFIRM_HOLD_MS);
+                // [v6.4] 미신전도 유지 시간 확인 (노이즈 한 프레임으로 경고하지 않음)
+                var isIncompleteNow = !isTopNow && maxElbowInCurrentRep >= 120 && (maxElbowInCurrentRep - currentElbowAng > 15) && currentElbowAng < 145;
+                var isIncompleteConfirmed = holdSatisfied(faultSustainedCounts, "INCOMPLETE", isIncompleteNow, nowMs, FAULT_HOLD_MS);
 
-                if (topConfirmCount >= TOP_CONFIRM_FRAMES) {
+                if (isTopConfirmed) {
                     // [v6.1] 가동범위: 화면 각도 30° 이상 또는 팔 길이 비율 0.20 이상 회복
                     // (팔꿈치를 크게 벌리면 화면 각도 변화가 작게 보여 30°를 못 채움)
                     var isFullRom = (currentElbowAng - minElbowInCurrentRep >= 30) ||
@@ -1902,14 +1950,16 @@
                     }
 
                     state = "UP";
-                    topConfirmCount = 0;
-                    downConfirmCount = 0;
+                    confirmSince.TOP = 0;
+                    confirmSince.DOWN = 0;
+                    faultSustainedCounts["INCOMPLETE"] = 0;
                     minElbowInCurrentRep = 180;
                     maxElbowInCurrentRep = 90;
                     minRatioInCurrentRep = 9;
                     repHasFault = false;
                     faultReasonCurrentRep = "";
-                } else if (maxElbowInCurrentRep >= 120 && (maxElbowInCurrentRep - currentElbowAng > 15) && currentElbowAng < 145) {
+                } else if (isIncompleteConfirmed) {
+                    faultSustainedCounts["INCOMPLETE"] = 0;
                     triggerMovementFault("INCOMPLETE", "팔꿈치 안 펴짐 (미신전)", "팔을 끝까지 펴십시오.", "최대: " + maxElbowInCurrentRep + "°" + (r !== null ? " / 팔길이 " + Math.round(r * 100) + "%" : ""));
                     maxElbowInCurrentRep = 90;
                 }
@@ -1938,8 +1988,9 @@
         elbowAngHistory = [];
         swDistHistory = [];
         bodyScaleEma = null;
-        downConfirmCount = 0;
-        topConfirmCount = 0;
+        bodyScaleBuf = [];
+        confirmSince.DOWN = 0;
+        confirmSince.TOP = 0;
 
         smoothedCoords = { s: null, e: null, p: null, k: null, w: null, n: null, a: null };
         lastValidPoints = { s: null, e: null, p: null, k: null, w: null };
@@ -1999,7 +2050,7 @@
     // [부정자세 트리거 및 육군 표준 음성 피드백 엔진]
     // ==========================================
     function triggerMovementFault(typeKey, reason, ttsSpeech, detail) {
-        var now = Date.now();
+        var now = judgeNowMs();   // [v6.4] 업로드 영상은 영상 시간 기준 쿨다운
         repHasFault = true;
         faultReasonCurrentRep = reason;
         isCurrentFaultWarn = true;
@@ -2496,6 +2547,12 @@
         }, 1000);
     }
 
+    function percentileOf(arr, q) {
+        var a = arr.slice().sort(function(x, y) { return x - y; });
+        var idx = Math.min(a.length - 1, Math.max(0, Math.round((a.length - 1) * q)));
+        return a[idx];
+    }
+
     function medianOf(arr) {
         var a = arr.slice().sort(function(x, y) { return x - y; });
         var m = Math.floor(a.length / 2);
@@ -2508,10 +2565,14 @@
             // 이전 측정자의 기준이 남지 않도록 초기화 → 측정 중 팔 편 자세에서 자동 보정
             isCalibrated = false;
             swTopDist = null;
+            calibSwTopDist = null;
+            topSwSamples = [];
             lineDevBaseline = 0;
             return false;
         }
         swTopDist = medianOf(calibSamples.map(function(c) { return c.sw; }));
+        calibSwTopDist = swTopDist;
+        topSwSamples = [];
         var dev = medianOf(calibSamples.map(function(c) { return c.dev; }));
         // 기준 자세 자체가 처지거나 들려 있으면 그것을 '정상'으로 학습하지 않도록 제한
         lineDevBaseline = (Math.abs(dev) <= CALIB_MAX_LINE_DEV) ? dev : 0;
@@ -3351,7 +3412,7 @@
         downSignReliable = false;
         osdCandidateFrames = 0;
         lastFaultKey = "";
-        lastAnyFaultTime = 0;
+        lastAnyFaultTime = -1e12;
         currentHeadDirection = "UNKNOWN";
 
         for (var k in faultSustainedCounts) {
@@ -3369,6 +3430,8 @@
         minRatioInCurrentRep = 9;
         // [v6.1] 기준 자세·필터 초기화 (다음 측정자는 새로 측정)
         swTopDist = null;
+        calibSwTopDist = null;
+        topSwSamples = [];
         lineDevBaseline = 0;
         calibSamples = [];
         isCalibrated = false;
@@ -3376,8 +3439,9 @@
         elbowAngHistory = [];
         swDistHistory = [];
         bodyScaleEma = null;
-        downConfirmCount = 0;
-        topConfirmCount = 0;
+        bodyScaleBuf = [];
+        confirmSince.DOWN = 0;
+        confirmSince.TOP = 0;
         currentDepthRatio = null;
         currentLineDev = 0;
         kneeIsUnknown = false;
