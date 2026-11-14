@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>육군 정자세 팔굽혀펴기 AI 정밀 측정체계</title>
     <!-- MediaPipe Pose CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
     <!-- mp4-muxer (카카오톡 Fast-Start MP4 고속 변환) -->
     <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.4/build/mp4-muxer.min.js" crossorigin="anonymous"></script>
     <style>
@@ -2709,6 +2709,7 @@
             totalSeconds: totalSeconds,
             elapsedSeconds: isUploadAnalysisMode ? Math.floor(uploadVideo.currentTime || uploadVideo.duration || 0) : (totalSeconds - remainingSeconds),
             recordingRes: recordingRes,
+            exerciseMode: exerciseMode,
             faultLogs: currentSessionFaultLogs.slice()
         };
         if (recordingPausedAt) {
@@ -3135,6 +3136,7 @@
             elapsedSeconds: snap.elapsedSeconds,
             sessionType: snap.sessionType,
             recordingRes: snap.recordingRes,
+            exerciseMode: snap.exerciseMode,
             faultLogs: snap.faultLogs,
             videoBlob: videoBlob
         };
@@ -3305,7 +3307,7 @@
         req.onsuccess = function() {
             var item = req.result;
             if (!item) return;
-            generateAndDownloadCSV(item.cadetId, item.cadetName, item.dateStr, item.repCount, item.failCount, item.totalSeconds, item.elapsedSeconds, item.faultLogs);
+            generateAndDownloadCSV(item.cadetId, item.cadetName, item.dateStr, item.repCount, item.failCount, item.totalSeconds, item.elapsedSeconds, item.faultLogs, item.exerciseMode);
         };
     }
 
@@ -3352,14 +3354,14 @@
         var cName = document.getElementById('inCadetName').value.trim() || "후보생";
         var dateFormatted = new Date().toLocaleString();
         var elSec = isUploadAnalysisMode ? Math.floor(uploadVideo.duration || 0) : (totalSeconds - remainingSeconds);
-        generateAndDownloadCSV(cId, cName, dateFormatted, repCount, failCount, totalSeconds, elSec, currentSessionFaultLogs);
+        generateAndDownloadCSV(cId, cName, dateFormatted, repCount, failCount, totalSeconds, elSec, currentSessionFaultLogs, exerciseMode);
     }
 
-    function generateAndDownloadCSV(cId, cName, dateStr, rCount, fCount, tSec, elSec, logs) {
+    function generateAndDownloadCSV(cId, cName, dateStr, rCount, fCount, tSec, elSec, logs, mode) {
         var lines = [];
         lines.push("\uFEFF=== 육군 팔굽혀펴기 정밀측정 종합결과표 ===");
         lines.push("측정일시," + dateStr);
-        lines.push("교번," + cId + ",성명," + cName + ",환경," + (exerciseMode === "BAR" ? "30cm봉" : "맨땅"));
+        lines.push("교번," + cId + ",성명," + cName + ",환경," + (mode === "BAR" ? "30cm봉" : mode === "FLOOR" ? "맨땅" : "미기록"));
         lines.push("설정시간," + tSec + "초,실제측정시간," + elSec + "초");
         lines.push("정자세 인정횟수," + rCount + "회,부정자세 누적건수," + fCount + "건");
         lines.push("");
@@ -3475,7 +3477,7 @@
         if (pose) return;
         pose = new Pose({
             locateFile: function(file) {
-                return "https://cdn.jsdelivr.net/npm/@mediapipe/pose/" + file;
+                return "https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/" + file;
             }
         });
 
