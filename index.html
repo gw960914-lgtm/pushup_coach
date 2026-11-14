@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>육군 정자세 팔굽혀펴기 AI 정밀 측정체계</title>
-    <!-- MediaPipe Pose CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
-    <!-- mp4-muxer (카카오톡 Fast-Start MP4 고속 변환) -->
-    <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.4/build/mp4-muxer.min.js" crossorigin="anonymous"></script>
+    <!-- 카메라 유틸(@mediapipe/camera_utils 0.3.1675466862, Apache-2.0) — 앱에 포함 -->
+    <script src="vendor/libs/camera_utils-0.3.1675466862.js"></script>
+    <!-- mp4-muxer 5.1.4 (MIT, 카카오톡 Fast-Start MP4 고속 변환) — 앱에 포함 -->
+    <script src="vendor/libs/mp4-muxer-5.1.4.js"></script>
+    <!-- 포즈 엔진(@mediapipe/tasks-vision)은 initPoseModel()에서 vendor/mediapipe 에서 불러옴 -->
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body {
@@ -430,7 +430,7 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">검정 표준체계 v6.4</div>
+        <div class="badge">검정 표준체계 v6.5</div>
     </div>
 </header>
 
@@ -3404,6 +3404,7 @@
     }
 
     function resetAll() {
+        subjectRef = null;
         stopSetupCheck();
         stopTimer();
         stopRecording();
@@ -3479,22 +3480,113 @@
         updateActionButtons("📹 측정 시작 (녹화 ON)", "btn-start");
     }
 
+    // ==========================================
+    // [포즈 인식 엔진: MediaPipe Tasks PoseLandmarker]
+    //  - 구형 @mediapipe/pose(지원 종료) → @mediapipe/tasks-vision (윗몸일으키기 앱과 같은 엔진·같은 파일)
+    //  - 최대 2명을 인식해, 채점자·보조자가 아닌 측정 대상자 1명만 판정에 사용
+    //  - 기존 판정 코드는 그대로 두고 pose.send() → onPoseResults({ poseLandmarks }) 형태로 연결
+    //  - 엔진·wasm·모델을 앱과 함께 배포 → 외부 CDN·Google 서버 불필요
+    // ==========================================
+    var TASKS_VISION_URL = new URL("vendor/mediapipe", document.baseURI).href;
+    var POSE_MODEL_URL = TASKS_VISION_URL + "/pose_landmarker_full.task";
+    var SUBJECT_MAX_JUMP = 0.6;   // 직전 대상자 골반에서 몸통 길이의 이 비율 이상 떨어진 사람은 대상자로 보지 않음
+    var SUBJECT_RESET_MS = 1500;  // 대상자를 이 시간 이상 놓치면 처음부터 다시 선택
+    var subjectRef = null;        // 직전 대상자 { x, y: 골반 중심(화면비 보정), len: 몸통 길이, t: 시각 }
+
     function initPoseModel() {
-        if (pose) return;
-        pose = new Pose({
-            locateFile: function(file) {
-                return "https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/" + file;
+        if (pose && !pose.failed) return;
+        var landmarker = null;
+        var lastTs = 0;
+        var readyResolve;
+        var ready = new Promise(function(res) { readyResolve = res; });
+        pose = {
+            failed: false,
+            send: function(input) {
+                // 모델 로딩이 끝날 때까지 기다렸다가 판정 (구형 엔진과 같은 동작)
+                return ready.then(function() {
+                    if (!landmarker) return;
+                    var src = input.image;
+                    var ts = performance.now();
+                    if (ts <= lastTs) ts = lastTs + 1;   // VIDEO 모드는 시각이 계속 증가해야 함
+                    lastTs = ts;
+                    var res;
+                    try {
+                        res = landmarker.detectForVideo(src, ts);
+                    } catch (err) {
+                        return;
+                    }
+                    onPoseResults({ poseLandmarks: pickSubjectPose(res && res.landmarks, src) });
+                });
             }
+        };
+        var thisPose = pose;
+        import(TASKS_VISION_URL + "/vision_bundle.mjs").then(function(vision) {
+            return vision.FilesetResolver.forVisionTasks(TASKS_VISION_URL + "/wasm").then(function(fileset) {
+                function create(delegate) {
+                    return vision.PoseLandmarker.createFromOptions(fileset, {
+                        baseOptions: { modelAssetPath: POSE_MODEL_URL, delegate: delegate },
+                        runningMode: "VIDEO",
+                        numPoses: 2,
+                        minPoseDetectionConfidence: 0.60,
+                        minPosePresenceConfidence: 0.55,
+                        minTrackingConfidence: 0.55
+                    });
+                }
+                // GPU를 못 쓰는 기기는 CPU로 재시도
+                return create("GPU").catch(function() { return create("CPU"); });
+            });
+        }).then(function(lm) {
+            landmarker = lm;
+            readyResolve();
+        }, function() {
+            thisPose.failed = true;   // 다음 측정 시작 때 다시 불러옴
+            readyResolve();
+            showToast("AI 자세 인식 모델을 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시작하십시오.");
         });
+    }
 
-        pose.setOptions({
-            modelComplexity: 1,
-            smoothLandmarks: true,
-            minDetectionConfidence: 0.60,
-            minTrackingConfidence: 0.55
-        });
+    // 인식된 사람 중 측정 대상자 1명을 고름
+    //  - 처음: 어깨→골반→무릎이 "가로로" 가장 길게 보이는 사람
+    //    (측면 촬영한 엎드린 대상자는 가로로 길고, 옆에 선 채점자·보조자는 세로로 서 있어 가로 길이가 짧음)
+    //  - 이후: 직전 대상자 골반 위치에서 가장 가까운 사람. 갑자기 멀리 있는 사람만 보이면 대상자 아님(미인식 처리)
+    function pickSubjectPose(list, src) {
+        if (!list || list.length === 0) return null;
+        var w = (src && (src.videoWidth || src.width)) || 1;
+        var h = (src && (src.videoHeight || src.height)) || 1;
+        var aspect = w / h;   // 정규화 좌표의 가로·세로 비율 보정
+        var now = performance.now();
+        function mid(lm, a, b) {
+            return { x: (lm[a].x + lm[b].x) / 2 * aspect, y: (lm[a].y + lm[b].y) / 2 };
+        }
+        function dist(a, b) {
+            var dx = a.x - b.x, dy = a.y - b.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+        if (subjectRef && now - subjectRef.t > SUBJECT_RESET_MS) subjectRef = null;
 
-        pose.onResults(onPoseResults);
+        var bestIdx = -1, bestScore = Infinity, bestInfo = null;
+        for (var i = 0; i < list.length; i++) {
+            var lm = list[i];
+            if (!lm || lm.length < 27) continue;
+            var s = mid(lm, 11, 12), p = mid(lm, 23, 24), k = mid(lm, 25, 26);
+            var len = Math.max(1e-3, dist(s, p));
+            var score;
+            if (subjectRef) {
+                var jump = dist(p, subjectRef) / subjectRef.len;
+                if (jump >= SUBJECT_MAX_JUMP) continue;
+                score = jump;
+            } else {
+                score = -(Math.abs(s.x - p.x) + Math.abs(p.x - k.x));
+            }
+            if (score < bestScore) {
+                bestScore = score;
+                bestIdx = i;
+                bestInfo = { x: p.x, y: p.y, len: len };
+            }
+        }
+        if (bestIdx < 0) return null;
+        subjectRef = { x: bestInfo.x, y: bestInfo.y, len: bestInfo.len, t: now };
+        return list[bestIdx];
     }
 
     // ==========================================
@@ -3513,7 +3605,12 @@
             height: { ideal: 720 },
             facingMode: facingMode
         });
-        camera.start();
+        var startPromise = camera.start();
+        if (startPromise && startPromise.catch) {
+            startPromise.catch(function() {
+                showToast("카메라를 열 수 없습니다. 브라우저의 카메라 권한을 허용하십시오.");
+            });
+        }
     }
 
     function switchCamera() {
@@ -3522,6 +3619,7 @@
             return;
         }
         facingMode = (facingMode === "user") ? "environment" : "user";
+        subjectRef = null;
         startCameraStream();
         showToast((facingMode === "user" ? "전면(셀카)" : "후면") + " 카메라로 전환되었습니다.");
     }
