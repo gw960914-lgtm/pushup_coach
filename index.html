@@ -642,7 +642,7 @@
                 <div class="help-step-title">3단계: 측정 시작 및 정자세 실시 요령</div>
                 <div class="help-step-desc">
                     • <b>[📹 측정 시작]</b>을 누르면 자동으로 <b>전체 화면(가로)</b>으로 전환되고 <b>준비 확인</b>이 시작됩니다. 휴대폰은 가로로 세워 사용하십시오. (가로 자동 고정이 안 되는 기기는 화면에 안내가 표시됩니다)<br>
-                    • 준비 확인에서는 몸 인식·화면 안·거리·옆모습·팔 펴기와 몸 일직선·정지 여부를 자동으로 확인하고 문제를 음성으로 안내합니다.<br>
+                    • 준비 확인에서는 몸 인식·화면 안·거리·옆모습·팔 펴기와 몸 일직선을 자동으로 확인하고(약간 움직여도 통과) 문제를 음성으로 안내합니다.<br>
                     • 모든 항목을 통과한 채 2초간 유지하면 5초 음성 카운트다운 후 자동으로 시간 계측과 녹화가 시작됩니다. 준비 확인 중 버튼을 다시 누르면 <b>바로 시작</b>합니다.<br>
                     • <b>카운트다운 중</b>: 팔을 곧게 편 엎드려뻗쳐 자세로 정지해 있으면 마지막 4초 동안 기준 자세(팔 길이·몸 일직선)를 자동 측정합니다.<br>
                     • <b>하강</b>: 팔꿈치를 기준선까지 충분히 굽혀 가슴을 바닥(또는 봉) 깊숙이 내립니다.<br>
@@ -2328,7 +2328,7 @@
             var tol = (info.bodyLenPx || 1) * SETUP_STILL_FRAC;
             r.still = (maxX - minX <= tol) && (maxY - minY <= tol) && (maxE - minE <= SETUP_STILL_ELBOW);
         }
-        if (!r.still) fail("움직이지 말고 자세를 유지하십시오");
+        // [v6.5] 정지 여부는 통과 조건에서 제외 (정자세 범위 안이면 약간 움직여도 통과). 화면에 참고 표시만
 
         return r;
     }
@@ -2344,7 +2344,7 @@
         if (!isSetupChecking) return;
         var now = Date.now();
         var r = evaluateSetup(now);
-        var allOk = r.body && r.frame && r.dist && r.side && r.pose && r.still;
+        var allOk = r.body && r.frame && r.dist && r.side && r.pose;
         setupFrameOk = r.body && r.frame && r.dist && r.side;
 
         setSetupItem('setupItemBody', r.body ? "pass" : "fail", "몸 인식");
@@ -2352,7 +2352,7 @@
         setSetupItem('setupItemDist', r.dist ? "pass" : "fail", "카메라 거리");
         setSetupItem('setupItemSide', r.side ? (r.sideWarn ? "warn" : "pass") : "fail", r.sideWarn ? "옆모습 촬영 (조금 비스듬함)" : "옆모습 촬영");
         setSetupItem('setupItemPose', r.pose ? "pass" : "fail", "팔 펴기 · 몸 일직선");
-        setSetupItem('setupItemStill', r.still ? "pass" : "fail", "정지 유지");
+        setSetupItem('setupItemStill', r.still ? "pass" : "warn", r.still ? "정지 유지" : "움직임 있음 (통과에는 영향 없음)");
         document.getElementById('setupPanel').classList.toggle('ok', allOk);
 
         if (allOk) {
