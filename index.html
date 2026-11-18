@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>육군 정자세 팔굽혀펴기 AI 정밀 측정체계</title>
-    <!-- MediaPipe Pose CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
-    <!-- mp4-muxer (카카오톡 Fast-Start MP4 고속 변환) -->
-    <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.4/build/mp4-muxer.min.js" crossorigin="anonymous"></script>
+    <!-- 카메라 유틸(@mediapipe/camera_utils 0.3.1675466862, Apache-2.0) — 앱에 포함 -->
+    <script src="vendor/libs/camera_utils-0.3.1675466862.js"></script>
+    <!-- mp4-muxer 5.1.4 (MIT, 카카오톡 Fast-Start MP4 고속 변환) — 앱에 포함 -->
+    <script src="vendor/libs/mp4-muxer-5.1.4.js"></script>
+    <!-- 포즈 엔진(@mediapipe/tasks-vision)은 initPoseModel()에서 vendor/mediapipe 에서 불러옴 -->
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body {
@@ -430,7 +430,7 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">검정 표준체계 v6.4</div>
+        <div class="badge">검정 표준체계 v6.5</div>
     </div>
 </header>
 
@@ -642,11 +642,11 @@
                 <div class="help-step-title">3단계: 측정 시작 및 정자세 실시 요령</div>
                 <div class="help-step-desc">
                     • <b>[📹 측정 시작]</b>을 누르면 자동으로 <b>전체 화면(가로)</b>으로 전환되고 <b>준비 확인</b>이 시작됩니다. 휴대폰은 가로로 세워 사용하십시오. (가로 자동 고정이 안 되는 기기는 화면에 안내가 표시됩니다)<br>
-                    • 준비 확인에서는 몸 인식·화면 안·거리·옆모습·팔 펴기와 몸 일직선·정지 여부를 자동으로 확인하고 문제를 음성으로 안내합니다.<br>
+                    • 준비 확인에서는 몸 인식·화면 안·거리·옆모습·팔 펴기와 몸 일직선을 자동으로 확인하고(약간 움직여도 통과) 문제를 음성으로 안내합니다.<br>
                     • 모든 항목을 통과한 채 2초간 유지하면 5초 음성 카운트다운 후 자동으로 시간 계측과 녹화가 시작됩니다. 준비 확인 중 버튼을 다시 누르면 <b>바로 시작</b>합니다.<br>
                     • <b>카운트다운 중</b>: 팔을 곧게 편 엎드려뻗쳐 자세로 정지해 있으면 마지막 4초 동안 기준 자세(팔 길이·몸 일직선)를 자동 측정합니다.<br>
                     • <b>하강</b>: 팔꿈치를 기준선까지 충분히 굽혀 가슴을 바닥(또는 봉) 깊숙이 내립니다.<br>
-                    • <b>상승</b>: 가장 내려간 지점에서 완전히 편 자세까지 거리의 75% 이상 팔을 펴면 횟수가 카운트됩니다.<br>
+                    • <b>상승</b>: 가장 내려간 지점에서 완전히 편 자세까지 거리의 75% 이상 팔을 펴거나 팔꿈치가 150° 이상 펴지면 횟수가 카운트됩니다.<br>
                     • <b>자세 유지</b>: 머리부터 발끝까지 일직선을 유지하십시오. 허리가 처지면 "허리가 처졌습니다", 엉덩이를 들면 "골반이 높습니다" 경고가 명확히 분리 송출됩니다.<br>
                     • <b>유일한 휴식</b>: 팔을 곧게 펴고 엉덩이를 산 모양으로 확실하고 크게 솟구친 상태만 감점 없이 휴식으로 인정됩니다.<br>
                     • <b>일시정지</b>: 일시정지 후 재개해도 하나의 영상·기록으로 이어서 저장됩니다.
@@ -682,7 +682,7 @@
                 1. <b>양방향 머리 무결점 판정</b>: 머리가 좌측이든 우측이든 중력(Y축) 수직 편차를 기반으로 처짐과 들림을 100% 동일하게 판정합니다.<br>
                 2. <b>골반 엄격 정렬</b>: 어깨-발목 일직선에서 골반이 벗어난 거리(몸 길이 대비)로 판정합니다. 맨땅은 처짐 4.5%·들림 5.5%, 봉 모드는 처짐 5.5%·들림 6.5%를 넘으면 부정자세입니다. (발목이 안 보이면 어깨-무릎 선 기준)<br>
                 3. <b>하강 깊이</b>: 맨땅은 팔꿈치 100° 이하 <b>또는</b> 어깨-손목 거리가 기준 자세의 75% 이하, 봉 모드는 105° 이하(또는 심부선) <b>또는</b> 79% 이하로 충분히 내려갑니다. (팔꿈치를 옆으로 벌려도 깊이를 정확히 판정)<br>
-                4. <b>완전 신전 및 가동범위</b>: 최저점에서 완전히 편 자세까지 거리의 75% 이상 팔을 펴고, 최저점 대비 최소 30° 이상(또는 팔 길이 20% 이상) 신전되어야 1회로 인정됩니다.<br>
+                4. <b>완전 신전 및 가동범위</b>: 최저점에서 완전히 편 자세까지 거리의 75% 이상(또는 팔꿈치 150° 이상) 팔을 펴고, 최저점 대비 최소 30° 이상(또는 팔 길이 20% 이상) 신전되어야 1회로 인정됩니다.<br>
                 5. <b>유일한 휴식(Pike Rest)</b>: 팔을 곧게 펴고(≥145°) 골반을 산 모양으로 <b>확실하고 크게 치켜올렸을 때만</b>(비율 10% 이상 & 코어각 ≤150°) 정상 휴식으로 인정됩니다. 어설프게 살짝 든 자세는 골반 들림 부정자세로 지적됩니다.<br>
                 6. <b>판정 보류</b>: 손목·골반이 화면에서 인식되지 않으면 해당 구간은 카운트하지 않고 판정을 보류합니다. 발목이 보이지 않으면 무릎 닿음 판정은 하지 않습니다(무릎 각도 '-' 표시). 관절이 인식되지 않아도 측정 시간은 계속 흐릅니다.
             </div>
@@ -939,6 +939,10 @@
     var TOP_ROM_RATIO = 0.75;
     var TOP_FULL_ELBOW_ANG = 170; // 화면상 팔꿈치 각도는 완전히 펴도 180°에 거의 도달하지 않음
     var TOP_UPDATE_ANG = 165;     // 기준 팔 길이 자동 갱신은 이 각도 이상(확실히 편 자세)에서만
+    // [v6.5] 신전 인정 완화: 팔꿈치 각도가 이 값 이상이면 가동범위 비율과 관계없이 편 것으로 인정
+    //  실측(2026-11-19 영상): 쭉 편 자세가 팔꿈치 151~168°, 팔 길이 비율 0.81~0.88로 잡혀
+    //  가동범위 75% 기준(0.88~0.91 필요)을 근소하게 못 넘어 '팔꿈치 안 펴짐'으로 오판
+    var TOP_OK_ELBOW_ANG = 150;
     // [v6.4] 단일 프레임 노이즈로 상태가 바뀌지 않도록 '시간' 기준으로 연속 확인
     //   (기존 프레임 수 기준은 15fps 기기에서 30fps의 2배 시간이 걸려 짧은 배치기 등을 놓침)
     //   30fps 기준 기존 동작과 같도록 설정: 상태 전환 2프레임(33ms), 부정자세 3프레임(66ms)
@@ -1330,7 +1334,7 @@
 
         ctx.fillStyle = "#ffffff";
         ctx.font = "9.5px monospace";
-        ctx.fillText(dateFormatted, 18, 41);
+        ctx.fillText(dateFormatted + "  v6.5 " + poseEngineTag + " " + poseFps + "fps", 18, 41);
 
         ctx.fillStyle = "#39e75f";
         ctx.font = "bold 11px sans-serif";
@@ -1782,6 +1786,7 @@
         } else {
             isTopNow = currentElbowAng >= minElbowInCurrentRep + TOP_ROM_RATIO * (TOP_FULL_ELBOW_ANG - minElbowInCurrentRep);
         }
+        if (currentElbowAng >= TOP_OK_ELBOW_ANG) isTopNow = true;
 
         // [v6.1] 기준 자세 미측정(업로드 분석·카운트다운 중 자세 미유지) 시 팔 편 자세에서 자동 보정
         // [v6.4] 확실히 편 자세(≥165°)의 최근 샘플 '중앙값'으로 갱신
@@ -2328,7 +2333,7 @@
             var tol = (info.bodyLenPx || 1) * SETUP_STILL_FRAC;
             r.still = (maxX - minX <= tol) && (maxY - minY <= tol) && (maxE - minE <= SETUP_STILL_ELBOW);
         }
-        if (!r.still) fail("움직이지 말고 자세를 유지하십시오");
+        // [v6.5] 정지 여부는 통과 조건에서 제외 (정자세 범위 안이면 약간 움직여도 통과). 화면에 참고 표시만
 
         return r;
     }
@@ -2344,7 +2349,7 @@
         if (!isSetupChecking) return;
         var now = Date.now();
         var r = evaluateSetup(now);
-        var allOk = r.body && r.frame && r.dist && r.side && r.pose && r.still;
+        var allOk = r.body && r.frame && r.dist && r.side && r.pose;
         setupFrameOk = r.body && r.frame && r.dist && r.side;
 
         setSetupItem('setupItemBody', r.body ? "pass" : "fail", "몸 인식");
@@ -2352,7 +2357,7 @@
         setSetupItem('setupItemDist', r.dist ? "pass" : "fail", "카메라 거리");
         setSetupItem('setupItemSide', r.side ? (r.sideWarn ? "warn" : "pass") : "fail", r.sideWarn ? "옆모습 촬영 (조금 비스듬함)" : "옆모습 촬영");
         setSetupItem('setupItemPose', r.pose ? "pass" : "fail", "팔 펴기 · 몸 일직선");
-        setSetupItem('setupItemStill', r.still ? "pass" : "fail", "정지 유지");
+        setSetupItem('setupItemStill', r.still ? "pass" : "warn", r.still ? "정지 유지" : "움직임 있음 (통과에는 영향 없음)");
         document.getElementById('setupPanel').classList.toggle('ok', allOk);
 
         if (allOk) {
@@ -3404,6 +3409,7 @@
     }
 
     function resetAll() {
+        subjectRef = null;
         stopSetupCheck();
         stopTimer();
         stopRecording();
@@ -3479,22 +3485,178 @@
         updateActionButtons("📹 측정 시작 (녹화 ON)", "btn-start");
     }
 
-    function initPoseModel() {
-        if (pose) return;
-        pose = new Pose({
-            locateFile: function(file) {
-                return "https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/" + file;
+    // ==========================================
+    // [포즈 인식 엔진: MediaPipe Tasks PoseLandmarker]
+    //  - 구형 @mediapipe/pose(지원 종료) → @mediapipe/tasks-vision (윗몸일으키기 앱과 같은 엔진·같은 파일)
+    //  - 최대 2명을 인식해, 채점자·보조자가 아닌 측정 대상자 1명만 판정에 사용
+    //  - 기존 판정 코드는 그대로 두고 pose.send() → onPoseResults({ poseLandmarks }) 형태로 연결
+    //  - 엔진·wasm·모델을 앱과 함께 배포 → 외부 CDN·Google 서버 불필요
+    // ==========================================
+    var TASKS_VISION_URL = new URL("vendor/mediapipe", document.baseURI).href;
+    var POSE_MODEL_URL = TASKS_VISION_URL + "/pose_landmarker_full.task";
+    var SUBJECT_MAX_JUMP = 0.6;   // 직전 대상자 골반에서 몸통 길이의 이 비율 이상 떨어진 사람은 대상자로 보지 않음
+    var SUBJECT_RESET_MS = 1500;  // 대상자를 이 시간 이상 놓치면 처음부터 다시 선택
+    var subjectRef = null;        // 직전 대상자 { x, y: 골반 중심(화면비 보정), len: 몸통 길이, t: 시각 }
+    var poseEngineTag = "로딩";    // 화면 표시용: GPU | CPU
+    var poseFps = 0;              // 화면 표시용: 최근 1초 동안 인식한 프레임 수
+    var poseFrameTimes = [];
+
+    function countPoseFrame(ts) {
+        poseFrameTimes.push(ts);
+        while (poseFrameTimes.length && ts - poseFrameTimes[0] > 1000) poseFrameTimes.shift();
+        poseFps = poseFrameTimes.length;
+    }
+
+    // 관절 좌표 흔들림 보정 (구형 엔진의 smoothLandmarks와 같은 방식)
+    //  - 좌표: One Euro 필터 (min_cutoff 0.05, beta 80, derivate_cutoff 1.0), 속도는 몸 크기로 나눠 거리와 무관하게
+    //  - 가시도: 저역 통과 필터 (alpha 0.1)
+    //  천천히 움직이거나 멈춰 있을 때는 강하게 보정하고, 빠르게 움직일 때는 거의 그대로 따라감
+    var SMOOTH_MIN_CUTOFF = 0.05, SMOOTH_BETA = 80, SMOOTH_D_CUTOFF = 1.0, SMOOTH_VIS_ALPHA = 0.1;
+    var smoothState = null;       // { t, pts: [{x, y, z, dx, dy, dz, v}] } (픽셀 좌표)
+
+    function smoothAlpha(cutoff, dt) {
+        var tau = 1 / (2 * Math.PI * cutoff);
+        return 1 / (1 + tau / dt);
+    }
+
+    function smoothLandmarks(lm, src, tsMs) {
+        var w = (src && (src.videoWidth || src.width)) || 1;
+        var h = (src && (src.videoHeight || src.height)) || 1;
+        var t = tsMs / 1000;
+        var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, i;
+        for (i = 0; i < lm.length; i++) {
+            minX = Math.min(minX, lm[i].x * w); maxX = Math.max(maxX, lm[i].x * w);
+            minY = Math.min(minY, lm[i].y * h); maxY = Math.max(maxY, lm[i].y * h);
+        }
+        var scale = Math.max(1, ((maxX - minX) + (maxY - minY)) / 2);
+        var prev = smoothState;
+        var dt = prev ? t - prev.t : 0;
+        if (!prev || prev.pts.length !== lm.length || dt <= 0 || dt > SUBJECT_RESET_MS / 1000) {
+            smoothState = { t: t, pts: [] };
+            for (i = 0; i < lm.length; i++) {
+                smoothState.pts.push({ x: lm[i].x * w, y: lm[i].y * h, z: lm[i].z * w, dx: 0, dy: 0, dz: 0, v: lm[i].visibility || 0 });
             }
-        });
+            return lm;
+        }
+        var aD = smoothAlpha(SMOOTH_D_CUTOFF, dt);
+        function step(p, key, dkey, raw) {
+            var d = (raw - p[key]) / scale / dt;
+            p[dkey] = p[dkey] + aD * (d - p[dkey]);
+            var a = smoothAlpha(SMOOTH_MIN_CUTOFF + SMOOTH_BETA * Math.abs(p[dkey]), dt);
+            p[key] = p[key] + a * (raw - p[key]);
+        }
+        var out = [];
+        for (i = 0; i < lm.length; i++) {
+            var p = prev.pts[i];
+            step(p, "x", "dx", lm[i].x * w);
+            step(p, "y", "dy", lm[i].y * h);
+            step(p, "z", "dz", lm[i].z * w);
+            p.v = p.v + SMOOTH_VIS_ALPHA * ((lm[i].visibility || 0) - p.v);
+            out.push({ x: p.x / w, y: p.y / h, z: p.z / w, visibility: p.v });
+        }
+        prev.t = t;
+        return out;
+    }
 
-        pose.setOptions({
-            modelComplexity: 1,
-            smoothLandmarks: true,
-            minDetectionConfidence: 0.60,
-            minTrackingConfidence: 0.55
+    function initPoseModel() {
+        if (pose && !pose.failed) return;
+        var landmarker = null;
+        var lastTs = 0;
+        var readyResolve;
+        var ready = new Promise(function(res) { readyResolve = res; });
+        pose = {
+            failed: false,
+            send: function(input) {
+                // 모델 로딩이 끝날 때까지 기다렸다가 판정 (구형 엔진과 같은 동작)
+                return ready.then(function() {
+                    if (!landmarker) return;
+                    var src = input.image;
+                    var ts = performance.now();
+                    if (ts <= lastTs) ts = lastTs + 1;   // VIDEO 모드는 시각이 계속 증가해야 함
+                    lastTs = ts;
+                    var res;
+                    try {
+                        res = landmarker.detectForVideo(src, ts);
+                    } catch (err) {
+                        return;
+                    }
+                    countPoseFrame(ts);
+                    var picked = pickSubjectPose(res && res.landmarks, src);
+                    onPoseResults({ poseLandmarks: picked ? smoothLandmarks(picked, src, ts) : null });
+                });
+            }
+        };
+        var thisPose = pose;
+        import(TASKS_VISION_URL + "/vision_bundle.mjs").then(function(vision) {
+            return vision.FilesetResolver.forVisionTasks(TASKS_VISION_URL + "/wasm").then(function(fileset) {
+                function create(delegate) {
+                    return vision.PoseLandmarker.createFromOptions(fileset, {
+                        baseOptions: { modelAssetPath: POSE_MODEL_URL, delegate: delegate },
+                        runningMode: "VIDEO",
+                        numPoses: 2,
+                        minPoseDetectionConfidence: 0.60,
+                        minPosePresenceConfidence: 0.55,
+                        minTrackingConfidence: 0.55
+                    });
+                }
+                // GPU를 못 쓰는 기기는 CPU로 재시도
+                return create("GPU").then(function(lm) { poseEngineTag = "GPU"; return lm; }, function() {
+                    return create("CPU").then(function(lm) { poseEngineTag = "CPU"; return lm; });
+                });
+            });
+        }).then(function(lm) {
+            landmarker = lm;
+            readyResolve();
+        }, function() {
+            thisPose.failed = true;   // 다음 측정 시작 때 다시 불러옴
+            readyResolve();
+            showToast("AI 자세 인식 모델을 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시작하십시오.");
         });
+    }
 
-        pose.onResults(onPoseResults);
+    // 인식된 사람 중 측정 대상자 1명을 고름
+    //  - 처음: 어깨→골반→무릎이 "가로로" 가장 길게 보이는 사람
+    //    (측면 촬영한 엎드린 대상자는 가로로 길고, 옆에 선 채점자·보조자는 세로로 서 있어 가로 길이가 짧음)
+    //  - 이후: 직전 대상자 골반 위치에서 가장 가까운 사람. 갑자기 멀리 있는 사람만 보이면 대상자 아님(미인식 처리)
+    function pickSubjectPose(list, src) {
+        if (!list || list.length === 0) return null;
+        var w = (src && (src.videoWidth || src.width)) || 1;
+        var h = (src && (src.videoHeight || src.height)) || 1;
+        var aspect = w / h;   // 정규화 좌표의 가로·세로 비율 보정
+        var now = performance.now();
+        function mid(lm, a, b) {
+            return { x: (lm[a].x + lm[b].x) / 2 * aspect, y: (lm[a].y + lm[b].y) / 2 };
+        }
+        function dist(a, b) {
+            var dx = a.x - b.x, dy = a.y - b.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+        if (subjectRef && now - subjectRef.t > SUBJECT_RESET_MS) subjectRef = null;
+        if (!subjectRef) smoothState = null;   // 대상자를 새로 고르면 보정도 처음부터
+
+        var bestIdx = -1, bestScore = Infinity, bestInfo = null;
+        for (var i = 0; i < list.length; i++) {
+            var lm = list[i];
+            if (!lm || lm.length < 27) continue;
+            var s = mid(lm, 11, 12), p = mid(lm, 23, 24), k = mid(lm, 25, 26);
+            var len = Math.max(1e-3, dist(s, p));
+            var score;
+            if (subjectRef) {
+                var jump = dist(p, subjectRef) / subjectRef.len;
+                if (jump >= SUBJECT_MAX_JUMP) continue;
+                score = jump;
+            } else {
+                score = -(Math.abs(s.x - p.x) + Math.abs(p.x - k.x));
+            }
+            if (score < bestScore) {
+                bestScore = score;
+                bestIdx = i;
+                bestInfo = { x: p.x, y: p.y, len: len };
+            }
+        }
+        if (bestIdx < 0) return null;
+        subjectRef = { x: bestInfo.x, y: bestInfo.y, len: bestInfo.len, t: now };
+        return list[bestIdx];
     }
 
     // ==========================================
@@ -3513,7 +3675,12 @@
             height: { ideal: 720 },
             facingMode: facingMode
         });
-        camera.start();
+        var startPromise = camera.start();
+        if (startPromise && startPromise.catch) {
+            startPromise.catch(function() {
+                showToast("카메라를 열 수 없습니다. 브라우저의 카메라 권한을 허용하십시오.");
+            });
+        }
     }
 
     function switchCamera() {
@@ -3522,6 +3689,7 @@
             return;
         }
         facingMode = (facingMode === "user") ? "environment" : "user";
+        subjectRef = null;
         startCameraStream();
         showToast((facingMode === "user" ? "전면(셀카)" : "후면") + " 카메라로 전환되었습니다.");
     }
