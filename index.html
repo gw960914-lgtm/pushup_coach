@@ -1330,7 +1330,7 @@
 
         ctx.fillStyle = "#ffffff";
         ctx.font = "9.5px monospace";
-        ctx.fillText(dateFormatted, 18, 41);
+        ctx.fillText(dateFormatted + "  v6.5 " + poseEngineTag + " " + poseFps + "fps", 18, 41);
 
         ctx.fillStyle = "#39e75f";
         ctx.font = "bold 11px sans-serif";
@@ -3492,6 +3492,66 @@
     var SUBJECT_MAX_JUMP = 0.6;   // 직전 대상자 골반에서 몸통 길이의 이 비율 이상 떨어진 사람은 대상자로 보지 않음
     var SUBJECT_RESET_MS = 1500;  // 대상자를 이 시간 이상 놓치면 처음부터 다시 선택
     var subjectRef = null;        // 직전 대상자 { x, y: 골반 중심(화면비 보정), len: 몸통 길이, t: 시각 }
+    var poseEngineTag = "로딩";    // 화면 표시용: GPU | CPU
+    var poseFps = 0;              // 화면 표시용: 최근 1초 동안 인식한 프레임 수
+    var poseFrameTimes = [];
+
+    function countPoseFrame(ts) {
+        poseFrameTimes.push(ts);
+        while (poseFrameTimes.length && ts - poseFrameTimes[0] > 1000) poseFrameTimes.shift();
+        poseFps = poseFrameTimes.length;
+    }
+
+    // 관절 좌표 흔들림 보정 (구형 엔진의 smoothLandmarks와 같은 방식)
+    //  - 좌표: One Euro 필터 (min_cutoff 0.05, beta 80, derivate_cutoff 1.0), 속도는 몸 크기로 나눠 거리와 무관하게
+    //  - 가시도: 저역 통과 필터 (alpha 0.1)
+    //  천천히 움직이거나 멈춰 있을 때는 강하게 보정하고, 빠르게 움직일 때는 거의 그대로 따라감
+    var SMOOTH_MIN_CUTOFF = 0.05, SMOOTH_BETA = 80, SMOOTH_D_CUTOFF = 1.0, SMOOTH_VIS_ALPHA = 0.1;
+    var smoothState = null;       // { t, pts: [{x, y, z, dx, dy, dz, v}] } (픽셀 좌표)
+
+    function smoothAlpha(cutoff, dt) {
+        var tau = 1 / (2 * Math.PI * cutoff);
+        return 1 / (1 + tau / dt);
+    }
+
+    function smoothLandmarks(lm, src, tsMs) {
+        var w = (src && (src.videoWidth || src.width)) || 1;
+        var h = (src && (src.videoHeight || src.height)) || 1;
+        var t = tsMs / 1000;
+        var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, i;
+        for (i = 0; i < lm.length; i++) {
+            minX = Math.min(minX, lm[i].x * w); maxX = Math.max(maxX, lm[i].x * w);
+            minY = Math.min(minY, lm[i].y * h); maxY = Math.max(maxY, lm[i].y * h);
+        }
+        var scale = Math.max(1, ((maxX - minX) + (maxY - minY)) / 2);
+        var prev = smoothState;
+        var dt = prev ? t - prev.t : 0;
+        if (!prev || prev.pts.length !== lm.length || dt <= 0 || dt > SUBJECT_RESET_MS / 1000) {
+            smoothState = { t: t, pts: [] };
+            for (i = 0; i < lm.length; i++) {
+                smoothState.pts.push({ x: lm[i].x * w, y: lm[i].y * h, z: lm[i].z * w, dx: 0, dy: 0, dz: 0, v: lm[i].visibility || 0 });
+            }
+            return lm;
+        }
+        var aD = smoothAlpha(SMOOTH_D_CUTOFF, dt);
+        function step(p, key, dkey, raw) {
+            var d = (raw - p[key]) / scale / dt;
+            p[dkey] = p[dkey] + aD * (d - p[dkey]);
+            var a = smoothAlpha(SMOOTH_MIN_CUTOFF + SMOOTH_BETA * Math.abs(p[dkey]), dt);
+            p[key] = p[key] + a * (raw - p[key]);
+        }
+        var out = [];
+        for (i = 0; i < lm.length; i++) {
+            var p = prev.pts[i];
+            step(p, "x", "dx", lm[i].x * w);
+            step(p, "y", "dy", lm[i].y * h);
+            step(p, "z", "dz", lm[i].z * w);
+            p.v = p.v + SMOOTH_VIS_ALPHA * ((lm[i].visibility || 0) - p.v);
+            out.push({ x: p.x / w, y: p.y / h, z: p.z / w, visibility: p.v });
+        }
+        prev.t = t;
+        return out;
+    }
 
     function initPoseModel() {
         if (pose && !pose.failed) return;
@@ -3515,7 +3575,9 @@
                     } catch (err) {
                         return;
                     }
-                    onPoseResults({ poseLandmarks: pickSubjectPose(res && res.landmarks, src) });
+                    countPoseFrame(ts);
+                    var picked = pickSubjectPose(res && res.landmarks, src);
+                    onPoseResults({ poseLandmarks: picked ? smoothLandmarks(picked, src, ts) : null });
                 });
             }
         };
@@ -3533,7 +3595,9 @@
                     });
                 }
                 // GPU를 못 쓰는 기기는 CPU로 재시도
-                return create("GPU").catch(function() { return create("CPU"); });
+                return create("GPU").then(function(lm) { poseEngineTag = "GPU"; return lm; }, function() {
+                    return create("CPU").then(function(lm) { poseEngineTag = "CPU"; return lm; });
+                });
             });
         }).then(function(lm) {
             landmarker = lm;
@@ -3563,6 +3627,7 @@
             return Math.sqrt(dx * dx + dy * dy);
         }
         if (subjectRef && now - subjectRef.t > SUBJECT_RESET_MS) subjectRef = null;
+        if (!subjectRef) smoothState = null;   // 대상자를 새로 고르면 보정도 처음부터
 
         var bestIdx = -1, bestScore = Infinity, bestInfo = null;
         for (var i = 0; i < list.length; i++) {
