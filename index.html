@@ -430,7 +430,7 @@
     <div class="header-title">🛡️ 육군 정자세 팔굽혀펴기 AI 정밀 측정체계</div>
     <div class="header-right">
         <button type="button" class="btn-help-top" onclick="openHelpModal()">❓ 사용방법</button>
-        <div class="badge">검정 표준체계 v6.5</div>
+        <div class="badge">검정 표준체계 v6.6</div>
     </div>
 </header>
 
@@ -507,6 +507,19 @@
             <div class="countdown-num" id="countdownText">5</div>
             <div class="countdown-sub" id="countdownSub">자세를 취하십시오 (준비 카운트)</div>
             <div class="countdown-sub" id="countdownCalib" style="font-size:12px; color:#e5a93c; margin-top:6px;">팔을 곧게 편 엎드려뻗쳐 자세를 유지하십시오</div>
+        </div>
+    </div>
+
+    <!-- [v6.6] 대상자 확인: 자세 이탈(일어섬·화면 이탈) 후 다시 엎드리면 같은 사람인지 확인 (전체화면에서도 보이도록 카메라 영역 안에 둠) -->
+    <div class="countdown-overlay" id="subjectCheckOverlay" style="pointer-events:auto; z-index:60;">
+        <div id="subjectCheckInner" style="display:flex; flex-direction:column; align-items:stretch; gap:8px; background:rgba(10,18,12,0.92); border:2px solid #e5a93c; border-radius:10px; padding:12px 16px; max-width:92%; transition: transform 0.2s;">
+            <div style="font-size:16px; font-weight:900; color:#e5a93c; text-align:center;">👥 대상자 확인</div>
+            <div id="subjectCheckMsg" style="font-size:13px; font-weight:bold; color:#e2eae3; text-align:center; line-height:1.5;">자세 이탈 후 다시 엎드렸습니다.</div>
+            <div style="font-size:11.5px; color:#a3b8a6; text-align:center;">확인 전까지 횟수를 세지 않습니다 (시간은 계속 진행)</div>
+            <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+                <button type="button" class="action-btn btn-start" onclick="subjectCheckSame()">같은 사람 · 이어서 측정</button>
+                <button type="button" class="action-btn btn-reset" onclick="subjectCheckNew()">다른 사람 · 여기서 측정 종료</button>
+            </div>
         </div>
     </div>
 
@@ -649,7 +662,8 @@
                     • <b>상승</b>: 가장 내려간 지점에서 완전히 편 자세까지 거리의 75% 이상 팔을 펴거나 팔꿈치가 150° 이상 펴지면 횟수가 카운트됩니다.<br>
                     • <b>자세 유지</b>: 머리부터 발끝까지 일직선을 유지하십시오. 허리가 처지면 "허리가 처졌습니다", 엉덩이를 들면 "골반이 높습니다" 경고가 명확히 분리 송출됩니다.<br>
                     • <b>유일한 휴식</b>: 팔을 곧게 펴고 엉덩이를 산 모양으로 확실하고 크게 솟구친 상태만 감점 없이 휴식으로 인정됩니다.<br>
-                    • <b>일시정지</b>: 일시정지 후 재개해도 하나의 영상·기록으로 이어서 저장됩니다.
+                    • <b>일시정지</b>: 일시정지 후 재개해도 하나의 영상·기록으로 이어서 저장됩니다.<br>
+                    • <b>대상자 확인</b>: 1회 이상 센 뒤 일어서거나 화면을 벗어났다가(2초 이상) 다시 엎드리면 횟수를 멈추고 <b>같은 사람인지</b> 묻습니다. [다른 사람]을 누르면 앞사람 기록을 그 횟수로 저장하고 측정을 끝냅니다. 다음 사람은 교번 입력 → [0회 초기화] → [측정 시작] 순서로 새로 시작합니다.
                 </div>
             </div>
 
@@ -882,6 +896,27 @@
 
     // [v5.8] 영상 우측 카운트 박스 크기 배율 (1.0 = 기존, 0.7 = 30% 축소)
     var OSD_COUNT_SCALE = 0.7;
+
+    // ==========================================
+    // [v6.6] 대상자 교체 감지
+    //  - 1회 이상 센 뒤 엎드려뻗쳐 자세에서 벗어난 상태(화면 이탈·일어섬·무릎 꿇고 앉음)가
+    //    AWAY_TRIGGER_MS 이상 이어지면 '이탈'로 기록
+    //  - 이탈 뒤 다시 엎드려뻗쳐 자세를 RETURN_CONFIRM_MS 유지하면 판정을 멈추고 같은 사람인지 확인
+    //    (다른 사람이 이어서 하면 앞사람 횟수에 더해지는 문제 방지, 2026-11-20 부대 PC 시험에서 발견)
+    //  - 엉덩이를 든 휴식(Pike)은 무릎이 펴져 있어 이탈로 보지 않음
+    // ==========================================
+    var AWAY_TRIGGER_MS = 2000;      // 자세 이탈이 이 시간 이상 이어지면 '이탈' 확정
+    var RETURN_CONFIRM_MS = 800;     // 다시 엎드려뻗쳐 자세를 이 시간 유지하면 '복귀'
+    var AWAY_KNEE_ANG = 140;         // 무릎과 골반이 모두 이 각도보다 굽으면 일어서는 중·앉음
+    var AWAY_CORE_ANG = 140;
+    var AWAY_ARM_TORSO_ANG = 30;     // 팔을 편 채 팔-몸통 각도가 이보다 작으면 팔을 내린 선 자세
+    var SUBJECT_SIZE_DIFF = 0.15;    // 이탈 전후 몸 크기(몸통+허벅지 길이)가 이 비율 이상 다르면 '다른 사람 가능성 높음' 안내
+    var awaySinceMs = 0;
+    var returnSinceMs = 0;
+    var subjectAway = false;
+    var awaitingSubjectConfirm = false;
+    var subjectScaleSamples = [];    // 이탈 전 팔 편 자세의 몸 크기 표본 (최근 것만)
+    var subjectScaleBefore = null;
 
     // [v5.8] 한쪽 측면 관절만 일관되게 사용 (좌/우 관절 혼용 방지)
     var SIDE_IDX = {
@@ -1268,6 +1303,8 @@
         cameraBox.classList.toggle('osd-rotated', deg !== 0);
         var cd = document.getElementById('countdownInner');
         if (cd) cd.style.transform = 'rotate(' + deg + 'deg)';
+        var sc = document.getElementById('subjectCheckInner');
+        if (sc) sc.style.transform = 'rotate(' + deg + 'deg)';
         updateOsdButtonLabel();
     }
 
@@ -1334,7 +1371,7 @@
 
         ctx.fillStyle = "#ffffff";
         ctx.font = "9.5px monospace";
-        ctx.fillText(dateFormatted + "  v6.5 " + poseEngineTag + " " + poseFps + "fps", 18, 41);
+        ctx.fillText(dateFormatted + "  v6.6 " + poseEngineTag + " " + poseFps + "fps", 18, 41);
 
         ctx.fillStyle = "#39e75f";
         ctx.font = "bold 11px sans-serif";
@@ -1709,7 +1746,16 @@
 
         updateHUDData(currentElbowAng, currentCoreAng, currentKneeAng);
 
-        var isJudging = (isTimerRunning || isUploadAnalysisMode) && !isPausedDueToNoBody;
+        // [v6.6] 대상자 교체 감지용 자세 이탈 판단 (골반 추정값일 때는 판단하지 않음)
+        if (!hipIsEstimatedNow) {
+            var armTorsoAng = getTrueInnerAngle(pP, pS, pW);
+            var isOutOfPosture = (!kneeIsUnknown && currentKneeAng < AWAY_KNEE_ANG && currentCoreAng < AWAY_CORE_ANG) ||
+                                 (currentElbowAng >= 150 && armTorsoAng < AWAY_ARM_TORSO_ANG);
+            updateSubjectPresence(!isOutOfPosture, judgeNowMs(), currentElbowAng >= 150 ? bodyScaleEma : null);
+        }
+
+        // [v6.6] 이탈이 확정된 뒤(복귀 확인 전)와 대상자 확인 대기 중에는 판정하지 않음
+        var isJudging = (isTimerRunning || isUploadAnalysisMode) && !isPausedDueToNoBody && !subjectAway && !awaitingSubjectConfirm;
         var nowMs = judgeNowMs();
 
         // [v5.7] 골반이 추정값이면 판정 보류: 카운트·부정자세 모두 이번 프레임은 건너뜀
@@ -1985,6 +2031,7 @@
 
     // [v5.7] 관절 미인식 시 판정만 중단. 타이머는 계속 흐르고 구간을 로그에 남김
     function handleCoreBodyLoss() {
+        updateSubjectPresence(false, judgeNowMs(), null);   // [v6.6] 화면 이탈도 자세 이탈로 셈
         isCoreBodyDetected = false;
         isPausedDueToNoBody = true;
 
@@ -2051,6 +2098,125 @@
                 document.getElementById('txtTimerState').style.color = "#8b9b8e";
             }
         }
+    }
+
+    // ==========================================
+    // [v6.6] 대상자 교체 감지 (자세 이탈 → 복귀 시 확인)
+    // ==========================================
+    function resetSubjectPresence() {
+        awaySinceMs = 0;
+        returnSinceMs = 0;
+        subjectAway = false;
+        subjectScaleSamples = [];
+        subjectScaleBefore = null;
+    }
+
+    // inPosture: 이번 프레임이 엎드려뻗쳐(휴식 포함) 자세인지, scale: 팔 편 자세일 때 몸 크기(아니면 null)
+    function updateSubjectPresence(inPosture, now, scale) {
+        var measuring = (isTimerRunning || isUploadAnalysisMode) && !isCountingDown;
+        if (!measuring) { resetSubjectPresence(); return; }
+        if (awaitingSubjectConfirm) return;
+        if (awaySinceMs && now < awaySinceMs) awaySinceMs = now;      // 영상 되감기
+        if (returnSinceMs && now < returnSinceMs) returnSinceMs = now;
+
+        if (!inPosture) {
+            returnSinceMs = 0;
+            if (!awaySinceMs) awaySinceMs = now || 1;
+            if (!subjectAway && repCount >= 1 && now - awaySinceMs >= AWAY_TRIGGER_MS) {
+                subjectAway = true;
+                subjectScaleBefore = subjectScaleSamples.length ? medianOf(subjectScaleSamples) : null;
+                addLogRow("엎드려뻗쳐 자세 이탈", "복귀 시 대상자 확인 (" + repCount + "회 시점)", false);
+            }
+            return;
+        }
+
+        if (!returnSinceMs) returnSinceMs = now || 1;
+        if (now - returnSinceMs < RETURN_CONFIRM_MS) return;
+        // 자세 유지 확인됨
+        if (subjectAway) {
+            subjectAway = false;
+            awaySinceMs = 0;
+            showSubjectCheck(scale);
+            return;
+        }
+        awaySinceMs = 0;
+        if (scale) {
+            subjectScaleSamples.push(scale);
+            if (subjectScaleSamples.length > 60) subjectScaleSamples.shift();
+        }
+    }
+
+    function showSubjectCheck(scaleNow) {
+        awaitingSubjectConfirm = true;
+        // 반복 도중 상태를 비워 확인 직후 반쪽 동작이 1회로 인정되지 않게 함
+        state = "UP";
+        minElbowInCurrentRep = 180;
+        maxElbowInCurrentRep = 90;
+        minRatioInCurrentRep = 9;
+        confirmSince.DOWN = 0;
+        confirmSince.TOP = 0;
+        repHasFault = false;
+        faultReasonCurrentRep = "";
+        for (var fk in faultSustainedCounts) faultSustainedCounts[fk] = 0;
+
+        var msg = "엎드려뻗쳐 자세에서 벗어났다가 다시 엎드렸습니다.\n지금까지 " + repCount + "회입니다. 같은 사람입니까?";
+        var diff = (subjectScaleBefore && scaleNow) ? Math.abs(scaleNow - subjectScaleBefore) / subjectScaleBefore : null;
+        if (diff !== null && diff >= SUBJECT_SIZE_DIFF) {
+            msg += "\n⚠️ 화면 속 몸 크기가 이탈 전과 " + Math.round(diff * 100) + "% 다릅니다 (카메라를 옮기지 않았다면 다른 사람일 수 있음).";
+        }
+        document.getElementById('subjectCheckMsg').innerText = msg;
+        document.getElementById('subjectCheckOverlay').style.display = 'flex';
+        currentFaultBannerText = "⚠️ 대상자 확인 대기 - 횟수 세지 않음 (시간은 계속 진행)";
+        isCurrentFaultWarn = true;
+        if (isUploadAnalysisMode && !uploadVideo.paused) {
+            uploadVideo.pause();
+            pauseRecording();
+            document.getElementById('btnUploadPlayPause').innerText = "▶ 재생";
+        }
+        speak("자세 이탈 후 다시 엎드렸습니다. 같은 사람인지 확인하십시오.");
+    }
+
+    function hideSubjectCheck() {
+        awaitingSubjectConfirm = false;
+        var ov = document.getElementById('subjectCheckOverlay');
+        if (ov) ov.style.display = 'none';
+    }
+
+    function subjectCheckSame() {
+        hideSubjectCheck();
+        subjectScaleSamples = [];
+        addLogRow("대상자 확인: 같은 사람", "이어서 판정 (" + repCount + "회부터)", false);
+        currentFaultBannerText = "판정 재개";
+        isCurrentFaultWarn = false;
+        if (isUploadAnalysisMode && uploadVideo.paused && !uploadVideo.ended) {
+            uploadVideo.play();
+            resumeRecording();
+            document.getElementById('btnUploadPlayPause').innerText = "⏸ 일시정지";
+        }
+    }
+
+    function subjectCheckNew() {
+        hideSubjectCheck();
+        addLogRow("대상자 확인: 다른 사람", "이 시점에서 측정 종료 (최종 " + repCount + "회)", false);
+        currentFaultBannerText = "측정 종료 (대상자 교체) - 최종 " + repCount + "회";
+        isCurrentFaultWarn = false;
+        if (isUploadAnalysisMode) {
+            // 영상 분석: 앞사람 결과를 기록으로 저장하고 분석을 멈춤
+            uploadVideo.pause();
+            stopRecording();
+            document.getElementById('txtTimerState').innerText = "영상 분석 종료 - 대상자 교체 (" + repCount + "회)";
+            document.getElementById('txtTimerState').style.color = "#e5a93c";
+            speak("측정 종료! 최종 " + repCount + "회입니다.");
+            return;
+        }
+        stopTimer();
+        stopRecording();          // 이 시점의 횟수·경과 시간으로 기록 저장
+        remainingSeconds = 0;     // 다시 시작 버튼으로 이어지지 않도록 종료 상태로 둠 (다음 사람은 0회 초기화)
+        updateTimerDisplay();
+        speak("측정 종료! 최종 " + repCount + "회입니다. 다음 사람은 교번을 입력하고 0회 초기화 후 시작하십시오.");
+        document.getElementById('txtTimerState').innerText = "측정 완료 (대상자 교체)";
+        document.getElementById('txtTimerState').style.color = "#e5a93c";
+        updateActionButtons("📹 측정 시작", "btn-start");
     }
 
     // ==========================================
@@ -2608,6 +2774,10 @@
 
             if (remainingSeconds <= 0) {
                 remainingSeconds = 0;
+                if (awaitingSubjectConfirm) {
+                    hideSubjectCheck();
+                    addLogRow("측정 종료 시점 대상자 확인 대기", "확인 전 종료 (" + repCount + "회)", false);
+                }
                 if (bodyLossStartSec !== null) {
                     addLogRow("측정 종료 시점 관절 미인식", "미인식 " + Math.max(0, getElapsedSec() - bodyLossStartSec) + "초", false);
                     bodyLossStartSec = null;
@@ -3035,6 +3205,7 @@
         };
 
         uploadVideo.onended = function() {
+            if (awaitingSubjectConfirm) hideSubjectCheck();   // [v6.6]
             if (bodyLossStartSec !== null) {
                 addLogRow("영상 종료 시점 관절 미인식", "미인식 " + Math.max(0, getElapsedSec() - bodyLossStartSec) + "초", false);
                 bodyLossStartSec = null;
@@ -3410,6 +3581,8 @@
 
     function resetAll() {
         subjectRef = null;
+        hideSubjectCheck();        // [v6.6]
+        resetSubjectPresence();
         stopSetupCheck();
         stopTimer();
         stopRecording();
