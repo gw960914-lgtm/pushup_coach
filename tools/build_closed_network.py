@@ -14,7 +14,7 @@ import base64, datetime, json, os, re, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 V = os.path.join(ROOT, "vendor")
 TODAY = datetime.date.today().strftime("%Y%m%d")
-VERSION = "v6.5"
+VERSION = "v6.6"
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "dist", "팔굽혀펴기측정_%s_폐쇄망_%s.html" % (VERSION, TODAY))
 
 
@@ -93,8 +93,8 @@ header = ("<!--\n  육군 정자세 팔굽혀펴기 AI 정밀 측정체계 %s (�
           "   - 동시 인식 인원 1명 (부대 PC 속도 대응). 채점자는 카메라 뒤·옆에 위치\n-->\n") % (VERSION, TODAY)
 html = replace_once(html, "<!DOCTYPE html>\n", "<!DOCTYPE html>\n" + header)
 html = replace_once(html, '<meta charset="UTF-8">', '<meta charset="UTF-8">\n    ' + csp)
-html = replace_once(html, '<div class="badge">검정 표준체계 v6.5</div>', '<div class="badge">검정 표준체계 v6.5 폐쇄망</div>')
-html = replace_once(html, 'ctx.fillText(dateFormatted + "  v6.5 " + poseEngineTag', 'ctx.fillText(dateFormatted + "  v6.5폐쇄망 " + poseEngineTag')
+html = replace_once(html, '<div class="badge">검정 표준체계 %s</div>' % VERSION, '<div class="badge">검정 표준체계 %s 폐쇄망</div>' % VERSION)
+html = replace_once(html, 'ctx.fillText(dateFormatted + "  %s " + poseEngineTag' % VERSION, 'ctx.fillText(dateFormatted + "  %s폐쇄망 " + poseEngineTag' % VERSION)
 
 # 4-1) 남은 통계 전송 주소 제거 (코드는 이미 무력화, 이중 안전장치) + 1명 인식 안내
 bundle = replace_once(bundle, '"https://odml.pa.googleapis.com/v1/log"', '"data:,"')
